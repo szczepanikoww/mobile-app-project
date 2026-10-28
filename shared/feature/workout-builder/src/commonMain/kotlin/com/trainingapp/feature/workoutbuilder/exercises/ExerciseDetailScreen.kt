@@ -51,6 +51,7 @@ import com.trainingapp.domain.common.AppLanguage
 import com.trainingapp.domain.exercise.Exercise
 import com.trainingapp.domain.exercise.SyncState
 import com.trainingapp.feature.workoutbuilder.common.ExerciseDetailDestination
+import com.trainingapp.feature.workoutbuilder.common.ExerciseImage
 import com.trainingapp.feature.workoutbuilder.common.labelRes
 import com.trainingapp.feature.workoutbuilder.common.muscleAndEquipment
 import com.trainingapp.feature.workoutbuilder.resources.Res
@@ -158,18 +159,15 @@ private fun ExerciseDetailBody(exercise: Exercise, languageTag: String, onRetryS
             .padding(horizontal = Spacing.gutter, vertical = Spacing.l),
         verticalArrangement = Arrangement.spacedBy(Spacing.sectionGap),
     ) {
-        // Missing-media placeholder. Dataset images arrive with the storage copy (slice 4), trainer video later.
-        Box(
-            Modifier
+        // The bundled start-position photo; a neutral placeholder when there is none. Trainer video comes later.
+        ExerciseImage(
+            exercise,
+            modifier = Modifier
                 .fillMaxWidth()
                 .widthIn(max = 560.dp)
-                .aspectRatio(16f / 9f)
-                .clip(AppShapes.featureCard)
-                .background(colors.subtleSurface),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(Icons.Outlined.FitnessCenter, contentDescription = null, tint = colors.textSecondary, modifier = Modifier.size(40.dp))
-        }
+                .aspectRatio(16f / 9f),
+            shape = AppShapes.featureCard,
+        )
 
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
             Text(exercise.name(languageTag), style = AppTheme.type.screenTitle, modifier = Modifier.semantics { heading() })

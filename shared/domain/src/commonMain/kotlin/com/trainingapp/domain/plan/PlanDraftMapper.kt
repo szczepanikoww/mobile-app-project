@@ -31,6 +31,7 @@ object PlanDraftMapper {
         val parseIssues = mutableListOf<PlanIssue.SetValueInvalid>()
         val body = PlanBodyDto(
             name = draft.name.trim(),
+            tags = draft.tags,
             days = draft.days.mapIndexed { index, day ->
                 PlanDayDto(
                     id = day.id,
@@ -43,6 +44,7 @@ object PlanDraftMapper {
                             supersetGroup = exercise.supersetGroup,
                             restSeconds = exercise.restSeconds,
                             rpeEnabled = exercise.rpeEnabled,
+                            accessory = exercise.accessory,
                             tempo = exercise.tempo.trim().ifEmpty { null },
                             note = exercise.note.trim().ifEmpty { null },
                             sets = exercise.sets.map { set ->
@@ -86,6 +88,7 @@ object PlanDraftMapper {
             durationSeconds = if (usesDuration) SetInput.parseDurationSeconds(set.duration).valueOrReport(SetField.DURATION) else null,
             distanceMeters = if (tracking == TrackingType.DISTANCE_TIME) SetInput.parseDistanceMeters(set.distance).valueOrReport(SetField.DISTANCE) else null,
             rpe = if (rpeEnabled) SetInput.parseRpe(set.rpe).valueOrReport(SetField.RPE) else null,
+            restSecondsOverride = SetInput.parseDurationSeconds(set.rest).valueOrReport(SetField.REST),
         )
     }
 
@@ -102,6 +105,7 @@ object PlanDraftMapper {
         templateId = templateId,
         baseVersion = baseVersion,
         name = body.name,
+        tags = body.tags,
         days = body.days.mapIndexed { index, day ->
             DraftDay(
                 id = day.id,
@@ -114,6 +118,7 @@ object PlanDraftMapper {
                         supersetGroup = exercise.supersetGroup,
                         restSeconds = exercise.restSeconds,
                         rpeEnabled = exercise.rpeEnabled,
+                        accessory = exercise.accessory,
                         tempo = exercise.tempo.orEmpty(),
                         note = exercise.note.orEmpty(),
                         sets = exercise.sets.map { set ->
@@ -125,6 +130,7 @@ object PlanDraftMapper {
                                 duration = SetInput.formatDuration(set.durationSeconds),
                                 distance = SetInput.formatThousandths(set.distanceMeters, decimalSeparator),
                                 rpe = SetInput.formatRpe(set.rpe, decimalSeparator),
+                                rest = set.restSecondsOverride?.toString().orEmpty(),
                             )
                         },
                     )

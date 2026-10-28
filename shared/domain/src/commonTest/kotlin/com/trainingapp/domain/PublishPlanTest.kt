@@ -65,6 +65,7 @@ class PublishPlanTest {
         assertEquals("Dzień A", body.days.single().name)
         val set = body.days.single().exercises.single().sets.single()
         assertEquals(82_500, set.weightGrams)
+        assertEquals(null, set.restSecondsOverride)
         assertEquals(8, set.repsMin)
         assertEquals(8, set.repsMax)
     }

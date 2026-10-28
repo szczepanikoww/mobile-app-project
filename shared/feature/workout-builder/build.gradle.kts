@@ -17,6 +17,8 @@ kotlin {
             languageSettings.optIn("kotlinx.coroutines.ExperimentalCoroutinesApi")
             languageSettings.optIn("androidx.compose.material3.ExperimentalMaterial3Api")
             languageSettings.optIn("androidx.compose.foundation.layout.ExperimentalLayoutApi")
+            languageSettings.optIn("org.jetbrains.compose.resources.ExperimentalResourceApi")
+            languageSettings.optIn("kotlin.time.ExperimentalTime")
         }
         commonMain.dependencies {
             implementation(projects.shared.designsystem)

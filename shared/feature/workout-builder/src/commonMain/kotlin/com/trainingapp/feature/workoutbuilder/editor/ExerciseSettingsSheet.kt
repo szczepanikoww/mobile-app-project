@@ -34,8 +34,8 @@ import com.trainingapp.feature.workoutbuilder.resources.settings_note
 import com.trainingapp.feature.workoutbuilder.resources.settings_note_supporting
 import com.trainingapp.feature.workoutbuilder.resources.settings_rest
 import com.trainingapp.feature.workoutbuilder.resources.settings_rest_none
-import com.trainingapp.feature.workoutbuilder.resources.settings_rpe
-import com.trainingapp.feature.workoutbuilder.resources.settings_rpe_supporting
+import com.trainingapp.feature.workoutbuilder.resources.settings_accessory
+import com.trainingapp.feature.workoutbuilder.resources.settings_accessory_supporting
 import com.trainingapp.feature.workoutbuilder.resources.settings_tempo
 import com.trainingapp.feature.workoutbuilder.resources.settings_tempo_supporting
 import com.trainingapp.feature.workoutbuilder.resources.settings_title
@@ -45,9 +45,9 @@ import com.trainingapp.designsystem.resources.Res as DsRes
 /** Rest presets in seconds. `null` is "no rest". */
 private val RestPresets = listOf(null, 30, 60, 90, 120, 150, 180, 240, 300)
 
-data class ExerciseSettings(val restSeconds: Int?, val rpeEnabled: Boolean, val tempo: String, val note: String)
+data class ExerciseSettings(val restSeconds: Int?, val accessory: Boolean, val tempo: String, val note: String)
 
-/** S6: settings for one exercise in the plan. Changes apply with "Gotowe". */
+/** S6: settings for one exercise in the plan, opened from the note button. Changes apply with "Gotowe". */
 @Composable
 fun ExerciseSettingsSheet(
     planned: DraftExercise,
@@ -56,7 +56,7 @@ fun ExerciseSettingsSheet(
     onDismiss: () -> Unit,
 ) {
     var rest by rememberSaveable(planned.id) { mutableStateOf(planned.restSeconds) }
-    var rpe by rememberSaveable(planned.id) { mutableStateOf(planned.rpeEnabled) }
+    var accessory by rememberSaveable(planned.id) { mutableStateOf(planned.accessory) }
     var tempo by rememberSaveable(planned.id) { mutableStateOf(planned.tempo) }
     var note by rememberSaveable(planned.id) { mutableStateOf(planned.note) }
     // Presets plus the stored value, if it is not a preset.
@@ -82,15 +82,15 @@ fun ExerciseSettingsSheet(
             Modifier
                 .fillMaxWidth()
                 .heightIn(min = Sizes.minTouchTarget)
-                .toggleable(value = rpe, role = Role.Switch, onValueChange = { rpe = it }),
+                .toggleable(value = accessory, role = Role.Switch, onValueChange = { accessory = it }),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
-                Text(stringResource(Res.string.settings_rpe), style = AppTheme.type.bodyStrong)
-                Text(stringResource(Res.string.settings_rpe_supporting), style = AppTheme.type.compactBody, color = AppTheme.colors.textSecondary)
+                Text(stringResource(Res.string.settings_accessory), style = AppTheme.type.bodyStrong)
+                Text(stringResource(Res.string.settings_accessory_supporting), style = AppTheme.type.compactBody, color = AppTheme.colors.textSecondary)
             }
             Switch(
-                checked = rpe,
+                checked = accessory,
                 onCheckedChange = null,
                 colors = SwitchDefaults.colors(checkedTrackColor = AppTheme.colors.brandStrong),
             )
@@ -112,7 +112,7 @@ fun ExerciseSettingsSheet(
         )
         PrimaryButton(
             text = stringResource(DsRes.string.ds_done),
-            onClick = { onApply(ExerciseSettings(rest, rpe, tempo, note)) },
+            onClick = { onApply(ExerciseSettings(rest, accessory, tempo, note)) },
             modifier = Modifier.fillMaxWidth(),
         )
     }

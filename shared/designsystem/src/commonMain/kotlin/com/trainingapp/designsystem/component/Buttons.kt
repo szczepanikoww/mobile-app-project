@@ -43,7 +43,7 @@ import org.jetbrains.compose.resources.stringResource
 private val ButtonPadding = PaddingValues(horizontal = Spacing.xl, vertical = Spacing.m)
 
 /**
- * The one dominant action of a screen: white text on the strong brand colour.
+ * The dominant action of a screen, as in the Stitch reference: white bold text on the brand orange pill.
  * While [loading], it shows progress and ignores taps, so an action cannot be submitted twice.
  */
 @Composable
@@ -65,11 +65,36 @@ fun PrimaryButton(
         shape = AppShapes.pill,
         contentPadding = ButtonPadding,
         colors = ButtonDefaults.buttonColors(
-            containerColor = AppTheme.colors.brandStrong,
+            containerColor = AppTheme.colors.brandAccent,
             contentColor = AppTheme.colors.onBrandStrong,
         ),
     ) {
         ButtonContent(text, icon, loading, progressColor = AppTheme.colors.onBrandStrong)
+    }
+}
+
+/** A filled, low-emphasis pill on the subtle surface, e.g. "Zapisz szablon" next to the primary action. */
+@Composable
+fun TonalButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    loading: Boolean = false,
+    icon: ImageVector? = null,
+) {
+    Button(
+        onClick = { if (!loading) onClick() },
+        modifier = modifier.defaultMinSize(minHeight = Sizes.minTouchTarget),
+        enabled = enabled,
+        shape = AppShapes.pill,
+        contentPadding = ButtonPadding,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = AppTheme.colors.tonalSurface,
+            contentColor = AppTheme.colors.text,
+        ),
+    ) {
+        ButtonContent(text, icon, loading, progressColor = AppTheme.colors.text)
     }
 }
 
@@ -131,7 +156,7 @@ private fun ButtonContent(text: String, icon: ImageVector?, loading: Boolean, pr
             Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(Spacing.s))
         }
-        Text(text, style = AppTheme.type.button, textAlign = TextAlign.Center)
+        Text(text, style = AppTheme.type.button, textAlign = TextAlign.Center, modifier = Modifier.weight(1f, fill = false))
     }
 }
 

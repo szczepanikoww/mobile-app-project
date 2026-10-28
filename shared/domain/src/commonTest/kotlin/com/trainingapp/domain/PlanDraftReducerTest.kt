@@ -159,6 +159,19 @@ class PlanDraftReducerTest {
     }
 
     @Test
+    fun tagsAreTrimmedAndDeduplicatedAndSetRestIsEditable() {
+        val draft = draftWith("bench")
+        val dayId = draft.firstDay.id
+        val exercise = draft.firstDay.exercises.single()
+        val edited = draft.apply(
+            PlanDraftAction.UpdateTags(listOf(" Hipertrofia ", "Hipertrofia", "", "Góra")),
+            PlanDraftAction.UpdateSetValue(dayId, exercise.id, exercise.sets.single().id, DraftSetField.REST, "120"),
+        )
+        assertEquals(listOf("Hipertrofia", "Góra"), edited.tags)
+        assertEquals("120", edited.firstDay.exercises.single().sets.single().rest)
+    }
+
+    @Test
     fun alphabetLabelsContinuePastZ() {
         assertEquals(listOf("A", "B", "Z", "AA", "AB"), listOf(0, 1, 25, 26, 27).map(::alphabetLabel))
     }

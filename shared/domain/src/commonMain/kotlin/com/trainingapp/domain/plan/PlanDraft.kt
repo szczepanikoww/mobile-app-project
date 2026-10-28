@@ -17,6 +17,7 @@ data class PlanDraft(
     val baseVersion: Int? = null,
     val name: String = "",
     val days: List<DraftDay>,
+    val tags: List<String> = emptyList(),
     /** Reused when a publish is retried, so a retry never publishes twice. Cleared by any edit. */
     val pendingOperationId: String? = null,
     val updatedAtEpochMs: Long = 0,
@@ -45,7 +46,8 @@ data class DraftExercise(
     val exerciseId: String,
     val supersetGroup: String? = null,
     val restSeconds: Int? = null,
-    val rpeEnabled: Boolean = false,
+    val rpeEnabled: Boolean = true,
+    val accessory: Boolean = false,
     val tempo: String = "",
     val note: String = "",
     val sets: List<DraftSet>,
@@ -60,6 +62,8 @@ data class DraftSet(
     val duration: String = "",
     val distance: String = "",
     val rpe: String = "",
+    /** Rest after this set, in seconds or min:s ("PRZERWA"). Blank uses the exercise's rest. */
+    val rest: String = "",
 )
 
-enum class DraftSetField { REPS, WEIGHT, DURATION, DISTANCE, RPE }
+enum class DraftSetField { REPS, WEIGHT, DURATION, DISTANCE, RPE, REST }

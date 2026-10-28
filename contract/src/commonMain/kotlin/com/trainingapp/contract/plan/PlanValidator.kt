@@ -14,9 +14,11 @@ object PlanLimits {
     val REST_SECONDS = 0..3_600
     const val TEMPO_MAX = 20
     const val NOTE_MAX = 500
+    const val TAGS_MAX = 5
+    const val TAG_MAX = 24
 }
 
-enum class SetField { REPS, WEIGHT, DURATION, DISTANCE, RPE }
+enum class SetField { REPS, WEIGHT, DURATION, DISTANCE, RPE, REST }
 
 enum class SetProblem {
     /** The value the tracking type needs is missing. */
@@ -34,6 +36,7 @@ sealed interface PlanIssue {
     data object NameBlank : PlanIssue
     data object NameTooLong : PlanIssue
     data object NoDays : PlanIssue
+    data object TagsInvalid : PlanIssue
     data class DayNameTooLong(val dayId: String) : PlanIssue
     data class DayHasNoExercises(val dayId: String) : PlanIssue
     data class UnknownExercise(val dayId: String, val plannedExerciseId: String) : PlanIssue
@@ -70,6 +73,9 @@ object PlanValidator {
             name.length > PlanLimits.NAME_MAX -> issues += PlanIssue.NameTooLong
         }
         if (body.days.isEmpty()) issues += PlanIssue.NoDays
+        if (body.tags.size > PlanLimits.TAGS_MAX || body.tags.any { it.isBlank() || it.length > PlanLimits.TAG_MAX }) {
+            issues += PlanIssue.TagsInvalid
+        }
 
         for (day in body.days) {
             if (day.name.trim().length > PlanLimits.DAY_NAME_MAX) issues += PlanIssue.DayNameTooLong(day.id)
@@ -129,6 +135,9 @@ object PlanValidator {
                     }
                 }
                 else -> Unit
+            }
+            set.restSecondsOverride?.let {
+                if (it !in PlanLimits.REST_SECONDS) issues += issue(SetField.REST, SetProblem.OUT_OF_RANGE)
             }
             set.rpe?.let { rpe ->
                 when {

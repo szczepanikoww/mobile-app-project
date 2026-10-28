@@ -5,6 +5,7 @@ free-exercise-db (https://github.com/yuhonas/free-exercise-db) is public domain 
 
     curl -sSLo /tmp/exercises.json https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json
     python3 tools/exercise-seed/build_seed.py --dataset /tmp/exercises.json
+    python3 tools/exercise-seed/build_seed.py --dataset /tmp/exercises.json --images   # also bundle photos (needs Pillow)
 
 By default only the curated, featured subset is written (delivery slice 1). `--all` writes every dataset
 exercise with the curated ones marked featured; that is the input for the server-side import in slice 4.
@@ -19,6 +20,9 @@ import uuid
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 DEFAULT_OUT = ROOT / "shared/app/src/commonMain/composeResources/files/exercise_library.json"
+IMAGES_OUT = ROOT / "shared/feature/workout-builder/src/commonMain/composeResources/files/exercise_images"
+IMAGE_URL = "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/{}"
+IMAGE_WIDTH = 400
 CURATION = pathlib.Path(__file__).with_name("curation.tsv")
 SOURCE = "free-exercise-db"
 ID_NAMESPACE = uuid.UUID("6f1c2b7e-3d4a-4c1e-9f0a-5b8e2d7c9a10")
@@ -96,11 +100,31 @@ def convert(record, curation):
     return out
 
 
+def bundle_images(exercises):
+    """Copies the start-position photo of each exercise into the app, resized. Photos are never hotlinked."""
+    import io
+    import urllib.request
+    from PIL import Image
+
+    IMAGES_OUT.mkdir(parents=True, exist_ok=True)
+    for exercise in exercises:
+        target = IMAGES_OUT / f"{exercise['sourceId']}.jpg"
+        if target.exists() or not exercise.get("images"):
+            continue
+        source = exercise["images"][0].removeprefix(f"{SOURCE}/")
+        with urllib.request.urlopen(IMAGE_URL.format(source), timeout=30) as response:
+            image = Image.open(io.BytesIO(response.read())).convert("RGB")
+        image.thumbnail((IMAGE_WIDTH, IMAGE_WIDTH))
+        image.save(target, "JPEG", quality=72, optimize=True)
+    print(f"bundled images in {IMAGES_OUT}")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--dataset", required=True, type=pathlib.Path, help="free-exercise-db dist/exercises.json")
     parser.add_argument("--out", type=pathlib.Path, default=DEFAULT_OUT)
     parser.add_argument("--all", action="store_true", help="include every dataset exercise, not only the curated ones")
+    parser.add_argument("--images", action="store_true", help="download and bundle one resized photo per exercise")
     args = parser.parse_args()
 
     dataset = json.loads(args.dataset.read_text(encoding="utf-8"))
@@ -117,6 +141,8 @@ def main():
     # One exercise per line keeps diffs reviewable.
     lines = ",\n".join(json.dumps(e, ensure_ascii=False, separators=(",", ":")) for e in exercises)
     args.out.write_text(f"[\n{lines}\n]\n", encoding="utf-8")
+    if args.images:
+        bundle_images(exercises)
     print(f"wrote {len(exercises)} exercises ({sum(1 for e in exercises if e.get('featured'))} featured) to {args.out}")
 
 

@@ -6,6 +6,8 @@ import com.trainingapp.contract.plan.PlanLimits
 import com.trainingapp.contract.plan.SetField
 import com.trainingapp.contract.plan.SetProblem
 import com.trainingapp.feature.workoutbuilder.resources.Res
+import com.trainingapp.feature.workoutbuilder.resources.creator_tags_invalid
+import com.trainingapp.feature.workoutbuilder.resources.set_error_rest
 import com.trainingapp.feature.workoutbuilder.resources.editor_day_empty_error
 import com.trainingapp.feature.workoutbuilder.resources.editor_day_name_too_long
 import com.trainingapp.feature.workoutbuilder.resources.editor_name_blank
@@ -29,6 +31,7 @@ import org.jetbrains.compose.resources.stringResource
 /** Issues grouped by where the editor shows them. */
 class EditorIssues(issues: List<PlanIssue>) {
     val name: PlanIssue? = issues.firstOrNull { it is PlanIssue.NameBlank || it is PlanIssue.NameTooLong }
+    val tags: PlanIssue? = issues.firstOrNull { it is PlanIssue.TagsInvalid }
     private val byDay = issues.groupBy { it.dayId }
     private val byExercise = issues.groupBy { it.plannedExerciseId }
 
@@ -68,6 +71,7 @@ fun planIssueText(issue: PlanIssue): String = when (issue) {
     PlanIssue.NameBlank -> stringResource(Res.string.editor_name_blank)
     PlanIssue.NameTooLong -> stringResource(Res.string.editor_name_too_long, PlanLimits.NAME_MAX)
     PlanIssue.NoDays, is PlanIssue.DayHasNoExercises -> stringResource(Res.string.editor_day_empty_error)
+    PlanIssue.TagsInvalid -> stringResource(Res.string.creator_tags_invalid)
     is PlanIssue.DayNameTooLong -> stringResource(Res.string.editor_day_name_too_long, PlanLimits.DAY_NAME_MAX)
     is PlanIssue.UnknownExercise -> stringResource(Res.string.exercise_error_unknown)
     is PlanIssue.ExerciseHasNoSets -> stringResource(Res.string.exercise_error_no_sets)
@@ -85,4 +89,5 @@ private fun setProblemText(field: SetField, problem: SetProblem): StringResource
     SetField.RPE -> Res.string.set_error_rpe
     SetField.DURATION -> if (problem == SetProblem.REQUIRED) Res.string.set_error_time_required else Res.string.set_error_time_invalid
     SetField.DISTANCE -> if (problem == SetProblem.REQUIRED) Res.string.set_error_distance_required else Res.string.set_error_distance_invalid
+    SetField.REST -> Res.string.set_error_rest
 }

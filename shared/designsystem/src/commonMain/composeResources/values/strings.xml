@@ -1,12 +1,12 @@
 <resources>
-    <string name="ds_back">Back</string>
-    <string name="ds_close">Close</string>
-    <string name="ds_more_options">More options</string>
-    <string name="ds_clear_search">Clear search</string>
-    <string name="ds_retry">Try again</string>
-    <string name="ds_loading">Loading</string>
-    <string name="ds_done">Done</string>
-    <string name="ds_cancel">Cancel</string>
-    <string name="ds_selected">Selected</string>
-    <string name="ds_image_placeholder">No image</string>
+    <string name="ds_back">Wstecz</string>
+    <string name="ds_close">Zamknij</string>
+    <string name="ds_more_options">Więcej opcji</string>
+    <string name="ds_clear_search">Wyczyść wyszukiwanie</string>
+    <string name="ds_retry">Spróbuj ponownie</string>
+    <string name="ds_loading">Wczytywanie</string>
+    <string name="ds_done">Gotowe</string>
+    <string name="ds_cancel">Anuluj</string>
+    <string name="ds_selected">Zaznaczone</string>
+    <string name="ds_image_placeholder">Brak zdjęcia</string>
 </resources>

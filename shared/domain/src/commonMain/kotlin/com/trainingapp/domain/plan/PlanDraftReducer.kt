@@ -6,6 +6,7 @@ import com.trainingapp.domain.common.IdGenerator
 /** Every edit the plan editor can make. [PlanDraftReducer] applies them as pure functions. */
 sealed interface PlanDraftAction {
     data class Rename(val name: String) : PlanDraftAction
+    data class UpdateTags(val tags: List<String>) : PlanDraftAction
 
     data object AddDay : PlanDraftAction
     data class RenameDay(val dayId: String, val name: String) : PlanDraftAction
@@ -31,6 +32,7 @@ sealed interface PlanDraftAction {
         val rpeEnabled: Boolean,
         val tempo: String,
         val note: String,
+        val accessory: Boolean = false,
     ) : PlanDraftAction
 
     /** Copies the values of the last set. */
@@ -59,6 +61,7 @@ object PlanDraftReducer {
     fun reduce(draft: PlanDraft, action: PlanDraftAction, ids: IdGenerator): PlanDraft {
         val next = when (action) {
             is PlanDraftAction.Rename -> draft.copy(name = action.name)
+            is PlanDraftAction.UpdateTags -> draft.copy(tags = action.tags.map { it.trim() }.filter { it.isNotEmpty() }.distinct())
             PlanDraftAction.AddDay -> draft.copy(days = draft.days + DraftDay(ids.newId()))
             is PlanDraftAction.RenameDay -> draft.updateDay(action.dayId) { it.copy(name = action.name) }
             is PlanDraftAction.DuplicateDay -> duplicateDay(draft, action.dayId, ids)
@@ -101,6 +104,7 @@ object PlanDraftReducer {
                 it.copy(
                     restSeconds = action.restSeconds,
                     rpeEnabled = action.rpeEnabled,
+                    accessory = action.accessory,
                     tempo = action.tempo.trim(),
                     note = action.note.trim(),
                 )
@@ -126,6 +130,7 @@ object PlanDraftReducer {
                     DraftSetField.DURATION -> it.copy(duration = action.text)
                     DraftSetField.DISTANCE -> it.copy(distance = action.text)
                     DraftSetField.RPE -> it.copy(rpe = action.text)
+                    DraftSetField.REST -> it.copy(rest = action.text)
                 }
             }
         }

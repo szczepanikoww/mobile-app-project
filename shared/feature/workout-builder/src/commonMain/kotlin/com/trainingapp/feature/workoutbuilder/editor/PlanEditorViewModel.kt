@@ -50,6 +50,8 @@ data class PlanEditorUiState(
     val offline: Boolean = false,
     /** The draft has been written to the device at least once. */
     val savedOnDevice: Boolean = false,
+    /** When the draft was last written to the device ("Edytowano 2 min temu"). */
+    val lastSavedAtEpochMs: Long? = null,
 ) {
     val isNewPlan: Boolean get() = draft?.templateId == null
     val selectedDay: DraftDay? get() = draft?.days?.firstOrNull { it.id == selectedDayId } ?: draft?.days?.firstOrNull()
@@ -64,6 +66,9 @@ sealed interface EditorBanner {
 
 sealed interface PlanEditorEffect {
     data class Published(val templateId: String, val versionNumber: Int) : PlanEditorEffect
+
+    /** "Przypisz klientowi": the plan is published and this version can be assigned. */
+    data class Assign(val templateId: String, val versionNumber: Int) : PlanEditorEffect
     data class ExerciseRemoved(val exerciseName: String, val undo: PlanDraftAction.RestoreExercise) : PlanEditorEffect
     data class OpenPicker(val requestKey: String, val singleSelect: Boolean) : PlanEditorEffect
 
@@ -102,6 +107,9 @@ class PlanEditorViewModel(
     private var showIssues = false
     private var dayNames: List<String> = emptyList()
 
+    /** The draft as it was when it matched a published version, so assigning it needs no new version. */
+    private var publishedSnapshot: Pair<PlanDraft, PlanEditorEffect.Assign>? = null
+
     init {
         viewModelScope.launch { load() }
         viewModelScope.launch {
@@ -120,16 +128,33 @@ class PlanEditorViewModel(
 
     private suspend fun load() {
         dayNames = defaultDayNames.names(MAX_DEFAULT_DAY_NAMES)
-        val draft = when {
+        val stored = when {
             destination.draftId != null -> openDraft.existingDraft(destination.draftId)
+            destination.templateId != null -> plans.findDraftForTemplate(destination.templateId)
+            else -> null
+        }
+        val draft = when {
+            stored != null -> stored
             destination.templateId != null -> openDraft.forTemplate(destination.templateId, decimalSeparator(), ::defaultDayName)
+            destination.draftId != null -> null
             else -> openDraft.newPlan()
+        }
+        val openedTemplate = draft?.templateId
+        val openedVersion = draft?.baseVersion
+        if (draft != null && stored == null && openedTemplate != null && openedVersion != null) {
+            publishedSnapshot = draft to PlanEditorEffect.Assign(openedTemplate, openedVersion)
         }
         _state.update {
             if (draft == null) {
                 it.copy(loading = false, notFound = true)
             } else {
-                it.copy(loading = false, draft = draft, selectedDayId = draft.days.first().id, savedOnDevice = destination.draftId != null)
+                it.copy(
+                    loading = false,
+                    draft = draft,
+                    selectedDayId = draft.days.first().id,
+                    savedOnDevice = stored != null,
+                    lastSavedAtEpochMs = stored?.updatedAtEpochMs,
+                )
             }
         }
     }
@@ -169,7 +194,21 @@ class PlanEditorViewModel(
         _effects.trySend(PlanEditorEffect.OpenPicker(PickRequest.replace(draft.draftId, dayId, plannedExerciseId), singleSelect = true))
     }
 
-    fun publish() {
+    /** "Przypisz klientowi": publishes first unless the plan is unchanged since its last published version. */
+    fun assignToClient() {
+        val current = _state.value
+        if (current.publishing) return
+        val snapshot = publishedSnapshot
+        if (snapshot != null && snapshot.first == current.draft) {
+            _effects.trySend(snapshot.second)
+        } else {
+            publishInternal(thenAssign = true)
+        }
+    }
+
+    fun publish() = publishInternal(thenAssign = false)
+
+    private fun publishInternal(thenAssign: Boolean) {
         val current = _state.value
         val draft = current.draft ?: return
         if (current.publishing) return
@@ -178,11 +217,11 @@ class PlanEditorViewModel(
         viewModelScope.launch {
             writeIfCurrent(prepared)
             val outcome = publishPlan(prepared, ::defaultDayName)
-            handleOutcome(prepared, outcome)
+            handleOutcome(prepared, outcome, thenAssign)
         }
     }
 
-    private suspend fun handleOutcome(sent: PlanDraft, outcome: PublishOutcome) {
+    private suspend fun handleOutcome(sent: PlanDraft, outcome: PublishOutcome, thenAssign: Boolean) {
         when (outcome) {
             is PublishOutcome.Published -> {
                 showIssues = false
@@ -193,8 +232,11 @@ class PlanEditorViewModel(
                     baseVersion = outcome.versionNumber,
                     pendingOperationId = null,
                 )
-                _state.update { it.copy(publishing = false, draft = next, issues = emptyList(), savedOnDevice = false) }
+                val assign = PlanEditorEffect.Assign(outcome.templateId, outcome.versionNumber)
+                publishedSnapshot = next to assign
+                _state.update { it.copy(publishing = false, draft = next, issues = emptyList(), savedOnDevice = false, lastSavedAtEpochMs = null) }
                 _effects.send(PlanEditorEffect.Published(outcome.templateId, outcome.versionNumber))
+                if (thenAssign) _effects.send(assign)
             }
             is PublishOutcome.Invalid -> {
                 showIssues = true
@@ -231,7 +273,11 @@ class PlanEditorViewModel(
             writeMutex.withLock { plans.deleteDraft(draft.draftId) }
             val latest = openDraft.forTemplate(templateId, decimalSeparator(), ::defaultDayName) ?: return@launch
             showIssues = false
-            _state.update { it.copy(draft = latest, selectedDayId = latest.days.first().id, issues = emptyList(), banner = null, savedOnDevice = false) }
+            val templateVersion = latest.baseVersion
+            publishedSnapshot = if (templateVersion != null) latest to PlanEditorEffect.Assign(templateId, templateVersion) else null
+            _state.update {
+                it.copy(draft = latest, selectedDayId = latest.days.first().id, issues = emptyList(), banner = null, savedOnDevice = false, lastSavedAtEpochMs = null)
+            }
         }
     }
 
@@ -279,7 +325,6 @@ class PlanEditorViewModel(
 
     private suspend fun write(draft: PlanDraft) {
         writeMutex.withLock { saveDraft(draft) }
-        if (!draft.isPristineNewPlan) _state.update { it.copy(savedOnDevice = true) }
     }
 
     /**
@@ -287,12 +332,13 @@ class PlanEditorViewModel(
      * after a publish deleted the draft, or it would bring a stale draft back.
      */
     private suspend fun writeIfCurrent(draft: PlanDraft) {
-        val written = writeMutex.withLock {
-            if (draft != _state.value.draft) return@withLock false
+        val saved = writeMutex.withLock {
+            if (draft != _state.value.draft) return@withLock null
             saveDraft(draft)
-            true
         }
-        if (written && !draft.isPristineNewPlan) _state.update { it.copy(savedOnDevice = true) }
+        if (saved != null && !draft.isPristineNewPlan) {
+            _state.update { it.copy(savedOnDevice = true, lastSavedAtEpochMs = saved.updatedAtEpochMs) }
+        }
     }
 
     private fun revalidate() {

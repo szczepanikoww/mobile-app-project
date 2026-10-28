@@ -53,7 +53,8 @@ fun appModule(platform: AppPlatform) = module {
     single { createTrainingDatabase(get()) }
     single<NetworkMonitor> { platform.networkMonitor }
     single<CurrentUser> { DemoTrainer }
-    single<AppLanguage> { AppLanguage { Locale.current.language } }
+    // Polish is the app language; English only when the device asks for it.
+    single<AppLanguage> { AppLanguage { if (Locale.current.language == "en") "en" else "pl" } }
     single<IdGenerator> { IdGenerator.Uuids }
     single<TimeSource> { TimeSource.System }
     single(AppScope) { CoroutineScope(SupervisorJob() + Dispatchers.Default) }

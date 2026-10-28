@@ -383,3 +383,42 @@ Assumptions made while implementing (not product decisions):
 - **Input formats.** Distance is entered in km. Time is entered as seconds or `min:s`; `1.30` also means 1:30, because numeric keypads have no colon.
 - **Name of a custom exercise.** It is stored in a single language, the trainer's language when they last saved it.
 - **Hidden own exercises.** They are listed under "Moje → Ukryte" so they can be shown again. Search never returns them.
+
+## 12. Decision change (2026-10-28, after review)
+
+The product owner reviewed slices 0–3 and asked for two changes. Both override section 3, decision D10 and part of D7:
+
+1. **Polish is the app language.** Default resources are Polish (`values/`). English is a translation (`values-en/`), used only when the device language is English.
+2. **S2 follows the Stitch "Kreator planu" screen element by element.** It has:
+   - the "Kreator Planu" header with the messages, notifications and profile buttons;
+   - the "SZKIC AUTOZAPISU" badge with "Edytowano … temu";
+   - the "NAZWA JEDNOSTKI" pill with a tag button;
+   - the three stat tiles: ŁĄCZNIE SERII, SZAC. CZAS and ŚR. RPE;
+   - "Kolejność ćwiczeń" with a count of positions;
+   - exercise cards with a photo, a "#1 muscle" label and a "Superseria"/"Akcesoryjne" chip;
+   - a five-column set table: SERIA, CIĘŻAR, POWT., RPE, PRZERWA;
+   - "Dodaj serię", note and more buttons;
+   - the orange "Dodaj ćwiczenie z biblioteki" button;
+   - the two bottom buttons "Zapisz szablon" and "Przypisz klientowi".
+
+What this added to the model:
+
+- **Plan tags**, at most 5, each up to 24 characters.
+- **`accessory`** on a planned exercise.
+- **Rest per set** (`restSecondsOverride`).
+- **`PlanStatsCalculator`.** The time estimate assumes 45 s per set (or the set's planned duration) plus the rest after it. An unset rest counts as 90 s. This is an estimate, not a policy.
+
+Kept from the Stitch screen but adjusted:
+
+- No unread dots on the messages and notifications icons, because there is no data behind them. The three header buttons show a "coming later" dialog.
+- Set inputs are laid out so values and units do not overlap; the mockup clips "8powt.".
+- Decimals follow the language: "82,5" in Polish.
+
+Not on the screen any more (the data model still supports them):
+
+- Several days per plan (D7).
+- Duplicate, archive and discard-draft menus.
+
+The exercise photos are bundled. `tools/exercise-seed --images` copies one 400 px photo per curated exercise into the app (≈3 MB), so they are not hotlinked.
+
+Open accessibility issue: CLAUDE.md asks for 4.5:1 contrast. White text on the reference orange `#FF6B00` measures about 2.9:1. It is used as the mockup shows.

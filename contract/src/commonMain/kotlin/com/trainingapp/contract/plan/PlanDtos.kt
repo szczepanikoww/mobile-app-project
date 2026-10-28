@@ -8,6 +8,7 @@ import kotlinx.serialization.Serializable
 data class PlanBodyDto(
     val name: String,
     val days: List<PlanDayDto>,
+    val tags: List<String> = emptyList(),
 )
 
 @Serializable
@@ -25,6 +26,8 @@ data class PlannedExerciseDto(
     val supersetGroup: String? = null,
     val restSeconds: Int? = null,
     val rpeEnabled: Boolean = false,
+    /** Shown as "Akcesoryjne" in the plan creator. */
+    val accessory: Boolean = false,
     val tempo: String? = null,
     val note: String? = null,
     val sets: List<PlannedSetDto>,

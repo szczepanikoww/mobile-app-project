@@ -49,10 +49,15 @@ curl -sSLo /tmp/exercises.json https://raw.githubusercontent.com/yuhonas/free-ex
 ```
 
 ```bash
-python3 tools/exercise-seed/build_seed.py --dataset /tmp/exercises.json
+python3 tools/exercise-seed/build_seed.py --dataset /tmp/exercises.json --images
 ```
 
+`--images` also bundles one resized photo per exercise and needs Pillow (`pip install Pillow`).
+
 ## Status
+
+- **Language:** the app is in Polish. English is a translation, used when the device language is English.
+- **Plan creator (S2):** follows the Stitch "Kreator planu" screen; see section 12 of the feature plan.
 
 - **Built so far:** the trainer plan creator and exercise library, delivery slices 0–3 of [docs/features/plan-creator.md](docs/features/plan-creator.md), against local storage and fake remotes. There is no backend, sign-in or client list yet.
 - **Verified:** `./gradlew -Ptrainer.ui=false check`, which runs the `:contract`, `:shared:domain` and `:shared:data` tests.
@@ -60,5 +65,5 @@ python3 tools/exercise-seed/build_seed.py --dataset /tmp/exercises.json
 
 ## Third-party content
 
-- Exercise data: [free-exercise-db](https://github.com/yuhonas/free-exercise-db), public domain (Unlicense). Polish names and aliases in `tools/exercise-seed/curation.tsv` are ours.
+- Exercise data and photos: [free-exercise-db](https://github.com/yuhonas/free-exercise-db), public domain (Unlicense). The bundled photos are resized copies. Polish names and aliases in `tools/exercise-seed/curation.tsv` are ours.
 - Font: IBM Plex Sans, SIL Open Font License 1.1 (`shared/designsystem/FONT-LICENSE-IBM-Plex.txt`).

@@ -1,13 +1,13 @@
 <resources>
     <string name="tab_start">Start</string>
-    <string name="tab_calendar">Calendar</string>
-    <string name="tab_clients">Clients</string>
-    <string name="tab_finance">Finance</string>
-    <string name="segment_clients">Clients</string>
-    <string name="segment_plans">Plans</string>
-    <string name="placeholder_title">This view is not ready yet</string>
-    <string name="placeholder_message">It will arrive in a later version of the app.</string>
-    <string name="assign_title">Assign to client</string>
-    <string name="assign_message">Assigning plans arrives together with the client list. The saved plan version is ready to assign.</string>
+    <string name="tab_calendar">Kalendarz</string>
+    <string name="tab_clients">Klienci</string>
+    <string name="tab_finance">Finanse</string>
+    <string name="segment_clients">Klienci</string>
+    <string name="segment_plans">Plany</string>
+    <string name="placeholder_title">Ten widok jeszcze powstaje</string>
+    <string name="placeholder_message">Pojawi się w jednej z kolejnych wersji aplikacji.</string>
+    <string name="assign_title">Przypisz klientowi</string>
+    <string name="assign_message">Przypisywanie planów pojawi się razem z listą klientów. Zapisana wersja planu jest gotowa do przypisania.</string>
     <string name="ok">OK</string>
 </resources>

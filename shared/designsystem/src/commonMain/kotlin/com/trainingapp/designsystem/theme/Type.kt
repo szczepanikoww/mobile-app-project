@@ -27,6 +27,10 @@ data class AppTypography(
     val button: TextStyle,
     /** A set value or a prominent number. */
     val value: TextStyle,
+    /** Small uppercase labels of the Stitch reference ("NAZWA JEDNOSTKI", "SERIA"). */
+    val overline: TextStyle,
+    /** Stat tile values ("6", "48 min"). */
+    val statValue: TextStyle,
 )
 
 @Composable
@@ -46,6 +50,8 @@ internal fun appTypography(family: FontFamily) = AppTypography(
     label = TextStyle(fontFamily = family, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, lineHeight = 16.sp),
     button = TextStyle(fontFamily = family, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, lineHeight = 24.sp),
     value = TextStyle(fontFamily = family, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, lineHeight = 22.sp),
+    overline = TextStyle(fontFamily = family, fontWeight = FontWeight.Bold, fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.8.sp),
+    statValue = TextStyle(fontFamily = family, fontWeight = FontWeight.Bold, fontSize = 24.sp, lineHeight = 30.sp),
 )
 
 internal fun AppTypography.toMaterial() = Typography(

@@ -63,6 +63,7 @@ import com.trainingapp.domain.exercise.Exercise
 import com.trainingapp.domain.exercise.ExerciseScope
 import com.trainingapp.domain.exercise.SyncState
 import com.trainingapp.feature.workoutbuilder.common.ExerciseBrowserDestination
+import com.trainingapp.feature.workoutbuilder.common.ExerciseImage
 import com.trainingapp.feature.workoutbuilder.common.labelRes
 import com.trainingapp.feature.workoutbuilder.common.muscleAndEquipment
 import com.trainingapp.feature.workoutbuilder.resources.Res
@@ -338,9 +339,9 @@ private fun ExerciseRow(
                         onClickLabel = stringResource(Res.string.library_details, name),
                         onClick = onOpenDetails,
                     ),
-                ) { ExerciseThumbnail() }
+                ) { ExerciseImage(exercise, size = 56.dp) }
             } else {
-                ExerciseThumbnail()
+                ExerciseImage(exercise, size = 56.dp)
             }
         },
         badges = if (exercise.isCustom || exercise.isHidden) {

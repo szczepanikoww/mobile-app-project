@@ -15,6 +15,8 @@ data class AppColors(
     val background: Color,
     val surface: Color,
     val subtleSurface: Color,
+    /** Fill of tonal buttons and the set-row background in the plan creator. */
+    val tonalSurface: Color,
     val text: Color,
     val textSecondary: Color,
     val outline: Color,
@@ -40,6 +42,7 @@ val LightAppColors = AppColors(
     background = Color(0xFFF8F9FA),
     surface = Color(0xFFFFFFFF),
     subtleSurface = Color(0xFFF8FAFC),
+    tonalSurface = Color(0xFFF1F4F9),
     text = Color(0xFF0F172A),
     textSecondary = Color(0xFF565E74),
     outline = Color(0xFFE2E8F0),
