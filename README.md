@@ -60,6 +60,7 @@ python3 tools/exercise-seed/build_seed.py --dataset /tmp/exercises.json --images
 - **Design:** every screen follows the Stitch references. The plan library is under the orange "+ PLAN" button of the trainer navigation, and the plan creator (S2) copies the "Kreator planu" screen. See section 12 of the feature plan.
 
 - **Built so far:** the trainer plan creator and exercise library, delivery slices 0–3 of [docs/features/plan-creator.md](docs/features/plan-creator.md), against local storage and fake remotes. There is no backend, sign-in or client list yet.
+- **Trainer demo video:** an own exercise can have a recorded or picked video that uploads in the background (fake server). See section 13 of the feature plan.
 - **Verified:** `./gradlew -Ptrainer.ui=false check`, which runs the `:contract`, `:shared:domain` and `:shared:data` tests.
 - **Not verified:** the Compose/Android modules have not been compiled or run yet. Google Maven was unreachable where they were written. The AGP version in `gradle/libs.versions.toml` is unconfirmed too.
 

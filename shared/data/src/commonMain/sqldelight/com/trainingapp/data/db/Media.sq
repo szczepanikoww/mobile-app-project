@@ -1,0 +1,31 @@
+-- Trainer videos and their persisted upload jobs. A row survives process death, so an upload resumes.
+CREATE TABLE media_asset (
+    id TEXT NOT NULL PRIMARY KEY,
+    owner_trainer_id TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    local_path TEXT,
+    thumbnail_path TEXT,
+    duration_ms INTEGER,
+    size_bytes INTEGER NOT NULL,
+    content_type TEXT NOT NULL,
+    state TEXT NOT NULL,
+    progress REAL NOT NULL,
+    playback_url TEXT,
+    updated_at INTEGER NOT NULL
+);
+
+selectAllMedia:
+SELECT * FROM media_asset;
+
+selectMedia:
+SELECT * FROM media_asset WHERE id = ?;
+
+selectMediaToUpload:
+SELECT * FROM media_asset WHERE state IN ('QUEUED', 'UPLOADING', 'PROCESSING');
+
+insertMedia:
+INSERT OR IGNORE INTO media_asset(id, owner_trainer_id, kind, local_path, thumbnail_path, duration_ms, size_bytes, content_type, state, progress, playback_url, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateMediaState:
+UPDATE media_asset SET state = ?, progress = ?, playback_url = ?, updated_at = ? WHERE id = ?;

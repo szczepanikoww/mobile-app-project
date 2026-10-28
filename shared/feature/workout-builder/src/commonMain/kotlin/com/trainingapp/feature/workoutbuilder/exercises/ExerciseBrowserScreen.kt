@@ -22,6 +22,7 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.SearchOff
+import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
@@ -105,6 +106,7 @@ import com.trainingapp.feature.workoutbuilder.resources.library_section_recent
 import com.trainingapp.feature.workoutbuilder.resources.library_section_results
 import com.trainingapp.feature.workoutbuilder.resources.library_select
 import com.trainingapp.feature.workoutbuilder.resources.library_title
+import com.trainingapp.feature.workoutbuilder.resources.video_title
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
@@ -337,7 +339,7 @@ private fun ExerciseRow(
                 ExerciseImage(exercise, size = 64.dp)
             }
         },
-        badges = if (exercise.isCustom || exercise.isHidden) {
+        badges = if (exercise.isCustom || exercise.isHidden || exercise.demoMediaId != null) {
             { ExerciseBadges(exercise) }
         } else {
             null
@@ -365,4 +367,5 @@ internal fun ExerciseBadges(exercise: Exercise) {
         SyncState.SYNCED -> Unit
     }
     if (exercise.isHidden) StatusChip(stringResource(Res.string.library_badge_hidden))
+    if (exercise.demoMediaId != null) StatusChip(stringResource(Res.string.video_title), icon = Icons.Outlined.Videocam, tone = StatusTone.Accent)
 }

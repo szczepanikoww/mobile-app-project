@@ -442,3 +442,30 @@ Open accessibility issue: CLAUDE.md asks for 4.5:1 contrast. White text on the r
   - S3 (Biblioteka ćwiczeń) follows Trenerzy.
   - S4 (Ćwiczenie) follows Profil trenera.
   - S5 uses the Postępy selector cards.
+
+## 13. Trainer demo video (2026-10-28)
+
+The product owner asked for this, ahead of slice 5. In the exercise form (S5), the trainer can record a video or pick one from the gallery, to show how the exercise is performed. It follows the media pipeline of architecture section 9.3.
+
+**How it works:**
+
+- **Picking.** The platform picker copies the file into app-private storage and reads its size, duration and a first-frame thumbnail.
+  - Android uses the system camera (`CaptureVideo` through a `FileProvider`) or the photo picker.
+  - The desktop preview has a file chooser only and cannot read the duration.
+- **Limits.** 60 s and 100 MB, the architecture's proposed values. They are in `MediaLimits` and are still to be agreed. A video over a limit is rejected with a message, and nothing is saved.
+- **Saving.** The video gets an id and a persisted upload job (`media_asset` table), and `Exercise.demoMediaId` refers to it at once. The upload runs in the background:
+  - `QUEUED` while offline (shown as "Czeka na połączenie"),
+  - `UPLOADING` with progress,
+  - `PROCESSING`,
+  - then `READY` or `FAILED`. A failed upload can be retried with "Ponów wysyłanie".
+- **Resuming.** An upload resumes after process death and whenever the device comes back online.
+- **Playback.** Only a `READY` video shows a play button (Media3 ExoPlayer on Android). While uploading or processing, the card shows that state instead.
+- **Where it shows.** S4 shows the video card above the photo, and S3 marks such exercises with a "Wideo wzorcowe" chip.
+- **Discarded picks.** A video picked in the form and not saved is deleted from the device.
+
+**Gaps:**
+
+- **Server.** The backend is `FakeMediaRemoteDataSource`. It plays back the local copy instead of a signed URL.
+- **Compression.** Media3 Transformer compression is not implemented.
+- **Background work.** Uploads run in the app process, not in WorkManager or a user-initiated data transfer job.
+- **Clean-up.** A replaced or removed video is not yet deleted on the server.

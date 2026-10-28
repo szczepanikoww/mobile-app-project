@@ -38,7 +38,7 @@ val workoutBuilderModule = module {
     factory { PublishPlan(get(), get(), get(), get()) }
     factory { SearchExercises(get()) }
     factory { GetExercise(get()) }
-    factory { SaveCustomExercise(get(), get(), get(), get(), get()) }
+    factory { SaveCustomExercise(get(), get(), get(), get(), get(), get()) }
     factory { SetExerciseHidden(get(), get()) }
 
     viewModel { PlanLibraryViewModel(get(), get(), get()) }
@@ -58,6 +58,6 @@ val workoutBuilderModule = module {
         )
     }
     viewModel { (destination: ExerciseBrowserDestination) -> ExerciseBrowserViewModel(destination, get(), get(), get()) }
-    viewModel { (destination: ExerciseDetailDestination) -> ExerciseDetailViewModel(destination, get(), get(), get(), get(), get()) }
-    viewModel { (destination: ExerciseFormDestination) -> ExerciseFormViewModel(destination, get(), get(), get(), get(), get(), get()) }
+    viewModel { (destination: ExerciseDetailDestination) -> ExerciseDetailViewModel(destination, get(), get(), get(), get(), get(), get()) }
+    viewModel { (destination: ExerciseFormDestination) -> ExerciseFormViewModel(destination, get(), get(), get(), get(), get(), get(), get(), get()) }
 }

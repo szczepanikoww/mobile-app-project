@@ -85,3 +85,25 @@ class FakePlanRepository : PlanRepository {
         return PublishResult.Published(response)
     }
 }
+
+class FakeMediaRepository : com.trainingapp.domain.media.MediaRepository {
+    val assets = MutableStateFlow<Map<String, com.trainingapp.domain.media.MediaAsset>>(emptyMap())
+    private var next = 0
+
+    override fun observe(id: String) = assets.map { it[id] }
+    override fun observeAll() = assets
+    override suspend fun import(
+        video: com.trainingapp.domain.media.PickedVideo,
+        kind: com.trainingapp.contract.media.MediaKind,
+    ): com.trainingapp.domain.media.MediaAsset {
+        val asset = com.trainingapp.domain.media.MediaAsset(
+            id = "media${++next}", ownerTrainerId = "t1", kind = kind, localPath = video.localPath,
+            thumbnailPath = video.thumbnailPath, durationMs = video.durationMs, sizeBytes = video.sizeBytes,
+            state = com.trainingapp.domain.media.MediaState.QUEUED, progress = 0f, playbackUrl = null, updatedAtEpochMs = 0,
+        )
+        assets.value = assets.value + (asset.id to asset)
+        return asset
+    }
+    override suspend fun retry(id: String) = Unit
+    override suspend fun uploadPending() = Unit
+}

@@ -39,6 +39,8 @@ data class UpsertExerciseRequest(
     val equipment: Equipment,
     val trackingType: TrackingType,
     val instructions: Map<String, List<String>> = emptyMap(),
+    /** The trainer's demo video, once its upload has started. */
+    val demoMediaId: String? = null,
 )
 
 object ExerciseSources {

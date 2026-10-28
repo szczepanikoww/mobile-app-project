@@ -65,6 +65,8 @@ import com.trainingapp.domain.exercise.Exercise
 import com.trainingapp.domain.exercise.SyncState
 import com.trainingapp.feature.workoutbuilder.common.ExerciseDetailDestination
 import com.trainingapp.feature.workoutbuilder.common.ExerciseImage
+import com.trainingapp.domain.media.MediaAsset
+import com.trainingapp.feature.workoutbuilder.media.DemoVideoCard
 import com.trainingapp.feature.workoutbuilder.common.labelRes
 import com.trainingapp.feature.workoutbuilder.common.muscleAndEquipment
 import com.trainingapp.feature.workoutbuilder.resources.Res
@@ -106,6 +108,7 @@ fun ExerciseDetailScreen(
         onEdit = { onEdit(destination.exerciseId) },
         onSetHidden = viewModel::setHidden,
         onRetrySync = viewModel::retrySync,
+        onRetryVideo = viewModel::retryVideoUpload,
         onAddToDay = {
             viewModel.addToDay()
             onAddedToDay()
@@ -122,6 +125,7 @@ fun ExerciseDetailContent(
     onSetHidden: (Boolean) -> Unit,
     onRetrySync: () -> Unit,
     onAddToDay: () -> Unit,
+    onRetryVideo: () -> Unit = {},
 ) {
     val content = state as? ExerciseDetailUiState.Content
     Scaffold(
@@ -172,13 +176,27 @@ fun ExerciseDetailContent(
         when (state) {
             ExerciseDetailUiState.Loading -> LoadingState(Modifier.padding(padding))
             ExerciseDetailUiState.NotFound -> ErrorState(stringResource(Res.string.detail_not_found), Modifier.padding(padding))
-            is ExerciseDetailUiState.Content -> ExerciseDetailBody(state.exercise, languageTag, onRetrySync, Modifier.padding(padding))
+            is ExerciseDetailUiState.Content -> ExerciseDetailBody(
+                state.exercise,
+                languageTag,
+                onRetrySync,
+                Modifier.padding(padding),
+                video = state.video,
+                onRetryVideo = if (state.isOwner) onRetryVideo else null,
+            )
         }
     }
 }
 
 @Composable
-private fun ExerciseDetailBody(exercise: Exercise, languageTag: String, onRetrySync: () -> Unit, modifier: Modifier) {
+private fun ExerciseDetailBody(
+    exercise: Exercise,
+    languageTag: String,
+    onRetrySync: () -> Unit,
+    modifier: Modifier,
+    video: MediaAsset? = null,
+    onRetryVideo: (() -> Unit)? = null,
+) {
     val colors = AppTheme.colors
     Column(
         modifier
@@ -187,6 +205,11 @@ private fun ExerciseDetailBody(exercise: Exercise, languageTag: String, onRetryS
             .padding(horizontal = Spacing.gutter, vertical = Spacing.l),
         verticalArrangement = Arrangement.spacedBy(Spacing.sectionGap),
     ) {
+        // The trainer's demo video comes first, as the media card of "Trening na żywo".
+        if (video != null) {
+            DemoVideoCard(thumbnailPath = video.thumbnailPath, durationMs = video.durationMs, asset = video, onRetry = onRetryVideo)
+        }
+
         // Hero: the photo in a rounded card with a white name card over its lower edge ("Profil trenera").
         Box(
             Modifier

@@ -7,6 +7,11 @@ import com.trainingapp.contract.exercise.ExerciseStatus
 import com.trainingapp.contract.exercise.ExerciseValidator
 import com.trainingapp.contract.exercise.MuscleGroup
 import com.trainingapp.contract.exercise.TrackingType
+import com.trainingapp.contract.media.MediaKind
+import com.trainingapp.domain.media.MediaRepository
+import com.trainingapp.domain.media.PickedVideo
+import com.trainingapp.domain.media.VideoProblem
+import com.trainingapp.domain.media.VideoValidator
 import com.trainingapp.domain.common.CurrentUser
 import com.trainingapp.domain.common.IdGenerator
 import com.trainingapp.domain.common.TimeSource
@@ -30,7 +35,16 @@ data class ExerciseInput(
     val trackingType: TrackingType?,
     val secondaryMuscles: List<MuscleGroup> = emptyList(),
     val instructions: String = "",
+    val demoVideo: DemoVideoChange = DemoVideoChange.Keep,
 )
+
+/** What happens to the exercise's demo video on save. */
+sealed interface DemoVideoChange {
+    /** Keep the current video, or none. */
+    data object Keep : DemoVideoChange
+    data object Remove : DemoVideoChange
+    data class Replace(val video: PickedVideo) : DemoVideoChange
+}
 
 sealed interface SaveExerciseResult {
     data class Saved(val exercise: Exercise) : SaveExerciseResult
@@ -40,6 +54,9 @@ sealed interface SaveExerciseResult {
     data object TrackingTypeLocked : SaveExerciseResult
     data object NotOwner : SaveExerciseResult
     data object NotFound : SaveExerciseResult
+
+    /** The picked video is too long, too large or empty. Nothing was saved. */
+    data class VideoInvalid(val problem: VideoProblem) : SaveExerciseResult
 }
 
 /**
@@ -48,6 +65,7 @@ sealed interface SaveExerciseResult {
  */
 class SaveCustomExercise(
     private val repository: ExerciseRepository,
+    private val media: MediaRepository,
     private val usage: ExerciseUsage,
     private val currentUser: CurrentUser,
     private val ids: IdGenerator,
@@ -71,6 +89,16 @@ class SaveCustomExercise(
                 return SaveExerciseResult.TrackingTypeLocked
             }
         }
+        val demoVideo = input.demoVideo
+        if (demoVideo is DemoVideoChange.Replace) {
+            VideoValidator.validate(demoVideo.video)?.let { return SaveExerciseResult.VideoInvalid(it) }
+        }
+        val demoMediaId = when (demoVideo) {
+            DemoVideoChange.Keep -> existing?.demoMediaId
+            DemoVideoChange.Remove -> null
+            // The upload starts in the background; the exercise refers to the video at once.
+            is DemoVideoChange.Replace -> media.import(demoVideo.video, MediaKind.EXERCISE_DEMO).id
+        }
         val steps = input.instructions.lines().map { it.trim() }.filter { it.isNotEmpty() }
         val exercise = Exercise(
             id = existing?.id ?: ids.newId(),
@@ -85,7 +113,7 @@ class SaveCustomExercise(
             trackingType = input.trackingType!!,
             instructions = if (steps.isEmpty()) emptyMap() else mapOf(languageTag to steps),
             images = existing?.images.orEmpty(),
-            demoMediaId = existing?.demoMediaId,
+            demoMediaId = demoMediaId,
             featured = false,
             status = existing?.status ?: ExerciseStatus.ACTIVE,
             syncState = SyncState.PENDING,

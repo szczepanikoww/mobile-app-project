@@ -1,6 +1,28 @@
 package com.trainingapp.feature.workoutbuilder.exercises
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.SwapHoriz
+import androidx.compose.material.icons.outlined.VideoLibrary
+import androidx.compose.material.icons.outlined.Videocam
+import androidx.compose.ui.draw.clip
+import com.trainingapp.designsystem.component.AppTextButton
+import com.trainingapp.designsystem.component.SectionHeader
+import com.trainingapp.feature.workoutbuilder.media.DemoVideoCard
+import com.trainingapp.feature.workoutbuilder.media.VideoPickResult
+import com.trainingapp.feature.workoutbuilder.media.VideoPickerLauncher
+import com.trainingapp.feature.workoutbuilder.media.rememberVideoPicker
+import com.trainingapp.feature.workoutbuilder.resources.video_change
+import com.trainingapp.feature.workoutbuilder.resources.video_error_too_large
+import com.trainingapp.feature.workoutbuilder.resources.video_error_too_long
+import com.trainingapp.feature.workoutbuilder.resources.video_error_unreadable
+import com.trainingapp.feature.workoutbuilder.resources.video_hint
+import com.trainingapp.feature.workoutbuilder.resources.video_pick
+import com.trainingapp.feature.workoutbuilder.resources.video_record
+import com.trainingapp.feature.workoutbuilder.resources.video_remove
+import com.trainingapp.feature.workoutbuilder.resources.video_title
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -125,6 +147,9 @@ fun ExerciseFormScreen(
         onSecondaryMusclesChange = viewModel::onSecondaryMusclesChange,
         onInstructionsChange = viewModel::onInstructionsChange,
         onToggleMoreDetails = viewModel::toggleMoreDetails,
+        onVideoPicked = viewModel::onVideoPicked,
+        onRemoveVideo = viewModel::removeVideo,
+        onRetryVideo = viewModel::retryVideoUpload,
         onOpenExercise = onOpenExercise,
         onSubmit = viewModel::submit,
     )
@@ -146,6 +171,9 @@ fun ExerciseFormContent(
     onToggleMoreDetails: () -> Unit,
     onOpenExercise: (String) -> Unit,
     onSubmit: () -> Unit,
+    onVideoPicked: (VideoPickResult) -> Unit = {},
+    onRemoveVideo: () -> Unit = {},
+    onRetryVideo: () -> Unit = {},
 ) {
     var sheet by rememberSaveable { mutableStateOf<FormSheet?>(null) }
     val blocked = state.notFound || state.notOwner
@@ -228,6 +256,14 @@ fun ExerciseFormContent(
                 if (state.trackingLockedAttempt) {
                     InlineMessage(stringResource(Res.string.form_tracking_locked), tone = MessageTone.Error)
                 }
+
+                DemoVideoSection(
+                    video = state.video,
+                    message = state.videoMessage,
+                    onVideoPicked = onVideoPicked,
+                    onRemove = onRemoveVideo,
+                    onRetry = onRetryVideo,
+                )
 
                 MoreDetailsToggle(expanded = state.moreDetailsExpanded, onToggle = onToggleMoreDetails)
                 if (state.moreDetailsExpanded) {
@@ -337,4 +373,98 @@ private fun List<ExerciseIssue>.messageFor(field: ExerciseField): String? {
         ExerciseProblem.TOO_MANY -> stringResource(Res.string.form_error_secondary_many, ExerciseLimits.SECONDARY_MUSCLES_MAX)
         ExerciseProblem.INVALID -> stringResource(Res.string.form_error_secondary_same)
     }
+}
+
+/** "Wideo wzorcowe": the trainer records or picks a video showing how to perform the exercise. */
+@Composable
+private fun DemoVideoSection(
+    video: FormVideo,
+    message: VideoMessage?,
+    onVideoPicked: (VideoPickResult) -> Unit,
+    onRemove: () -> Unit,
+    onRetry: () -> Unit,
+) {
+    val picker = rememberVideoPicker(onVideoPicked)
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+        SectionHeader(stringResource(Res.string.video_title), icon = Icons.Outlined.Videocam)
+        when (video) {
+            FormVideo.None -> {
+                Text(stringResource(Res.string.video_hint), style = AppTheme.type.compactBody, color = AppTheme.colors.textSecondary)
+                VideoSourceButtons(picker)
+            }
+            is FormVideo.New -> {
+                DemoVideoCard(thumbnailPath = video.video.thumbnailPath, durationMs = video.video.durationMs, asset = null)
+                VideoEditButtons(picker, onRemove)
+            }
+            is FormVideo.Existing -> {
+                DemoVideoCard(
+                    thumbnailPath = video.asset?.thumbnailPath,
+                    durationMs = video.asset?.durationMs,
+                    asset = video.asset,
+                    onRetry = onRetry,
+                )
+                VideoEditButtons(picker, onRemove)
+            }
+        }
+        message?.let {
+            InlineMessage(
+                stringResource(
+                    when (it) {
+                        VideoMessage.TOO_LONG -> Res.string.video_error_too_long
+                        VideoMessage.TOO_LARGE -> Res.string.video_error_too_large
+                        VideoMessage.UNREADABLE -> Res.string.video_error_unreadable
+                    },
+                ),
+                tone = MessageTone.Error,
+            )
+        }
+    }
+}
+
+/** "Nagraj wideo" in the soft-orange pill of "Nagraj technikę", and "Wybierz z galerii" in a white pill. */
+@Composable
+private fun VideoSourceButtons(picker: VideoPickerLauncher) {
+    val colors = AppTheme.colors
+    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
+        if (picker.canRecord) {
+            Row(
+                Modifier
+                    .weight(1f)
+                    .heightIn(min = 56.dp)
+                    .clip(CircleShape)
+                    .background(colors.softAccent)
+                    .clickable(role = Role.Button, onClick = picker::record)
+                    .padding(horizontal = Spacing.l, vertical = Spacing.m),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.s, Alignment.CenterHorizontally),
+            ) {
+                Icon(Icons.Outlined.Videocam, contentDescription = null, tint = colors.brandAccent)
+                Text(stringResource(Res.string.video_record), style = AppTheme.type.bodyStrong, color = colors.brandStrong)
+            }
+        }
+        Row(
+            Modifier
+                .weight(1f)
+                .heightIn(min = 56.dp)
+                .clip(CircleShape)
+                .background(colors.surface)
+                .clickable(role = Role.Button, onClick = picker::pickFromGallery)
+                .padding(horizontal = Spacing.l, vertical = Spacing.m),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.s, Alignment.CenterHorizontally),
+        ) {
+            Icon(Icons.Outlined.VideoLibrary, contentDescription = null, tint = colors.text)
+            Text(stringResource(Res.string.video_pick), style = AppTheme.type.bodyStrong, color = colors.text)
+        }
+    }
+}
+
+@Composable
+private fun VideoEditButtons(picker: VideoPickerLauncher, onRemove: () -> Unit) {
+    var choosing by rememberSaveable { mutableStateOf(false) }
+    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+        AppTextButton(stringResource(Res.string.video_change), onClick = { choosing = !choosing }, icon = Icons.Outlined.SwapHoriz)
+        AppTextButton(stringResource(Res.string.video_remove), onClick = onRemove, icon = Icons.Outlined.DeleteOutline, destructive = true)
+    }
+    if (choosing) VideoSourceButtons(picker)
 }

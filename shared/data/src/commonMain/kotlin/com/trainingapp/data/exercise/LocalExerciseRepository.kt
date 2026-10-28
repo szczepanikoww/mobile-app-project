@@ -141,6 +141,7 @@ class LocalExerciseRepository(
         equipment = equipment,
         trackingType = trackingType,
         instructions = instructions,
+        demoMediaId = demoMediaId,
     )
 
     private companion object {

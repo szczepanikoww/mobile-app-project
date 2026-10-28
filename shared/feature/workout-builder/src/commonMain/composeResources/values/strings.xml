@@ -323,4 +323,23 @@
     <string name="library_available">%1$d dostępnych</string>
     <string name="library_new_short">Nowe</string>
     <string name="detail_title">Ćwiczenie</string>
+    <!-- Wideo wzorcowe trenera -->
+    <string name="video_title">Wideo wzorcowe</string>
+    <string name="video_hint">Pokaż klientom, jak poprawnie wykonać ćwiczenie. Maksymalnie 60 sekund i 100 MB.</string>
+    <string name="video_record">Nagraj wideo</string>
+    <string name="video_pick">Wybierz z galerii</string>
+    <string name="video_change">Zmień wideo</string>
+    <string name="video_remove">Usuń wideo</string>
+    <string name="video_new_pending">Wideo zostanie wysłane po zapisaniu ćwiczenia.</string>
+    <string name="video_state_queued">Czeka na połączenie · zapisano na telefonie</string>
+    <string name="video_state_uploading">Wysyłanie wideo · %1$s</string>
+    <string name="video_state_processing">Przetwarzanie wideo…</string>
+    <string name="video_state_ready">Wideo gotowe</string>
+    <string name="video_state_failed">Nie udało się wysłać wideo.</string>
+    <string name="video_retry">Ponów wysyłanie</string>
+    <string name="video_error_too_long">Wideo jest dłuższe niż 60 sekund. Skróć je i spróbuj ponownie.</string>
+    <string name="video_error_too_large">Plik wideo jest większy niż 100 MB.</string>
+    <string name="video_error_unreadable">Nie udało się odczytać tego pliku wideo.</string>
+    <string name="video_play">Odtwórz wideo wzorcowe</string>
+    <string name="video_desktop_playback">Odtwarzanie wideo działa w aplikacji na Androida.</string>
 </resources>

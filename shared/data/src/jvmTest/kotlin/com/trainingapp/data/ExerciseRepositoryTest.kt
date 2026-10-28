@@ -66,7 +66,7 @@ class ExerciseRepositoryTest {
     }
 
     private fun TestScope.save(repository: LocalExerciseRepository) =
-        SaveCustomExercise(repository, ExerciseUsage { false }, trainer, TestIds("ex"), TestClock())
+        SaveCustomExercise(repository, NoMedia, ExerciseUsage { false }, trainer, TestIds("ex"), TestClock())
 
     private val input = ExerciseInput("Hip thrust na maszynie", MuscleGroup.GLUTES, Equipment.MACHINE, TrackingType.WEIGHT_REPS)
 

@@ -28,3 +28,13 @@ class TestClock(var now: Long = 1_000) : TimeSource {
 }
 
 val trainer = object : CurrentUser { override val trainerId = "trainer-1" }
+
+/** For tests that save exercises without a video. */
+object NoMedia : com.trainingapp.domain.media.MediaRepository {
+    override fun observe(id: String) = kotlinx.coroutines.flow.flowOf(null)
+    override fun observeAll() = kotlinx.coroutines.flow.flowOf(emptyMap<String, com.trainingapp.domain.media.MediaAsset>())
+    override suspend fun import(video: com.trainingapp.domain.media.PickedVideo, kind: com.trainingapp.contract.media.MediaKind) =
+        error("not used")
+    override suspend fun retry(id: String) = Unit
+    override suspend fun uploadPending() = Unit
+}

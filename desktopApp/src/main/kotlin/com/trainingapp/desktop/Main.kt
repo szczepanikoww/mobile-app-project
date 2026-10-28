@@ -11,6 +11,7 @@ import com.trainingapp.app.AppPlatform
 import com.trainingapp.app.initKoin
 import com.trainingapp.data.db.TrainingDatabase
 import com.trainingapp.domain.common.NetworkMonitor
+import com.trainingapp.domain.media.LocalFiles
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +29,7 @@ private object DesktopPlatform : AppPlatform {
         override val isOnline = MutableStateFlow(System.getProperty("trainer.offline") != "true")
     }
     override val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    override val localFiles: LocalFiles = LocalFiles { File(it).delete() }
 }
 
 fun main() {
