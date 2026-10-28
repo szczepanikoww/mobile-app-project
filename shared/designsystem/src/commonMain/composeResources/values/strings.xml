@@ -12,4 +12,6 @@
     <string name="ds_messages">Wiadomości</string>
     <string name="ds_notifications">Powiadomienia</string>
     <string name="ds_profile">Profil</string>
+    <string name="ds_search">Szukaj</string>
+    <string name="ds_add">Dodaj</string>
 </resources>

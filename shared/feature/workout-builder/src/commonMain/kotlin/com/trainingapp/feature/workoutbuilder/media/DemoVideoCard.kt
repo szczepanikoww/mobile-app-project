@@ -57,7 +57,7 @@ import com.trainingapp.feature.workoutbuilder.resources.video_title
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
 
-private val VideoShape = RoundedCornerShape(24.dp)
+private val VideoShape = RoundedCornerShape(24.dp) // AppShapes.featureCard
 
 /**
  * The trainer's demo video as in the Stitch "Trening na żywo" media card: a 16:9 frame with the "Wideo wzorcowe"
@@ -121,7 +121,7 @@ fun DemoVideoCard(
                             .clickable(role = Role.Button, onClickLabel = playLabel) { playing = true },
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(Icons.Outlined.PlayArrow, contentDescription = playLabel, tint = colors.brandAccent, modifier = Modifier.size(36.dp))
+                        Icon(Icons.Outlined.PlayArrow, contentDescription = playLabel, tint = colors.brandStrong, modifier = Modifier.size(36.dp))
                     }
                 }
             }
@@ -151,13 +151,13 @@ private fun VideoStatus(asset: MediaAsset?, onRetry: (() -> Unit)?) {
             LinearProgressIndicator(
                 progress = { asset.progress },
                 modifier = Modifier.fillMaxWidth().clip(CircleShape),
-                color = colors.brandAccent,
+                color = colors.brandStrong,
                 trackColor = colors.softAccent,
             )
         }
         MediaState.PROCESSING -> Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             Text(stringResource(Res.string.video_state_processing), style = AppTheme.type.compactBody, color = colors.textSecondary)
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth().clip(CircleShape), color = colors.brandAccent, trackColor = colors.softAccent)
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth().clip(CircleShape), color = colors.brandStrong, trackColor = colors.softAccent)
         }
         MediaState.READY -> StatusChip(stringResource(Res.string.video_state_ready), tone = StatusTone.Success)
         MediaState.FAILED -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {

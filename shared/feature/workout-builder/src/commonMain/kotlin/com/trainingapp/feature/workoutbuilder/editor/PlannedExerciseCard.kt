@@ -51,7 +51,11 @@ import androidx.compose.ui.unit.dp
 import com.trainingapp.contract.exercise.SetType
 import com.trainingapp.contract.exercise.TrackingType
 import com.trainingapp.contract.plan.SetField
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import com.trainingapp.designsystem.component.AppTextButton
 import com.trainingapp.designsystem.component.MenuAction
+import com.trainingapp.designsystem.theme.AppShapes
 import com.trainingapp.designsystem.component.OverflowMenu
 import com.trainingapp.designsystem.component.SetCell
 import com.trainingapp.designsystem.component.SetRow
@@ -174,9 +178,10 @@ private fun DraftSet.value(field: DraftSetField) = when (field) {
     DraftSetField.REST -> rest
 }
 
-private val CardShape = RoundedCornerShape(28.dp)
-
-/** An exercise card of the plan creator, laid out as in the Stitch "Kreator planu" reference. */
+/**
+ * An exercise card of the plan creator: the content of the Stitch "Kreator planu" card, drawn as the flat outlined
+ * frame used by the trainer calendar/clients branch.
+ */
 @Composable
 fun PlannedExerciseCard(
     position: Int,
@@ -195,19 +200,10 @@ fun PlannedExerciseCard(
     Box(
         modifier
             .fillMaxWidth()
-            .shadow(10.dp, CardShape, ambientColor = Color(0x14000000), spotColor = Color(0x1F000000))
-            .clip(CardShape)
-            .background(colors.surface),
+            .clip(AppShapes.tile)
+            .background(colors.surface)
+            .border(BorderStroke(1.dp, colors.outline), AppShapes.tile),
     ) {
-        // The soft corner arc of the reference.
-        Box(
-            Modifier
-                .align(Alignment.TopEnd)
-                .offset(x = 40.dp, y = (-40).dp)
-                .size(110.dp)
-                .clip(CircleShape)
-                .background(colors.softAccent),
-        )
         Column(Modifier.padding(Spacing.l), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
             ExerciseHeader(position, planned, exercise, name, supersetLabel, showSupersetLetter, callbacks, dragHandleModifier)
             SetTable(planned, exercise?.trackingType, issues, callbacks)
@@ -249,17 +245,17 @@ private fun ExerciseHeader(
         ) {
             Icon(Icons.Outlined.DragIndicator, contentDescription = null, tint = colors.textSecondary)
         }
-        ExerciseImage(exercise, size = 56.dp, shape = RoundedCornerShape(6.dp))
+        ExerciseImage(exercise, size = Sizes.minTouchTarget, shape = CircleShape)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             val muscle = exercise?.primaryMuscle?.let { stringResource(it.labelRes) }.orEmpty()
             Text(
                 stringResource(Res.string.creator_exercise_label, position, muscle),
                 style = AppTheme.type.label,
-                color = colors.brandAccent,
+                color = colors.brandStrong,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text(name, style = AppTheme.type.sectionTitle, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(name, style = AppTheme.type.itemTitle, maxLines = 2, overflow = TextOverflow.Ellipsis)
             if (exercise?.isHidden == true) {
                 StatusChip(stringResource(Res.string.editor_removed_from_library))
             }
@@ -365,31 +361,13 @@ private fun PlannedSetRow(
 
 @Composable
 private fun CardFooter(name: String, callbacks: PlannedExerciseCallbacks) {
-    val colors = AppTheme.colors
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Row(
-            Modifier
-                .heightIn(min = Sizes.minTouchTarget)
-                .clip(CircleShape)
-                .background(colors.tonalSurface)
-                .clickable(role = Role.Button, onClick = callbacks.onAddSet)
-                .padding(horizontal = Spacing.l, vertical = Spacing.m),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.s),
-        ) {
-            Icon(Icons.Outlined.AddCircleOutline, contentDescription = null, tint = colors.brandAccent)
-            Text(stringResource(Res.string.set_add), style = AppTheme.type.bodyStrong, color = colors.text)
-        }
+        AppTextButton(stringResource(Res.string.set_add), onClick = callbacks.onAddSet, icon = Icons.Outlined.AddCircleOutline)
         Spacer(Modifier.weight(1f))
-        IconButton(
-            onClick = callbacks.onOpenSettings,
-            colors = IconButtonDefaults.iconButtonColors(containerColor = colors.subtleSurface),
-        ) {
-            Icon(Icons.Outlined.Description, stringResource(Res.string.creator_note, name), tint = colors.textSecondary)
+        IconButton(onClick = callbacks.onOpenSettings) {
+            Icon(Icons.Outlined.Description, stringResource(Res.string.creator_note, name), tint = AppTheme.colors.textSecondary)
         }
-        Box(Modifier.padding(start = Spacing.xs).clip(CircleShape).background(colors.subtleSurface)) {
-            ExerciseMenu(name, callbacks)
-        }
+        ExerciseMenu(name, callbacks)
     }
 }
 

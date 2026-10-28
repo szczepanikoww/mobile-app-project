@@ -1,6 +1,8 @@
 package com.trainingapp.designsystem.component
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.shadow
@@ -30,6 +32,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -39,26 +42,23 @@ import com.trainingapp.designsystem.theme.Sizes
 import com.trainingapp.designsystem.theme.Spacing
 
 /**
- * A section title in the section-title style (not a small uppercase label). As in the Stitch references it can
- * have a leading orange icon ("Gdzie trenuję") and an orange link on the right ("Wszystkie >").
+ * A section title in the bold section-title style, as SectionTitle on the trainer calendar/clients branch, with an
+ * optional text action on the right ("Biblioteka ćwiczeń") or custom trailing content.
  */
 @Composable
 fun SectionHeader(
     title: String,
     modifier: Modifier = Modifier,
-    icon: ImageVector? = null,
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
+    actionIcon: ImageVector? = null,
     trailing: @Composable RowScope.() -> Unit = {},
 ) {
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(top = Spacing.s, bottom = Spacing.s),
+        modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.s),
     ) {
-        if (icon != null) Icon(icon, contentDescription = null, tint = AppTheme.colors.brandAccent)
         Text(
             title,
             style = AppTheme.type.sectionTitle,
@@ -68,23 +68,15 @@ fun SectionHeader(
                 .semantics { heading() },
         )
         if (actionLabel != null && onAction != null) {
-            Row(
-                Modifier
-                    .defaultMinSize(minHeight = Sizes.minTouchTarget)
-                    .clickable(role = Role.Button, onClick = onAction),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(actionLabel, style = AppTheme.type.bodyStrong, color = AppTheme.colors.brandAccent)
-                Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, tint = AppTheme.colors.brandAccent)
-            }
+            AppTextButton(actionLabel, onClick = onAction, icon = actionIcon)
         }
         trailing()
     }
 }
 
 /**
- * One list item as a separate white card with a soft shadow, as in the Stitch Klienci and Postępy lists:
- * leading media, a bold title, a supporting line, optional badges and a trailing chevron or control.
+ * One list item as an outlined white tile, as the client rows of the trainer calendar/clients branch: leading
+ * media, a bold title, supporting lines, optional badges and a trailing chevron or control. Flat, no shadow.
  */
 @Composable
 fun CardRow(
@@ -96,27 +88,68 @@ fun CardRow(
     leading: (@Composable () -> Unit)? = null,
     badges: (@Composable RowScope.() -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = {
-        Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, tint = AppTheme.colors.textSecondary)
+        Icon(Icons.Outlined.ChevronRight, contentDescription = null, modifier = Modifier.size(20.dp), tint = AppTheme.colors.textSecondary)
     },
+    meta: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
-    val shape = AppShapes.featureCard
-    Box(
+    val colors = AppTheme.colors
+    Row(
         modifier
             .fillMaxWidth()
-            .shadow(8.dp, shape, ambientColor = Color(0x14000000), spotColor = Color(0x1F000000))
-            .clip(shape)
-            .background(AppTheme.colors.surface),
+            .clip(AppShapes.tile)
+            .background(colors.surface)
+            .border(BorderStroke(1.dp, colors.outline), AppShapes.tile)
+            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClickLabel = onClickLabel, onClick = onClick) else Modifier)
+            .padding(Spacing.l),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.m),
+        verticalAlignment = Alignment.Top,
     ) {
-        ListRow(
-            title = title,
-            supporting = supporting,
-            onClick = onClick,
-            onClickLabel = onClickLabel,
-            leading = leading,
-            badges = badges,
-            trailing = trailing,
-            modifier = Modifier.padding(vertical = Spacing.xs),
-        )
+        leading?.invoke()
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+            Text(title, style = AppTheme.type.itemTitle, color = colors.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            if (supporting != null) {
+                Text(supporting, style = AppTheme.type.compactBody, color = colors.textSecondary)
+            }
+            meta?.invoke(this)
+            if (badges != null) {
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), verticalAlignment = Alignment.CenterVertically, content = badges)
+            }
+        }
+        trailing?.invoke()
+    }
+}
+
+/** An icon and a line of supporting text, as MetaLine on the trainer calendar/clients branch ("📅 28 paź · 09:00"). */
+@Composable
+fun MetaLine(icon: ImageVector, text: String, modifier: Modifier = Modifier) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = AppTheme.colors.textSecondary)
+        Text(text, style = AppTheme.type.compactBody, color = AppTheme.colors.textSecondary)
+    }
+}
+
+/** An outlined row that opens something, as ActionRow in the "Co chcesz dodać?" sheet of the calendar branch. */
+@Composable
+fun ActionRow(icon: ImageVector, title: String, onClick: () -> Unit, modifier: Modifier = Modifier, subtitle: String? = null) {
+    val colors = AppTheme.colors
+    Row(
+        modifier
+            .fillMaxWidth()
+            .clip(AppShapes.tile)
+            .background(colors.surface)
+            .border(BorderStroke(1.dp, colors.outline), AppShapes.tile)
+            .clickable(role = Role.Button, onClick = onClick)
+            .defaultMinSize(minHeight = Sizes.minTouchTarget)
+            .padding(Spacing.l),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.m),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icon, contentDescription = null, tint = colors.brandStrong)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            Text(title, style = AppTheme.type.body, color = colors.text)
+            if (subtitle != null) Text(subtitle, style = AppTheme.type.label.copy(fontWeight = FontWeight.Normal), color = colors.textSecondary)
+        }
+        Icon(Icons.Outlined.ChevronRight, contentDescription = null, modifier = Modifier.size(20.dp), tint = colors.textSecondary)
     }
 }
 

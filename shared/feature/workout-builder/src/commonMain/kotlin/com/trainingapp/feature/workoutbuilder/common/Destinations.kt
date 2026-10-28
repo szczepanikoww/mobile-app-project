@@ -2,6 +2,10 @@ package com.trainingapp.feature.workoutbuilder.common
 
 import kotlinx.serialization.Serializable
 
+/** S1, the trainer's training plans. Opened from the shell's "Co chcesz dodać?" menu. */
+@Serializable
+data object PlanLibraryDestination
+
 /** S2. Opens a stored draft, the draft or latest version of a template, or (both null) a new plan. */
 @Serializable
 data class PlanEditorDestination(val draftId: String? = null, val templateId: String? = null)

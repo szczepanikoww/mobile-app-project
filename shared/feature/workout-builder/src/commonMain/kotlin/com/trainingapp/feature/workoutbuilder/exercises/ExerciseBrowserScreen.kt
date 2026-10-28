@@ -21,6 +21,7 @@ import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material3.Checkbox
@@ -43,7 +44,8 @@ import com.trainingapp.contract.exercise.MuscleGroup
 import com.trainingapp.designsystem.component.AppFilterChip
 import com.trainingapp.designsystem.component.AppTextButton
 import com.trainingapp.designsystem.component.CardRow
-import com.trainingapp.designsystem.component.CountPill
+import com.trainingapp.designsystem.component.MetaLine
+import com.trainingapp.designsystem.theme.AppShapes
 import com.trainingapp.designsystem.component.DetailHeader
 import com.trainingapp.designsystem.component.BottomActionBar
 import com.trainingapp.designsystem.component.EmptyState
@@ -73,8 +75,7 @@ import com.trainingapp.feature.workoutbuilder.common.muscleAndEquipment
 import com.trainingapp.feature.workoutbuilder.resources.Res
 import com.trainingapp.feature.workoutbuilder.resources.exercises_count
 import com.trainingapp.feature.workoutbuilder.resources.library_add_selected
-import com.trainingapp.feature.workoutbuilder.resources.library_available
-import com.trainingapp.feature.workoutbuilder.resources.library_new_short
+import com.trainingapp.feature.workoutbuilder.resources.library_results
 import com.trainingapp.feature.workoutbuilder.resources.library_screen_title
 import com.trainingapp.feature.workoutbuilder.resources.library_badge_failed
 import com.trainingapp.feature.workoutbuilder.resources.library_badge_hidden
@@ -186,18 +187,8 @@ fun ExerciseBrowserContent(
             contentPadding = PaddingValues(start = Spacing.gutter, end = Spacing.gutter, top = Spacing.s, bottom = Spacing.xxl),
         ) {
             item(key = "search") {
-                Column(verticalArrangement = Arrangement.spacedBy(Spacing.l), modifier = Modifier.padding(bottom = Spacing.l)) {
-                    // "Trenerzy  38 dostępnych" with the page action on the right, as in the references.
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
-                        Text(stringResource(Res.string.library_title), style = AppTheme.type.screenTitle)
-                        if (!state.loading && !state.error) {
-                            CountPill(stringResource(Res.string.library_available, state.matchCount))
-                        }
-                        Spacer(Modifier.weight(1f))
-                        if (!state.pickMode) {
-                            PrimaryButton(stringResource(Res.string.library_new_short), onClick = { onCreateExercise(null) }, icon = Icons.Outlined.Add)
-                        }
-                    }
+                // Laid out like "Twoi podopieczni": search, tabs, filters, then the result count and the page action.
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.s), modifier = Modifier.padding(bottom = Spacing.s)) {
                     SearchField(
                         query = state.filter.query,
                         onQueryChange = onQueryChange,
@@ -224,6 +215,19 @@ fun ExerciseBrowserContent(
                             onClick = { sheet = FilterSheet.Equipment },
                         )
                     }
+                    if (!state.loading && !state.error) {
+                        Row(Modifier.fillMaxWidth().padding(vertical = Spacing.s), verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                stringResource(Res.string.library_results, state.matchCount),
+                                style = AppTheme.type.compactBody,
+                                color = AppTheme.colors.textSecondary,
+                                modifier = Modifier.weight(1f),
+                            )
+                            if (!state.pickMode) {
+                                AppTextButton(stringResource(Res.string.library_new), onClick = { onCreateExercise(null) }, icon = Icons.Outlined.Add)
+                            }
+                        }
+                    }
                 }
             }
             when {
@@ -231,7 +235,9 @@ fun ExerciseBrowserContent(
                 state.error -> item(key = "error") { ErrorState(stringResource(Res.string.library_error), onRetry = onRetry) }
                 state.isEmpty -> item(key = "empty") { NoResults(state, onCreateExercise) }
                 else -> state.sections.forEach { section ->
-                    item(key = "header-${section.kind}") { SectionHeader(stringResource(section.kind.titleRes())) }
+                    item(key = "header-${section.kind}") {
+                        SectionHeader(stringResource(section.kind.titleRes()), modifier = Modifier.padding(top = Spacing.l, bottom = Spacing.s))
+                    }
                     itemsIndexed(section.exercises, key = { _, exercise -> "${section.kind}-${exercise.id}" }) { _, exercise ->
                         // One white card per exercise, as the Trenerzy and Postępy lists.
                         ExerciseRow(
@@ -241,7 +247,7 @@ fun ExerciseBrowserContent(
                             selected = exercise.id in state.selection,
                             onClick = { if (state.pickMode) onToggle(exercise.id) else onOpenExercise(exercise.id) },
                             onOpenDetails = { onOpenExercise(exercise.id) },
-                            modifier = Modifier.padding(bottom = Spacing.m),
+                            modifier = Modifier.padding(bottom = Spacing.s),
                         )
                     }
                     item(key = "gap-${section.kind}") { Box(Modifier.padding(bottom = Spacing.l)) }
@@ -322,7 +328,7 @@ private fun ExerciseRow(
     CardRow(
         modifier = modifier,
         title = name,
-        supporting = exercise.muscleAndEquipment(),
+        meta = { MetaLine(Icons.Outlined.FitnessCenter, exercise.muscleAndEquipment()) },
         onClick = onClick,
         onClickLabel = stringResource(if (pickMode) Res.string.library_select else Res.string.library_open),
         leading = {
@@ -334,9 +340,9 @@ private fun ExerciseRow(
                         onClickLabel = stringResource(Res.string.library_details, name),
                         onClick = onOpenDetails,
                     ),
-                ) { ExerciseImage(exercise, size = 64.dp) }
+                ) { ExerciseImage(exercise, size = 56.dp, shape = AppShapes.card) }
             } else {
-                ExerciseImage(exercise, size = 64.dp)
+                ExerciseImage(exercise, size = 56.dp, shape = AppShapes.card)
             }
         },
         badges = if (exercise.isCustom || exercise.isHidden || exercise.demoMediaId != null) {

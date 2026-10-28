@@ -1,6 +1,10 @@
 package com.trainingapp.designsystem.component
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,8 +37,8 @@ import com.trainingapp.designsystem.theme.Sizes
 import com.trainingapp.designsystem.theme.Spacing
 
 /**
- * A filter or choice chip as in the Stitch references: a white pill, filled brand orange with white text when
- * selected ("Cena ▾", "Wszyscy (24)"). [showChevron] marks a chip that opens a sheet.
+ * A filter or choice chip as on the trainer calendar/clients branch: outlined when off, soft accent with dark
+ * text and a check mark when selected. [showChevron] marks a chip that opens a sheet.
  */
 @Composable
 fun AppFilterChip(
@@ -46,13 +50,14 @@ fun AppFilterChip(
     leadingIcon: ImageVector? = null,
 ) {
     val colors = AppTheme.colors
+    val icon = leadingIcon ?: if (selected && !showChevron) Icons.Outlined.Check else null
     FilterChip(
         selected = selected,
         onClick = onClick,
-        label = { Text(label, style = AppTheme.type.bodyStrong, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        label = { Text(label, style = AppTheme.type.button, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         modifier = modifier.defaultMinSize(minHeight = Sizes.minTouchTarget),
-        shape = AppShapes.pill,
-        leadingIcon = leadingIcon?.let { icon -> { Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp)) } },
+        shape = RoundedCornerShape(12.dp),
+        leadingIcon = icon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(18.dp)) } },
         trailingIcon = if (showChevron) {
             { Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(18.dp)) }
         } else {
@@ -60,25 +65,26 @@ fun AppFilterChip(
         },
         colors = FilterChipDefaults.filterChipColors(
             containerColor = colors.surface,
-            labelColor = colors.text,
-            iconColor = colors.text,
-            selectedContainerColor = colors.brandAccent,
-            selectedLabelColor = colors.onBrandStrong,
-            selectedLeadingIconColor = colors.onBrandStrong,
-            selectedTrailingIconColor = colors.onBrandStrong,
+            labelColor = colors.textSecondary,
+            iconColor = colors.textSecondary,
+            selectedContainerColor = colors.softAccent,
+            selectedLabelColor = colors.onSoftAccent,
+            selectedLeadingIconColor = colors.onSoftAccent,
+            selectedTrailingIconColor = colors.onSoftAccent,
         ),
         border = FilterChipDefaults.filterChipBorder(
             enabled = true,
             selected = selected,
             borderColor = colors.outline,
-            selectedBorderColor = colors.brandAccent,
+            selectedBorderColor = colors.softAccent,
         ),
     )
 }
 
 /**
- * Pill tabs as in the Stitch Postępy screen ("Ćwiczenia | Pomiary | …"): the selected tab is filled brand orange
- * with white text, the others are white pills. Each option is a selectable tab for screen readers.
+ * The inset pill switcher of the trainer calendar/clients branch ("Dzień | Tydzień", "Podopieczni | Archiwum"):
+ * a rounded subtle track with an outline, the selected tab filled with the strong brand colour. It scrolls
+ * horizontally instead of squeezing labels.
  */
 @Composable
 fun SegmentedTabs(
@@ -88,30 +94,33 @@ fun SegmentedTabs(
     modifier: Modifier = Modifier,
 ) {
     val colors = AppTheme.colors
-    Row(
-        modifier.fillMaxWidth().selectableGroup(),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.s),
-    ) {
-        options.forEachIndexed { index, option ->
-            val selected = index == selectedIndex
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .defaultMinSize(minHeight = Sizes.minTouchTarget)
-                    .background(if (selected) colors.brandAccent else colors.surface, AppShapes.pill)
-                    .clip(AppShapes.pill)
-                    .selectable(selected = selected, role = Role.Tab, onClick = { onSelect(index) })
-                    .padding(horizontal = Spacing.m, vertical = Spacing.s),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    option,
-                    style = AppTheme.type.bodyStrong,
-                    color = if (selected) colors.onBrandStrong else colors.text,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+    Surface(modifier = modifier, shape = AppShapes.pill, color = colors.subtleSurface, border = BorderStroke(1.dp, colors.outline)) {
+        Row(
+            Modifier
+                .horizontalScroll(rememberScrollState())
+                .padding(Spacing.xs)
+                .selectableGroup(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            options.forEachIndexed { index, option ->
+                val selected = index == selectedIndex
+                Box(
+                    modifier = Modifier
+                        .defaultMinSize(minHeight = Sizes.minTouchTarget)
+                        .clip(AppShapes.pill)
+                        .background(if (selected) colors.brandStrong else colors.subtleSurface)
+                        .selectable(selected = selected, role = Role.Tab, onClick = { onSelect(index) })
+                        .padding(horizontal = Spacing.xl, vertical = Spacing.s),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        option,
+                        style = AppTheme.type.button,
+                        color = if (selected) colors.onBrandStrong else colors.textSecondary,
+                        maxLines = 1,
+                        softWrap = false,
+                    )
+                }
             }
         }
     }
@@ -139,7 +148,6 @@ fun StatusChip(
         shape = AppShapes.pill,
         color = container,
         contentColor = content,
-        border = if (tone == StatusTone.Neutral) BorderStroke(1.dp, colors.outline) else null,
         modifier = modifier,
     ) {
         Row(
@@ -147,7 +155,7 @@ fun StatusChip(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
-            if (icon != null) Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
+            if (icon != null) Icon(icon, contentDescription = null, modifier = Modifier.size(14.dp))
             Text(text, style = AppTheme.type.label, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }

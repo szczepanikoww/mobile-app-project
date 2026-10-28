@@ -9,6 +9,7 @@ import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.ui.draw.clip
 import com.trainingapp.designsystem.component.AppTextButton
+import com.trainingapp.designsystem.component.SecondaryButton
 import com.trainingapp.designsystem.component.SectionHeader
 import com.trainingapp.feature.workoutbuilder.media.DemoVideoCard
 import com.trainingapp.feature.workoutbuilder.media.VideoPickResult
@@ -192,7 +193,7 @@ fun ExerciseFormContent(
                         text = stringResource(if (state.isEdit) Res.string.form_save else Res.string.form_create),
                         onClick = onSubmit,
                         loading = state.saving,
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
             }
@@ -386,7 +387,7 @@ private fun DemoVideoSection(
 ) {
     val picker = rememberVideoPicker(onVideoPicked)
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-        SectionHeader(stringResource(Res.string.video_title), icon = Icons.Outlined.Videocam)
+        SectionHeader(stringResource(Res.string.video_title))
         when (video) {
             FormVideo.None -> {
                 Text(stringResource(Res.string.video_hint), style = AppTheme.type.compactBody, color = AppTheme.colors.textSecondary)
@@ -421,41 +422,14 @@ private fun DemoVideoSection(
     }
 }
 
-/** "Nagraj wideo" in the soft-orange pill of "Nagraj technikę", and "Wybierz z galerii" in a white pill. */
+/** "Nagraj wideo" and "Wybierz z galerii" as the outlined secondary buttons of the shared design. */
 @Composable
 private fun VideoSourceButtons(picker: VideoPickerLauncher) {
-    val colors = AppTheme.colors
-    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
         if (picker.canRecord) {
-            Row(
-                Modifier
-                    .weight(1f)
-                    .heightIn(min = 56.dp)
-                    .clip(CircleShape)
-                    .background(colors.softAccent)
-                    .clickable(role = Role.Button, onClick = picker::record)
-                    .padding(horizontal = Spacing.l, vertical = Spacing.m),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.s, Alignment.CenterHorizontally),
-            ) {
-                Icon(Icons.Outlined.Videocam, contentDescription = null, tint = colors.brandAccent)
-                Text(stringResource(Res.string.video_record), style = AppTheme.type.bodyStrong, color = colors.brandStrong)
-            }
+            SecondaryButton(stringResource(Res.string.video_record), onClick = picker::record, icon = Icons.Outlined.Videocam)
         }
-        Row(
-            Modifier
-                .weight(1f)
-                .heightIn(min = 56.dp)
-                .clip(CircleShape)
-                .background(colors.surface)
-                .clickable(role = Role.Button, onClick = picker::pickFromGallery)
-                .padding(horizontal = Spacing.l, vertical = Spacing.m),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.s, Alignment.CenterHorizontally),
-        ) {
-            Icon(Icons.Outlined.VideoLibrary, contentDescription = null, tint = colors.text)
-            Text(stringResource(Res.string.video_pick), style = AppTheme.type.bodyStrong, color = colors.text)
-        }
+        SecondaryButton(stringResource(Res.string.video_pick), onClick = picker::pickFromGallery, icon = Icons.Outlined.VideoLibrary)
     }
 }
 

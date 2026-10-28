@@ -4,7 +4,10 @@ import androidx.compose.foundation.layout.Arrangement
 import com.trainingapp.feature.workoutbuilder.resources.detail_title
 import com.trainingapp.designsystem.component.SectionHeader
 import com.trainingapp.designsystem.component.DetailHeader
-import com.trainingapp.designsystem.component.CircleIconButton
+import com.trainingapp.designsystem.component.BottomActionBar
+import com.trainingapp.designsystem.component.MetaLine
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Add
@@ -47,7 +50,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.trainingapp.designsystem.component.AppTextButton
 import com.trainingapp.designsystem.component.AppTopBar
-import com.trainingapp.designsystem.component.BottomActionBar
 import com.trainingapp.designsystem.component.ErrorState
 import com.trainingapp.designsystem.component.InlineMessage
 import com.trainingapp.designsystem.component.LoadingState
@@ -134,40 +136,30 @@ fun ExerciseDetailContent(
             DetailHeader(
                 title = stringResource(Res.string.detail_title),
                 onBack = onBack,
-                actions = if (content != null && content.isOwner) {
-                    {
-                        CircleIconButton(Icons.Outlined.Edit, stringResource(Res.string.detail_edit), onEdit)
-                        Box(Modifier.clip(CircleShape).background(AppTheme.colors.surface)) {
-                            OverflowMenu(
-                                actions = listOf(
-                                    if (content.exercise.isHidden) {
-                                        MenuAction(stringResource(Res.string.detail_unhide), Icons.Outlined.Visibility) { onSetHidden(false) }
-                                    } else {
-                                        MenuAction(stringResource(Res.string.detail_hide), Icons.Outlined.VisibilityOff) { onSetHidden(true) }
-                                    },
-                                ),
-                            )
-                        }
+                actions = {
+                    if (content != null && content.isOwner) {
+                        IconButton(onClick = onEdit) { Icon(Icons.Outlined.Edit, stringResource(Res.string.detail_edit), tint = AppTheme.colors.text) }
+                        OverflowMenu(
+                            actions = listOf(
+                                if (content.exercise.isHidden) {
+                                    MenuAction(stringResource(Res.string.detail_unhide), Icons.Outlined.Visibility) { onSetHidden(false) }
+                                } else {
+                                    MenuAction(stringResource(Res.string.detail_hide), Icons.Outlined.VisibilityOff) { onSetHidden(true) }
+                                },
+                            ),
+                        )
                     }
-                } else {
-                    null
                 },
             )
         },
         bottomBar = {
             if (content != null && content.pickMode && !content.exercise.isHidden) {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .background(AppTheme.colors.surface)
-                        .navigationBarsPadding()
-                        .padding(horizontal = Spacing.gutter, vertical = Spacing.m),
-                ) {
+                BottomActionBar {
                     PrimaryButton(
                         stringResource(Res.string.detail_add_to_day),
                         onClick = onAddToDay,
                         icon = Icons.Outlined.Add,
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
             }
@@ -210,35 +202,17 @@ private fun ExerciseDetailBody(
             DemoVideoCard(thumbnailPath = video.thumbnailPath, durationMs = video.durationMs, asset = video, onRetry = onRetryVideo)
         }
 
-        // Hero: the photo in a rounded card with a white name card over its lower edge ("Profil trenera").
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .shadow(10.dp, AppShapes.featureCard, ambientColor = Color(0x14000000), spotColor = Color(0x1F000000))
-                .clip(AppShapes.featureCard)
-                .background(colors.surface)
-                .padding(Spacing.s),
-        ) {
-            ExerciseImage(
-                exercise,
-                modifier = Modifier.fillMaxWidth().aspectRatio(4f / 3f),
-                shape = RoundedCornerShape(20.dp),
-            )
-            Column(
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(Spacing.m)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(colors.surface.copy(alpha = 0.95f))
-                    .padding(Spacing.l),
-                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-            ) {
-                Text(exercise.name(languageTag), style = AppTheme.type.sectionTitle, modifier = Modifier.semantics { heading() })
-                Text(exercise.muscleAndEquipment(), style = AppTheme.type.bodyStrong, color = colors.brandStrong)
-                if (exercise.isCustom || exercise.isHidden) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) { ExerciseBadges(exercise) }
-                }
+        // The photo, then the name and its meta line, as the profile header on the calendar/clients branch.
+        ExerciseImage(
+            exercise,
+            modifier = Modifier.fillMaxWidth().widthIn(max = 560.dp).aspectRatio(16f / 9f),
+            shape = AppShapes.featureCard,
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+            Text(exercise.name(languageTag), style = AppTheme.type.sectionTitle, modifier = Modifier.semantics { heading() })
+            MetaLine(Icons.Outlined.FitnessCenter, exercise.muscleAndEquipment())
+            if (exercise.isCustom || exercise.isHidden || exercise.demoMediaId != null) {
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) { ExerciseBadges(exercise) }
             }
         }
 
@@ -254,7 +228,7 @@ private fun ExerciseDetailBody(
         if (exercise.isHidden) InlineMessage(stringResource(Res.string.detail_hidden), tone = MessageTone.Info)
 
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-            SectionHeader(stringResource(Res.string.detail_muscles), icon = Icons.Outlined.FitnessCenter)
+            SectionHeader(stringResource(Res.string.detail_muscles))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 // Primary muscles are highlighted like "Korekta postawy"; secondary ones are white pills.
                 exercise.primaryMuscles.forEach { TagPill(stringResource(it.labelRes), highlighted = true) }
@@ -263,29 +237,21 @@ private fun ExerciseDetailBody(
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-            SectionHeader(stringResource(Res.string.detail_tracking), icon = Icons.Outlined.Tune)
+            SectionHeader(stringResource(Res.string.detail_tracking))
             TagPill(stringResource(exercise.trackingType.labelRes), highlighted = false)
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-            SectionHeader(stringResource(Res.string.detail_instructions), icon = Icons.Outlined.Info)
+            SectionHeader(stringResource(Res.string.detail_instructions))
             val steps = exercise.instructions(languageTag)
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .shadow(8.dp, AppShapes.featureCard, ambientColor = Color(0x14000000), spotColor = Color(0x1F000000))
-                    .clip(AppShapes.featureCard)
-                    .background(colors.surface)
-                    .padding(Spacing.xl),
-                verticalArrangement = Arrangement.spacedBy(Spacing.m),
-            ) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
                 if (steps.isEmpty()) {
                     Text(stringResource(Res.string.detail_no_instructions), style = AppTheme.type.body, color = colors.textSecondary)
                 } else {
                     steps.forEachIndexed { index, step ->
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(stringResource(Res.string.detail_step, index + 1).uppercase(), style = AppTheme.type.overline, color = colors.brandAccent)
-                            Text(step, style = AppTheme.type.body, color = colors.textSecondary)
+                            Text(stringResource(Res.string.detail_step, index + 1), style = AppTheme.type.label, color = colors.textSecondary)
+                            Text(step, style = AppTheme.type.body, color = colors.text)
                         }
                     }
                 }
@@ -294,17 +260,18 @@ private fun ExerciseDetailBody(
     }
 }
 
-/** A tag pill of the "Specjalizacje" section: white, or soft orange when [highlighted]. */
+/** A muscle pill: soft accent for primary muscles, outlined for secondary ones. */
 @Composable
 private fun TagPill(text: String, highlighted: Boolean) {
     val colors = AppTheme.colors
     Text(
         text,
-        style = AppTheme.type.bodyStrong,
-        color = if (highlighted) colors.onSoftAccent else colors.text,
+        style = AppTheme.type.button,
+        color = if (highlighted) colors.onSoftAccent else colors.textSecondary,
         modifier = Modifier
             .clip(CircleShape)
             .background(if (highlighted) colors.softAccent else colors.surface)
+            .border(BorderStroke(1.dp, if (highlighted) colors.softAccent else colors.outline), CircleShape)
             .padding(horizontal = Spacing.l, vertical = Spacing.s),
     )
 }

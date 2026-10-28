@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.ErrorOutline
@@ -43,7 +44,10 @@ fun LoadingState(modifier: Modifier = Modifier) {
     }
 }
 
-/** A short explanation and the applicable next action. */
+/**
+ * A short explanation and the applicable next action, as EmptyContent on the trainer calendar/clients branch:
+ * the icon in a soft accent circle, a bold title, a centred body and an outlined action.
+ */
 @Composable
 fun EmptyState(
     title: String,
@@ -56,17 +60,21 @@ fun EmptyState(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = Spacing.gutter, vertical = Spacing.xxxl),
+            .padding(vertical = Spacing.xxxl),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(Spacing.s),
+        verticalArrangement = Arrangement.spacedBy(Spacing.m),
     ) {
-        if (icon != null) Icon(icon, contentDescription = null, tint = AppTheme.colors.textSecondary, modifier = Modifier.size(32.dp))
+        if (icon != null) {
+            Surface(color = AppTheme.colors.softAccent, shape = CircleShape) {
+                Icon(icon, contentDescription = null, tint = AppTheme.colors.brandStrong, modifier = Modifier.padding(Spacing.l).size(28.dp))
+            }
+        }
         Text(title, style = AppTheme.type.itemTitle, color = AppTheme.colors.text, textAlign = TextAlign.Center)
         if (message != null) {
-            Text(message, style = AppTheme.type.body, color = AppTheme.colors.textSecondary, textAlign = TextAlign.Center)
+            Text(message, style = AppTheme.type.compactBody, color = AppTheme.colors.textSecondary, textAlign = TextAlign.Center)
         }
         if (actionLabel != null && onAction != null) {
-            SecondaryButton(actionLabel, onAction, modifier = Modifier.padding(top = Spacing.s))
+            SecondaryButton(actionLabel, onAction)
         }
     }
 }
@@ -90,7 +98,10 @@ fun ErrorState(
 
 enum class MessageTone { Info, Offline, Warning, Error, Success }
 
-/** An inline banner (offline, not saved, conflicts). It is announced politely when it appears. */
+/**
+ * An inline banner (offline, not saved, conflicts), as InfoBanner on the trainer calendar/clients branch:
+ * a 20 dp panel on the soft accent, or on the error/warning/success container. Announced politely.
+ */
 @Composable
 fun InlineMessage(
     text: String,
@@ -100,8 +111,8 @@ fun InlineMessage(
 ) {
     val colors = AppTheme.colors
     val (container, content, icon) = when (tone) {
-        MessageTone.Info -> Triple(colors.subtleSurface, colors.text, Icons.Outlined.Info)
-        MessageTone.Offline -> Triple(colors.subtleSurface, colors.text, Icons.Outlined.CloudOff)
+        MessageTone.Info -> Triple(colors.softAccent, colors.onSoftAccent, Icons.Outlined.Info)
+        MessageTone.Offline -> Triple(colors.softAccent, colors.onSoftAccent, Icons.Outlined.CloudOff)
         MessageTone.Warning -> Triple(colors.warningContainer, colors.onWarningContainer, Icons.Outlined.WarningAmber)
         MessageTone.Error -> Triple(colors.errorContainer, colors.onErrorContainer, Icons.Outlined.ErrorOutline)
         MessageTone.Success -> Triple(colors.successContainer, colors.onSuccessContainer, Icons.Outlined.Info)
@@ -110,12 +121,12 @@ fun InlineMessage(
         modifier = modifier
             .fillMaxWidth()
             .semantics { liveRegion = LiveRegionMode.Polite },
-        shape = AppShapes.card,
+        shape = AppShapes.panel,
         color = container,
         contentColor = content,
     ) {
-        Column(Modifier.padding(Spacing.m)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalAlignment = Alignment.Top) {
+        Column(Modifier.padding(Spacing.l)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.m), verticalAlignment = Alignment.Top) {
                 Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
                 Text(text, style = AppTheme.type.compactBody, modifier = Modifier.weight(1f))
             }

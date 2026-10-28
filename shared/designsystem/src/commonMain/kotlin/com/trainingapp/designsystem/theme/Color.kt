@@ -19,7 +19,10 @@ data class AppColors(
     val tonalSurface: Color,
     val text: Color,
     val textSecondary: Color,
+    /** Card and row borders. */
     val outline: Color,
+    /** Text-field borders, stronger than [outline] so inputs read as inputs. */
+    val fieldOutline: Color,
     /** Highlights and selected accents. Not a text colour on white, and never behind small white text. */
     val brandAccent: Color,
     /** Readable brand text and filled primary controls (white content). */
@@ -46,6 +49,7 @@ val LightAppColors = AppColors(
     text = Color(0xFF0F172A),
     textSecondary = Color(0xFF565E74),
     outline = Color(0xFFE2E8F0),
+    fieldOutline = Color(0xFF737B8C),
     brandAccent = Color(0xFFFF6B00),
     brandStrong = Color(0xFFA04100),
     onBrandStrong = Color(0xFFFFFFFF),
@@ -55,9 +59,9 @@ val LightAppColors = AppColors(
     successContainer = Color(0xFFDCFCE7),
     onSuccessContainer = Color(0xFF14532D),
     warning = Color(0xFFD97706),
-    // Added pair for readable warning text (the baseline warning colour is an indicator only).
-    warningContainer = Color(0xFFFEF3C7),
-    onWarningContainer = Color(0xFF78350F),
+    // Same readable warning pair as the trainer calendar/clients branch.
+    warningContainer = Color(0xFFFFF0DA),
+    onWarningContainer = Color(0xFF783B00),
     errorAccent = Color(0xFFEF4444),
     errorContainer = Color(0xFFFFDAD6),
     onErrorContainer = Color(0xFF93000A),
@@ -85,7 +89,7 @@ internal fun AppColors.toMaterialScheme(): ColorScheme = lightColorScheme(
     surfaceContainerHigh = surface,
     surfaceContainerHighest = subtleSurface,
     surfaceTint = Color.Transparent,
-    outline = outline,
+    outline = fieldOutline,
     outlineVariant = outline,
     error = onErrorContainer,
     onError = Color.White,

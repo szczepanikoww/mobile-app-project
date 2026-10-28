@@ -3,7 +3,7 @@
     <string name="plans_new">Nowy plan</string>
     <string name="plans_exercise_library">Biblioteka ćwiczeń</string>
     <string name="plans_empty_title">Nie masz jeszcze planów</string>
-    <string name="plans_empty_message">Zbuduj plan z dni, ćwiczeń i serii. Potem przypiszesz go klientowi.</string>
+    <string name="plans_empty_message">Zbuduj plan z dni, ćwiczeń i serii. Potem przypiszesz go podopiecznemu.</string>
     <string name="plans_empty_action">Utwórz pierwszy plan</string>
     <string name="plans_error">Nie udało się wczytać planów.</string>
     <string name="plans_offline">Brak połączenia. Widzisz plany zapisane na tym urządzeniu.</string>
@@ -55,7 +55,7 @@
     <string name="editor_note">Wskazówka: %1$s</string>
     <string name="editor_save">Zapisz plan</string>
     <string name="editor_saved_version">Zapisano wersję %1$d</string>
-    <string name="editor_assign">Przypisz klientowi</string>
+    <string name="editor_assign">Przypisz podopiecznemu</string>
     <string name="editor_invalid">Popraw zaznaczone pola, aby zapisać plan.</string>
     <string name="editor_offline">Nie zapisano – brak połączenia. Szkic jest na tym urządzeniu.</string>
     <string name="editor_sync_failed">Nie zapisano – nie udało się wysłać Twoich ćwiczeń: %1$s. Szkic jest na tym urządzeniu.</string>
@@ -71,7 +71,7 @@
     <string name="editor_menu_discard">Odrzuć szkic</string>
     <string name="editor_copy_name">%1$s (kopia)</string>
     <string name="editor_archive_title">Archiwizować plan?</string>
-    <string name="editor_archive_message">Plan zniknie z biblioteki. Klienci, którym go przypisano, zachowają swoją wersję.</string>
+    <string name="editor_archive_message">Plan zniknie z biblioteki. Podopieczni, którym go przypisano, zachowają swoją wersję.</string>
     <string name="editor_archive_confirm">Archiwizuj</string>
     <string name="editor_discard_title">Odrzucić szkic?</string>
     <string name="editor_discard_message">Niezapisane zmiany zostaną usunięte z tego urządzenia.</string>
@@ -121,7 +121,7 @@
     <string name="settings_rpe_supporting">Dodaje kolumnę RPE do serii tego ćwiczenia.</string>
     <string name="settings_tempo">Tempo</string>
     <string name="settings_tempo_supporting">Np. 3-1-1-0</string>
-    <string name="settings_note">Wskazówka dla klienta</string>
+    <string name="settings_note">Wskazówka dla podopiecznego</string>
     <string name="settings_note_supporting">Widoczna przy tym ćwiczeniu w planie.</string>
 
     <!-- S3 Exercise library / picker -->
@@ -130,7 +130,7 @@
     <string name="library_pick_title">Dodaj ćwiczenia</string>
     <string name="library_replace_title">Zamień ćwiczenie</string>
     <string name="library_new">Nowe ćwiczenie</string>
-    <string name="library_search">Szukaj ćwiczenia, partii, sprzętu…</string>
+    <string name="library_search">Ćwiczenie, partia, sprzęt</string>
     <string name="library_scope_all">Wszystkie</string>
     <string name="library_scope_mine">Moje</string>
     <string name="library_filter_muscle">Partia mięśniowa</string>
@@ -263,7 +263,7 @@
         <item quantity="other">%1$d serii</item>
     </plurals>
     <!-- Kreator planu (Stitch reference) -->
-    <string name="creator_title">Kreator Planu</string>
+    <string name="creator_title">Kreator planu</string>
     <string name="creator_autosave">Szkic autozapisu</string>
     <string name="creator_edited_now">Edytowano przed chwilą</string>
     <string name="creator_edited_minutes">Edytowano %1$d min temu</string>
@@ -307,8 +307,9 @@
         <item quantity="other">%1$d pozycji</item>
     </plurals>
     <!-- Plany (zakładka „+ PLAN”) -->
-    <string name="plans_title">Plany</string>
-    <string name="plans_search">Szukaj planu po nazwie lub tagu…</string>
+    <string name="plans_title">Plany treningowe</string>
+    <string name="plans_results">Wyniki: %1$d</string>
+    <string name="plans_search">Nazwa planu lub tag</string>
     <string name="plans_filter_all">Wszystkie (%1$d)</string>
     <string name="plans_filter_drafts">Szkice (%1$d)</string>
     <string name="plans_filter_published">Zapisane (%1$d)</string>
@@ -320,12 +321,12 @@
         <item quantity="many">%1$d planów</item>
         <item quantity="other">%1$d planu</item>
     </plurals>
-    <string name="library_available">%1$d dostępnych</string>
+    <string name="library_results">Wyniki: %1$d</string>
     <string name="library_new_short">Nowe</string>
     <string name="detail_title">Ćwiczenie</string>
     <!-- Wideo wzorcowe trenera -->
     <string name="video_title">Wideo wzorcowe</string>
-    <string name="video_hint">Pokaż klientom, jak poprawnie wykonać ćwiczenie. Maksymalnie 60 sekund i 100 MB.</string>
+    <string name="video_hint">Pokaż podopiecznym, jak poprawnie wykonać ćwiczenie. Maksymalnie 60 sekund i 100 MB.</string>
     <string name="video_record">Nagraj wideo</string>
     <string name="video_pick">Wybierz z galerii</string>
     <string name="video_change">Zmień wideo</string>

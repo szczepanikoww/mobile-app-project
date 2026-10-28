@@ -1,8 +1,8 @@
 [versions]
 # Versions were checked against Maven Central and the Compose Multiplatform changelog in October 2026.
-# AGP could not be resolved from the environment the scaffold was created in; confirm it in Android Studio.
+# AGP 8.11.1 is the version the trainer-calendar-clients branch builds and lints with.
 kotlin = "2.4.21"
-agp = "8.13.0"
+agp = "8.11.1"
 compose-multiplatform = "1.12.2"
 compose-material3 = "1.9.0"
 compose-material-icons = "1.7.3"

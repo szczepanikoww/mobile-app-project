@@ -43,8 +43,8 @@ import org.jetbrains.compose.resources.stringResource
 private val ButtonPadding = PaddingValues(horizontal = Spacing.xl, vertical = Spacing.m)
 
 /**
- * The dominant action of a screen, as in the Stitch reference: white bold text on the brand orange pill.
- * While [loading], it shows progress and ignores taps, so an action cannot be submitted twice.
+ * The dominant action of a screen: white text on the strong brand pill, at least 52 dp high (as on the trainer
+ * calendar/clients branch). While [loading], it shows progress and ignores taps, so it cannot be submitted twice.
  */
 @Composable
 fun PrimaryButton(
@@ -59,13 +59,13 @@ fun PrimaryButton(
     Button(
         onClick = { if (!loading) onClick() },
         modifier = modifier
-            .defaultMinSize(minHeight = Sizes.minTouchTarget)
+            .defaultMinSize(minHeight = Sizes.buttonHeight)
             .semantics { if (loading) stateDescription = loadingLabel },
         enabled = enabled,
         shape = AppShapes.pill,
         contentPadding = ButtonPadding,
         colors = ButtonDefaults.buttonColors(
-            containerColor = AppTheme.colors.brandAccent,
+            containerColor = AppTheme.colors.brandStrong,
             contentColor = AppTheme.colors.onBrandStrong,
         ),
     ) {
@@ -73,7 +73,10 @@ fun PrimaryButton(
     }
 }
 
-/** A filled, low-emphasis pill on the subtle surface, e.g. "Zapisz szablon" next to the primary action. */
+/**
+ * The second action next to the primary one, e.g. "Zapisz szablon": an outlined pill of the same height.
+ * While [loading], it shows progress and ignores taps.
+ */
 @Composable
 fun TonalButton(
     text: String,
@@ -83,18 +86,16 @@ fun TonalButton(
     loading: Boolean = false,
     icon: ImageVector? = null,
 ) {
-    Button(
+    OutlinedButton(
         onClick = { if (!loading) onClick() },
-        modifier = modifier.defaultMinSize(minHeight = Sizes.minTouchTarget),
+        modifier = modifier.defaultMinSize(minHeight = Sizes.buttonHeight),
         enabled = enabled,
         shape = AppShapes.pill,
         contentPadding = ButtonPadding,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = AppTheme.colors.tonalSurface,
-            contentColor = AppTheme.colors.text,
-        ),
+        border = BorderStroke(1.dp, AppTheme.colors.fieldOutline),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = AppTheme.colors.brandStrong),
     ) {
-        ButtonContent(text, icon, loading, progressColor = AppTheme.colors.text)
+        ButtonContent(text, icon, loading, progressColor = AppTheme.colors.brandStrong)
     }
 }
 
@@ -113,11 +114,8 @@ fun SecondaryButton(
         enabled = enabled,
         shape = AppShapes.pill,
         contentPadding = ButtonPadding,
-        border = BorderStroke(1.dp, AppTheme.colors.outline),
-        colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = AppTheme.colors.surface,
-            contentColor = AppTheme.colors.brandStrong,
-        ),
+        border = BorderStroke(1.dp, AppTheme.colors.fieldOutline),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = AppTheme.colors.brandStrong),
     ) {
         ButtonContent(text, icon, loading = false, progressColor = AppTheme.colors.brandStrong)
     }

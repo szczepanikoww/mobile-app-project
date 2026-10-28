@@ -8,14 +8,15 @@ import com.trainingapp.feature.workoutbuilder.common.ExerciseBrowserDestination
 import com.trainingapp.feature.workoutbuilder.common.ExerciseDetailDestination
 import com.trainingapp.feature.workoutbuilder.common.ExerciseFormDestination
 import com.trainingapp.feature.workoutbuilder.common.PlanEditorDestination
+import com.trainingapp.feature.workoutbuilder.common.PlanLibraryDestination
+import com.trainingapp.feature.workoutbuilder.plans.PlanLibraryScreen
 import com.trainingapp.feature.workoutbuilder.editor.PlanEditorScreen
 import com.trainingapp.feature.workoutbuilder.exercises.ExerciseBrowserScreen
 import com.trainingapp.feature.workoutbuilder.exercises.ExerciseDetailScreen
 import com.trainingapp.feature.workoutbuilder.exercises.ExerciseFormScreen
 
 /**
- * The full-screen destinations of the plan creator and exercise library. The plan library (S1) is not here: it is
- * part of the trainer's Klienci tab and rendered by the app shell with [com.trainingapp.feature.workoutbuilder.plans.PlanLibraryRoute].
+ * The full-screen destinations of the plan creator and exercise library, all opened over the app shell.
  *
  * [onAssignToClient] is the integration point with the clients/assignment feature ("Przypisz klientowi").
  */
@@ -23,6 +24,19 @@ fun NavGraphBuilder.workoutBuilderGraph(
     navController: NavController,
     onAssignToClient: (templateId: String, versionNumber: Int) -> Unit,
 ) {
+    composable<PlanLibraryDestination> {
+        PlanLibraryScreen(
+            onBack = { navController.popBackStack() },
+            onNewPlan = { navController.navigate(PlanEditorDestination()) },
+            onOpenPlan = { item ->
+                navController.navigate(
+                    // A published plan opens its unpublished draft, if any, or its latest version.
+                    if (item.templateId != null) PlanEditorDestination(templateId = item.templateId) else PlanEditorDestination(draftId = item.draftId),
+                )
+            },
+            onOpenExerciseLibrary = { navController.navigate(ExerciseBrowserDestination()) },
+        )
+    }
     composable<PlanEditorDestination> { entry ->
         PlanEditorScreen(
             destination = entry.toRoute(),

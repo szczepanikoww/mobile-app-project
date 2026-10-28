@@ -469,3 +469,46 @@ The product owner asked for this, ahead of slice 5. In the exercise form (S5), t
 - **Compression.** Media3 Transformer compression is not implemented.
 - **Background work.** Uploads run in the app process, not in WorkManager or a user-initiated data transfer job.
 - **Clean-up.** A replaced or removed video is not yet deleted on the server.
+
+## 14. Aligned with the trainer-calendar-clients branch (2026-10-29)
+
+The product owner asked for the plan screens to form one whole with the calendar and trainee screens on `trainer-calendar-clients` (commit `96b4a20`, documented in its `docs/main-design-alignment.md`). This replaces the Stitch-identical styling of sections 12–12.1; the content and behaviour stay.
+
+**Taken over from that branch** (all in `:shared:designsystem`):
+
+- **Colours.**
+  - Filled controls, the selected tab and the create button use the strong brand `#A04100` with white text. The bright `#FF6B00` is no longer used for controls or text.
+  - Warning text/surface is `#783B00` / `#FFF0DA`.
+  - Text fields use the `#737B8C` outline.
+- **Shapes.** Card 16, panel 20, tile 22, feature 24 and frame 28 dp. Rows and tiles are flat white tiles with a 1 dp `#E2E8F0` outline. There are no shadows, glows or corner arcs; only the create button has 2 dp (3 dp when pressed).
+- **Headers.** A white header bar of at least 64 dp with a bold 17/22 title. Top-level screens show only the title; pushed screens show a back arrow and the title. There are no chat, notification or avatar buttons.
+- **Controls.**
+  - Primary button: 52 dp pill.
+  - Secondary actions: outlined pills or text buttons with an icon.
+  - Pill tabs: an inset track with an outline and the selected tab filled.
+  - Filter chips: soft accent with a check mark when selected.
+  - Search: an outlined field labelled "Szukaj".
+- **Typography.** Bold section and item titles; no uppercase micro-labels.
+- **Shared pieces.**
+  - `InfoBanner`-style messages on a 20 dp panel.
+  - `EmptyContent`-style empty states: an icon in a soft circle with an outlined action.
+  - `MetaLine` and `ActionRow`.
+- **Navigation.** The trainer bottom bar is Start · Kalendarz · (+) · Podopieczni · Finanse. The create button is 56 dp, overhangs the bar by 24 dp and has no label. At 150 % text the tabs use two rows. The words are the same: "Twój plan", "Twoi podopieczni", "Co chcesz dodać?", "Podopieczni", and "Przypisz podopiecznemu" instead of "Przypisz klientowi".
+
+**Where training plans are now (D1 again):** the "+" opens the shared "Co chcesz dodać?" sheet, as on the calendar branch. It holds "Nowy plan treningowy", "Plany treningowe" (S1, now a pushed screen) and "Biblioteka ćwiczeń". When the branches are merged, the calendar branch's "Dodaj sesję" and "Dostępność" rows join the same sheet.
+
+**Screens:**
+
+- S1 follows "Twoi podopieczni": search, pill tabs (Wszystkie / Szkice / Zapisane), "Wyniki: N" with text actions, and outlined rows with meta lines.
+- S3 uses the same layout.
+- S4 follows the trainee profile.
+- S2 keeps the Stitch content (stat tiles, five-column set table, the two bottom actions) in the shared flat style.
+
+**Still different, to settle when merging:**
+
+- **Font.** This branch bundles IBM Plex Sans as CLAUDE.md asks. The calendar branch still uses the system sans fallback.
+- **Build stack.**
+  - This branch: Kotlin 2.4.21, Compose Multiplatform 1.12.2, separate modules, package `com.trainingapp`.
+  - Calendar branch: Kotlin 2.2.21, Compose Multiplatform 1.9.3, a single `shared` module, package `pl.trainer`.
+  - AGP is now 8.11.1 on both.
+  - The two theme files (`AppTheme` here, `TrainerTheme` there) hold the same values but must become one.

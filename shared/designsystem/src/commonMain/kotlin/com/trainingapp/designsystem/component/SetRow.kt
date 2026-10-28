@@ -57,7 +57,7 @@ data class SetCell(
     val weight: Float = 1f,
 )
 
-/** The uppercase column headers above set rows ("SERIA · CIĘŻAR · POWT. · RPE · PRZERWA"). */
+/** The column headers above set rows ("Seria · Ciężar · Powt. · RPE · Przerwa"). */
 @Composable
 fun SetTableHeader(
     setColumnLabel: String,
@@ -78,8 +78,8 @@ fun SetTableHeader(
 @Composable
 private fun HeaderLabel(text: String, modifier: Modifier) {
     Text(
-        text.uppercase(),
-        style = AppTheme.type.overline,
+        text,
+        style = AppTheme.type.label,
         color = AppTheme.colors.textSecondary,
         modifier = modifier,
         textAlign = TextAlign.Center,

@@ -57,12 +57,12 @@ python3 tools/exercise-seed/build_seed.py --dataset /tmp/exercises.json --images
 ## Status
 
 - **Language:** the app is Polish only, whatever the device language. Exercise instructions from the dataset are English, so they are not shown until they are translated.
-- **Design:** every screen follows the Stitch references. The plan library is under the orange "+ PLAN" button of the trainer navigation, and the plan creator (S2) copies the "Kreator planu" screen. See section 12 of the feature plan.
+- **Design:** aligned with the `trainer-calendar-clients` branch (same colours, shapes, headers, controls and bottom bar). Training plans are in the "+" menu ("Co chcesz dodać?"). See section 14 of the feature plan.
 
 - **Built so far:** the trainer plan creator and exercise library, delivery slices 0–3 of [docs/features/plan-creator.md](docs/features/plan-creator.md), against local storage and fake remotes. There is no backend, sign-in or client list yet.
 - **Trainer demo video:** an own exercise can have a recorded or picked video that uploads in the background (fake server). See section 13 of the feature plan.
 - **Verified:** `./gradlew -Ptrainer.ui=false check`, which runs the `:contract`, `:shared:domain` and `:shared:data` tests.
-- **Not verified:** the Compose/Android modules have not been compiled or run yet. Google Maven was unreachable where they were written. The AGP version in `gradle/libs.versions.toml` is unconfirmed too.
+- **Not verified:** the Compose/Android modules have not been compiled or run yet. Google Maven was unreachable where they were written. The AGP version (8.11.1) is the one the `trainer-calendar-clients` branch builds with.
 
 ## Third-party content
 

@@ -80,7 +80,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.trainingapp.contract.plan.PlanLimits
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material.icons.outlined.CloudDone
 import com.trainingapp.designsystem.component.AppBottomSheet
+import com.trainingapp.designsystem.component.BottomActionBar
+import com.trainingapp.designsystem.component.DetailHeader
+import com.trainingapp.designsystem.component.MetaLine
+import com.trainingapp.designsystem.component.PillTextField
+import com.trainingapp.designsystem.component.SecondaryButton
+import com.trainingapp.designsystem.component.SectionHeader
+import com.trainingapp.designsystem.theme.AppShapes
+import com.trainingapp.feature.workoutbuilder.resources.editor_draft_saved
+import com.trainingapp.feature.workoutbuilder.resources.editor_name_label
 import com.trainingapp.designsystem.component.AppFilterChip
 import com.trainingapp.designsystem.component.AppTextButton
 import com.trainingapp.designsystem.component.AppTextField
@@ -230,24 +243,16 @@ fun PlanEditorContent(
     val draft = state.draft
     var settingsFor by rememberSaveable { mutableStateOf<String?>(null) }
     var showTags by rememberSaveable { mutableStateOf(false) }
-    var showNotAvailable by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         containerColor = AppTheme.colors.background,
-        topBar = { CreatorTopBar(onBack = onBack, onNotAvailable = { showNotAvailable = true }) },
+        topBar = { DetailHeader(title = stringResource(Res.string.creator_title), onBack = onBack, backEnabled = !state.publishing) },
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
             if (draft != null) CreatorBottomBar(publishing = state.publishing, onSaveTemplate = onSaveTemplate, onAssign = onAssign)
         },
     ) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding)) {
-            // The warm wash behind the header in the reference.
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(280.dp)
-                    .background(Brush.verticalGradient(listOf(AppTheme.colors.softAccent, AppTheme.colors.background))),
-            )
+        Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.TopCenter) {
             when {
                 state.loading -> LoadingState()
                 state.notFound || draft == null -> ErrorState(stringResource(Res.string.editor_not_found))
@@ -258,9 +263,9 @@ fun PlanEditorContent(
                     Column(
                         Modifier
                             .fillMaxSize()
+                            .widthIn(max = Sizes.contentWidth)
                             .verticalScroll(rememberScrollState())
-                            .padding(horizontal = Spacing.gutter)
-                            .padding(top = Spacing.s, bottom = Spacing.xxl),
+                            .padding(Spacing.gutter),
                         verticalArrangement = Arrangement.spacedBy(Spacing.l),
                     ) {
                         AutosaveStatus(state.savedOnDevice, state.lastSavedAtEpochMs, languageTag)
@@ -300,11 +305,11 @@ fun PlanEditorContent(
                                 onRemove = { onRemoveExercise(day.id, it) },
                             )
                         }
-                        PrimaryButton(
+                        SecondaryButton(
                             text = stringResource(Res.string.creator_add_from_library),
                             onClick = { onAddExercises(day.id) },
                             icon = Icons.Outlined.Add,
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+                            modifier = Modifier.fillMaxWidth().heightIn(min = Sizes.buttonHeight),
                         )
                     }
 
@@ -338,82 +343,17 @@ fun PlanEditorContent(
         }
     }
 
-    if (showNotAvailable) {
-        AlertDialog(
-            onDismissRequest = { showNotAvailable = false },
-            text = { Text(stringResource(Res.string.creator_not_available), style = AppTheme.type.body) },
-            confirmButton = { AppTextButton(stringResource(DsRes.string.ds_done), onClick = { showNotAvailable = false }) },
-        )
-    }
 }
 
-/** Back, the two-line "Kreator Planu" title, messages, notifications and the profile avatar. */
-@Composable
-private fun CreatorTopBar(onBack: () -> Unit, onNotAvailable: () -> Unit) {
-    val colors = AppTheme.colors
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .background(colors.background)
-            .statusBarsPadding()
-            .padding(start = Spacing.xs, end = Spacing.l, top = Spacing.s, bottom = Spacing.s),
-        verticalAlignment = Alignment.Top,
-    ) {
-        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(DsRes.string.ds_back), tint = colors.text) }
-        Text(
-            stringResource(Res.string.creator_title),
-            style = AppTheme.type.screenTitle,
-            color = colors.text,
-            maxLines = 2,
-            modifier = Modifier
-                .weight(1f)
-                .padding(start = Spacing.s, top = Spacing.xs)
-                .semantics { heading() },
-        )
-        IconButton(onClick = onNotAvailable) {
-            Icon(Icons.Outlined.ChatBubbleOutline, stringResource(Res.string.creator_messages), tint = colors.text)
-        }
-        IconButton(onClick = onNotAvailable) {
-            Icon(Icons.Outlined.NotificationsNone, stringResource(Res.string.creator_notifications), tint = colors.text)
-        }
-        IconButton(
-            onClick = onNotAvailable,
-            colors = IconButtonDefaults.iconButtonColors(containerColor = colors.brandStrong, contentColor = colors.onBrandStrong),
-        ) {
-            Icon(Icons.Outlined.PersonOutline, stringResource(Res.string.creator_profile))
-        }
-    }
-}
-
-/** "● SZKIC AUTOZAPISU" on the left, "🕒 Edytowano 2 min temu" on the right. */
+/** "Szkic zapisany na urządzeniu · Edytowano 2 min temu", as a meta line. */
 @Composable
 private fun AutosaveStatus(savedOnDevice: Boolean, lastSavedAtEpochMs: Long?, languageTag: String) {
     if (!savedOnDevice) return
-    val colors = AppTheme.colors
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
-        Row(
-            Modifier
-                .weight(1f)
-                .clip(CircleShape)
-                .background(Brush.horizontalGradient(listOf(colors.softAccent, colors.softAccent.copy(alpha = 0f))))
-                .padding(horizontal = Spacing.m, vertical = Spacing.xs),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.s),
-        ) {
-            Box(Modifier.size(8.dp).clip(CircleShape).background(colors.brandAccent))
-            Text(stringResource(Res.string.creator_autosave).uppercase(), style = AppTheme.type.overline, color = colors.onSoftAccent)
-        }
-        if (lastSavedAtEpochMs != null) {
-            Row(
-                Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.xs, Alignment.End),
-            ) {
-                Icon(Icons.Outlined.Schedule, contentDescription = null, tint = colors.textSecondary, modifier = Modifier.size(18.dp))
-                Text(editedText(lastSavedAtEpochMs, languageTag), style = AppTheme.type.label, color = colors.textSecondary)
-            }
-        }
-    }
+    val saved = stringResource(Res.string.editor_draft_saved)
+    MetaLine(
+        Icons.Outlined.CloudDone,
+        if (lastSavedAtEpochMs != null) "$saved · ${editedText(lastSavedAtEpochMs, languageTag)}" else saved,
+    )
 }
 
 /** Relative time that refreshes every half minute. */
@@ -434,54 +374,21 @@ private fun editedText(savedAt: Long, languageTag: String): String {
     }
 }
 
-/** The white pill with the dumbbell icon, "NAZWA JEDNOSTKI" label, the editable name and the tag button. */
+/** The plan name: an outlined field with a persistent label and the tag button. */
 @Composable
 private fun NameCard(name: String, onNameChange: (String) -> Unit, onOpenTags: () -> Unit, error: String?) {
-    val colors = AppTheme.colors
-    val label = stringResource(Res.string.creator_name_label)
-    val shape = RoundedCornerShape(40.dp)
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .shadow(8.dp, shape, ambientColor = Color(0x14000000), spotColor = Color(0x1F000000))
-                .clip(shape)
-                .background(colors.surface)
-                .padding(Spacing.m),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.m),
-        ) {
-            Box(Modifier.size(52.dp).clip(CircleShape).background(colors.tonalSurface), contentAlignment = Alignment.Center) {
-                Icon(Icons.Outlined.FitnessCenter, contentDescription = null, tint = colors.brandAccent, modifier = Modifier.rotate(-45f))
+    PillTextField(
+        value = name,
+        onValueChange = { onNameChange(it.take(PlanLimits.NAME_MAX)) },
+        label = stringResource(Res.string.editor_name_label),
+        placeholder = stringResource(Res.string.creator_name_placeholder),
+        error = error,
+        trailing = {
+            IconButton(onClick = onOpenTags) {
+                Icon(Icons.Outlined.LocalOffer, stringResource(Res.string.creator_tags), tint = AppTheme.colors.textSecondary)
             }
-            Column(Modifier.weight(1f)) {
-                Text(label.uppercase(), style = AppTheme.type.overline, color = colors.textSecondary)
-                BasicTextField(
-                    value = name,
-                    onValueChange = { onNameChange(it.take(PlanLimits.NAME_MAX)) },
-                    singleLine = true,
-                    textStyle = AppTheme.type.sectionTitle.copy(color = colors.text),
-                    cursorBrush = SolidColor(colors.brandStrong),
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                    modifier = Modifier.fillMaxWidth().semantics { contentDescription = label },
-                    decorationBox = { inner ->
-                        Box {
-                            if (name.isEmpty()) {
-                                Text(stringResource(Res.string.creator_name_placeholder), style = AppTheme.type.sectionTitle, color = colors.textSecondary)
-                            }
-                            inner()
-                        }
-                    },
-                )
-            }
-            IconButton(onClick = onOpenTags, colors = IconButtonDefaults.iconButtonColors(containerColor = colors.subtleSurface)) {
-                Icon(Icons.Outlined.LocalOffer, stringResource(Res.string.creator_tags), tint = colors.textSecondary)
-            }
-        }
-        if (error != null) {
-            Text(error, style = AppTheme.type.compactBody, color = colors.onErrorContainer, modifier = Modifier.padding(horizontal = Spacing.l))
-        }
-    }
+        },
+    )
 }
 
 /** ŁĄCZNIE SERII · SZAC. CZAS · ŚR. RPE. */
@@ -509,59 +416,47 @@ private fun StatTile(label: String, value: String, highlighted: Boolean, modifie
     val colors = AppTheme.colors
     Column(
         modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (highlighted) colors.softAccent.copy(alpha = 0.5f) else colors.surface)
+            .clip(AppShapes.tile)
+            .background(colors.surface)
+            .border(BorderStroke(1.dp, colors.outline), AppShapes.tile)
             .padding(vertical = Spacing.l, horizontal = Spacing.s)
             .semantics(mergeDescendants = true) {},
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        Text(label.uppercase(), style = AppTheme.type.overline, color = colors.textSecondary, textAlign = TextAlign.Center, maxLines = 2)
-        Text(value, style = AppTheme.type.statValue, color = if (highlighted) colors.brandAccent else colors.text, textAlign = TextAlign.Center)
+        Text(label, style = AppTheme.type.label, color = colors.textSecondary, textAlign = TextAlign.Center, maxLines = 2)
+        Text(value, style = AppTheme.type.sectionTitle, color = if (highlighted) colors.brandStrong else colors.text, textAlign = TextAlign.Center)
     }
 }
 
 @Composable
 private fun ExerciseOrderHeader(count: Int) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-        Icon(Icons.AutoMirrored.Outlined.FormatListBulleted, contentDescription = null, tint = AppTheme.colors.brandAccent)
-        Text(
-            stringResource(Res.string.editor_exercise_order),
-            style = AppTheme.type.sectionTitle,
-            modifier = Modifier.weight(1f).semantics { heading() },
-        )
-        Text(pluralStringResource(Res.plurals.positions_count, count, count), style = AppTheme.type.label, color = AppTheme.colors.textSecondary)
-    }
+    SectionHeader(
+        stringResource(Res.string.editor_exercise_order),
+        trailing = {
+            Text(pluralStringResource(Res.plurals.positions_count, count, count), style = AppTheme.type.compactBody, color = AppTheme.colors.textSecondary)
+        },
+    )
 }
 
-/** "Zapisz szablon" and "Przypisz klientowi" side by side, above the keyboard and system bars. */
+/** "Zapisz szablon" and "Przypisz podopiecznemu" side by side, above the keyboard and system bars. */
 @Composable
 private fun CreatorBottomBar(publishing: Boolean, onSaveTemplate: () -> Unit, onAssign: () -> Unit) {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .background(AppTheme.colors.surface)
-            .navigationBarsPadding()
-            .imePadding(),
-    ) {
-        HorizontalDivider(color = AppTheme.colors.outline)
-        Row(
-            Modifier.padding(horizontal = Spacing.gutter, vertical = Spacing.m),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.m),
-        ) {
+    BottomActionBar {
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
             TonalButton(
                 text = stringResource(Res.string.creator_save_template),
                 onClick = onSaveTemplate,
                 loading = publishing,
                 icon = Icons.Outlined.BookmarkBorder,
-                modifier = Modifier.weight(1f).heightIn(min = 56.dp),
+                modifier = Modifier.weight(1f),
             )
             PrimaryButton(
                 text = stringResource(Res.string.editor_assign),
                 onClick = onAssign,
                 enabled = !publishing,
                 icon = Icons.Outlined.PersonAddAlt,
-                modifier = Modifier.weight(1f).heightIn(min = 56.dp),
+                modifier = Modifier.weight(1f),
             )
         }
     }
@@ -638,10 +533,10 @@ private fun DayExercises(
     val heights = remember(day.id) { mutableStateMapOf<String, Int>() }
     var draggingId by remember(day.id) { mutableStateOf<String?>(null) }
     var dragOffset by remember(day.id) { mutableFloatStateOf(0f) }
-    val gapPx = with(LocalDensity.current) { Spacing.xl.toPx() }
+    val gapPx = with(LocalDensity.current) { Spacing.m.toPx() }
     val currentExercises by rememberUpdatedState(day.exercises)
 
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xl)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
         day.exercises.forEachIndexed { index, planned ->
             key(planned.id) {
                 val isDragging = draggingId == planned.id

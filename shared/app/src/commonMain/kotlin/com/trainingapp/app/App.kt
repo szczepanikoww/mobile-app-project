@@ -13,11 +13,12 @@ import androidx.navigation.compose.rememberNavController
 import com.trainingapp.app.resources.Res
 import com.trainingapp.app.resources.assign_message
 import com.trainingapp.app.resources.assign_title
-import com.trainingapp.app.resources.ok
+import com.trainingapp.app.resources.understood
 import com.trainingapp.designsystem.component.AppTextButton
 import com.trainingapp.designsystem.theme.AppTheme
 import com.trainingapp.feature.workoutbuilder.common.ExerciseBrowserDestination
 import com.trainingapp.feature.workoutbuilder.common.PlanEditorDestination
+import com.trainingapp.feature.workoutbuilder.common.PlanLibraryDestination
 import com.trainingapp.feature.workoutbuilder.workoutBuilderGraph
 import kotlinx.serialization.Serializable
 import org.jetbrains.compose.resources.stringResource
@@ -40,12 +41,7 @@ fun App() {
             composable<TrainerHomeDestination> {
                 TrainerShell(
                     onNewPlan = { navController.navigate(PlanEditorDestination()) },
-                    onOpenPlan = { item ->
-                        navController.navigate(
-                            // A published plan opens its unpublished draft, if any, or its latest version.
-                            if (item.templateId != null) PlanEditorDestination(templateId = item.templateId) else PlanEditorDestination(draftId = item.draftId),
-                        )
-                    },
+                    onOpenPlans = { navController.navigate(PlanLibraryDestination) },
                     onOpenExerciseLibrary = { navController.navigate(ExerciseBrowserDestination()) },
                 )
             }
@@ -61,7 +57,7 @@ fun App() {
                 onDismissRequest = { showAssignInfo = false },
                 title = { Text(stringResource(Res.string.assign_title)) },
                 text = { Text(stringResource(Res.string.assign_message), style = AppTheme.type.body) },
-                confirmButton = { AppTextButton(stringResource(Res.string.ok), onClick = { showAssignInfo = false }) },
+                confirmButton = { AppTextButton(stringResource(Res.string.understood), onClick = { showAssignInfo = false }) },
             )
         }
     }
