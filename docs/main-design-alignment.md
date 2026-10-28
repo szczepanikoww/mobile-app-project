@@ -11,7 +11,7 @@ Compared against `origin/main` at **356b4f89323c6d780ea6f1a006fe0b60637eda80**. 
 | Tabs | `PillTabs` uses an inset, rounded track with a filled selection. | One shared `PillTabs` replaces the default segmented switcher and underlined trainee tabs. It uses our strong brand/white pair and retains 48 dp targets and horizontal scrolling. |
 | Header | Shell/detail headers use white, 64 dp chrome with 17/22 bold titles. | Adopted a white header, 64 dp minimum height and shared 17/22 bold title styling. Headers grow for scaled text instead of clipping it to main's fixed height. |
 | Typography | Main uses bold 20/26 section and 17/22 item titles. | Updated shared title weights to bold; body sizes remain unchanged. |
-| Navigation | Main has a 28 dp upper-corner frame. | Added the rounded upper edge and subtle outline to the existing two-destination shell. Selected tabs use the retained primary color. |
+| Navigation | Main has a 28 dp upper-corner frame. | Imported main’s four-tab layout and central create control; the rounded upper edge, subtle outline and selected tabs use our shared theme. |
 | Buttons | Primary buttons use a pill shape and 52 dp minimum height. | Made both explicit in the shared primary button. The add control uses the same pill geometry. |
 | Shadows | Main includes 6–16 dp decorative shadows and brand-colored glows. | Ordinary cards and navigation are flat. Floating controls use 2 dp at rest and 3 dp while pressed/hovered. |
 
@@ -73,3 +73,11 @@ All 27 behavior/UI tests pass, and Android build/lint succeed with the existing 
 | ![Before](previews/trainer-clients-before-alignment.png) | ![After](previews/trainer-clients.png) |
 
 [Updated profile](previews/trainer-client-profile.png)
+
+## Imported trainer bottom bar
+
+The branch now ports `TrainerBottomBar` / `NavItem` from main's `shell/AppShell.kt` into the shared Compose shell: Start, Calendar, Trainees, Finance and the central 56 dp create control with 24 dp overhang. Selected tabs and the create control use our strong brand color; labels use our supporting text color and the bar uses the shared surface/outline. The bar is flat, with a restrained 2 dp create-button shadow. At 150% text and above, tabs use two rows to keep full labels readable.
+
+Calendar and Trainees retain their existing routes. The create control replaces the calendar's separate floating button and opens the session/availability menu from every tab. Detail/edit routes hide the bottom bar. Start and Finance are explicit integration placeholders; this port does not import main's Android-only feature implementations or resolve the build-stack conflict described above.
+
+Verified with the 27 existing behavior/UI tests (including tab selection, create from Finance, and hidden navigation on editor routes), Android assembly and lint. Updated [calendar](previews/trainer-calendar.png), [trainees](previews/trainer-clients.png), and [200% text navigation](previews/trainer-navigation-font200.png) are actual Compose test renders. Native system-bar/keyboard behavior remains unverified.

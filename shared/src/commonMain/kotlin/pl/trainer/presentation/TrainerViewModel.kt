@@ -12,7 +12,7 @@ import kotlin.time.Instant
 import pl.trainer.data.DemoTrainerRepository
 import pl.trainer.domain.*
 
-enum class Destination { Calendar, Clients }
+enum class Destination { Start, Calendar, Clients, Finance }
 enum class ClientFilter { All, Overdue }
 enum class ClientTab { Current, Archive }
 enum class CalendarMode { Day, Week }

@@ -1,4 +1,8 @@
 <resources>
+    <string name="nav_start">Home</string>
+    <string name="nav_finance">Finance</string>
+    <string name="screen_integration_pending">This screen has not been connected in this branch yet.</string>
+    <string name="open_calendar">Open calendar</string>
     <string name="calendar">Calendar</string>
     <string name="clients">Clients</string>
     <string name="calendar_subtitle">Make room for a good session</string>

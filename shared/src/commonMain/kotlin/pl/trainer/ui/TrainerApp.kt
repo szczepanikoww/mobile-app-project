@@ -1,9 +1,6 @@
 package pl.trainer.ui
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -14,7 +11,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -42,10 +38,6 @@ fun TrainerApp(model: TrainerViewModel = viewModel { TrainerViewModel(DemoTraine
 @Composable
 private fun TrainerAppContent(state: TrainerUiState, model: TrainerViewModel) {
     val snackbar = remember { SnackbarHostState() }
-    val floatingElevation = FloatingActionButtonDefaults.elevation(
-        defaultElevation = Layout.floatingElevation, pressedElevation = Layout.activeFloatingElevation,
-        focusedElevation = Layout.floatingElevation, hoveredElevation = Layout.activeFloatingElevation,
-    )
     var addMenu by remember { mutableStateOf(false) }
     var infoDialog by remember { mutableStateOf<String?>(null) }
     val savedMessage = tr(Res.string.saved)
@@ -60,7 +52,11 @@ private fun TrainerAppContent(state: TrainerUiState, model: TrainerViewModel) {
         if (state.saved) { snackbar.showSnackbar(savedMessage); model.dismissFeedback() }
     }
     val title = tr(when (val route = state.route) {
-        Route.Main -> if (state.destination == Destination.Calendar) Res.string.your_schedule else Res.string.your_clients
+        Route.Main -> when (state.destination) {
+            Destination.Calendar -> Res.string.your_schedule
+            Destination.Clients -> Res.string.your_clients
+            else -> state.destination.label()
+        }
         is Route.SessionDetail -> if (state.data?.sessions?.find { it.id == route.id }?.needsAttention() == true) Res.string.request_detail else Res.string.session_detail
         is Route.ClientDetail -> Res.string.client_detail
         is Route.SessionEditor -> if (route.sessionId == null) Res.string.new_session else Res.string.propose_time
@@ -85,32 +81,9 @@ private fun TrainerAppContent(state: TrainerUiState, model: TrainerViewModel) {
             }
         },
         bottomBar = {
-            if (main) Surface(shape = Layout.navigation, color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
-                NavigationBar(modifier = Modifier.clip(Layout.navigation), containerColor = Color.Transparent, tonalElevation = 0.dp) {
-                    Destination.entries.forEach { destination ->
-                        NavigationBarItem(selected = state.destination == destination, onClick = { model.destination(destination) },
-                            colors = NavigationBarItemDefaults.colors(indicatorColor = Color.Transparent,
-                                selectedIconColor = MaterialTheme.colorScheme.primary, selectedTextColor = MaterialTheme.colorScheme.primary),
-                            icon = { Icon(if (destination == Destination.Calendar) Icons.Outlined.CalendarMonth else Icons.Outlined.PeopleOutline, null) },
-                            label = { Text(tr(if (destination == Destination.Calendar) Res.string.calendar else Res.string.trainees)) })
-                    }
-                }
-            }
-        },
-        floatingActionButton = {
-            if (main && state.destination == Destination.Calendar && state.data != null && !state.loading && state.failure == null) {
-                if (LocalDensity.current.fontScale >= 1.5f) FloatingActionButton(onClick = { addMenu = true },
-                    shape = Layout.pill,
-                    elevation = floatingElevation,
-                    containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary) {
-                    Icon(Icons.Outlined.Add, tr(Res.string.add))
-                } else ExtendedFloatingActionButton(onClick = { addMenu = true },
-                    shape = Layout.pill,
-                    elevation = floatingElevation,
-                    containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary,
-                    icon = { Icon(Icons.Outlined.Add, null) }, text = { Text(tr(Res.string.add)) })
-            }
+            if (main) TrainerBottomBar(state.destination, onSelect = model::destination,
+                onCreate = { addMenu = true },
+                createEnabled = state.data != null && !state.loading && state.failure == null && !state.submitting)
         },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { insets ->
@@ -137,9 +110,17 @@ private fun TrainerAppContent(state: TrainerUiState, model: TrainerViewModel) {
                     }
                     state.data != null -> screenState.SaveableStateProvider(screenKey) {
                         when (val route = state.route) {
-                            Route.Main -> if (state.destination == Destination.Calendar) CalendarScreen(state, model::date, model::mode,
-                                { model.navigate(Route.Availability) }, { model.navigate(Route.SessionDetail(it)) }, { model.navigate(Route.SessionEditor()) })
-                            else ClientsScreen(state, model::search, model::filter, model::clientTab, { model.navigate(Route.ClientDetail(it)) }, { infoDialog = "invite" })
+                            Route.Main -> when (state.destination) {
+                                Destination.Calendar -> CalendarScreen(state, model::date, model::mode,
+                                    { model.navigate(Route.Availability) }, { model.navigate(Route.SessionDetail(it)) }, { model.navigate(Route.SessionEditor()) })
+                                Destination.Clients -> ClientsScreen(state, model::search, model::filter, model::clientTab,
+                                    { model.navigate(Route.ClientDetail(it)) }, { infoDialog = "invite" })
+                                Destination.Start, Destination.Finance -> Box(Modifier.fillMaxSize().padding(Layout.gutter), contentAlignment = Alignment.Center) {
+                                    EmptyContent(if (state.destination == Destination.Start) Icons.Outlined.Dashboard else Icons.Outlined.Payments,
+                                        tr(state.destination.label()), tr(Res.string.screen_integration_pending), tr(Res.string.open_calendar),
+                                        { model.destination(Destination.Calendar) })
+                                }
+                            }
                             is Route.SessionDetail -> state.data.sessions.find { it.id == route.id }?.let { session ->
                                 SessionDetailScreen(state, session,
                                     onClient = { model.navigate(Route.ClientDetail(session.clientId)) }, onEdit = { model.navigate(Route.SessionEditor(sessionId = session.id)) },

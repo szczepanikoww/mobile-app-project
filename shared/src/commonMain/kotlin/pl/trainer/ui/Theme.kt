@@ -21,6 +21,10 @@ object Layout {
     val target = 48.dp
     val buttonHeight = 52.dp
     val headerHeight = 64.dp
+    val navigationHeight = 68.dp
+    val navigationOverhang = 24.dp
+    val navigationCreateSize = 56.dp
+    val navigationCreateGap = 64.dp
     val floatingElevation = 2.dp
     val activeFloatingElevation = 3.dp
     val contentWidth = 640.dp

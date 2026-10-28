@@ -1,4 +1,8 @@
 <resources>
+    <string name="nav_start">Start</string>
+    <string name="nav_finance">Finanse</string>
+    <string name="screen_integration_pending">Ten widok nie został jeszcze połączony w tej gałęzi.</string>
+    <string name="open_calendar">Otwórz kalendarz</string>
     <string name="calendar">Kalendarz</string>
     <string name="clients">Klienci</string>
     <string name="calendar_subtitle">Dobry plan na każdy dzień</string>
