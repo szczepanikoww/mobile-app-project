@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Aplikacja trenera</string>
+
+    <!-- Powłoka -->
+    <string name="nav_start">Start</string>
+    <string name="nav_calendar">Kalendarz</string>
+    <string name="nav_clients">Klienci</string>
+    <string name="nav_finance">Finanse</string>
+    <string name="action_chat">Wiadomości</string>
+    <string name="action_notifications">Powiadomienia</string>
+    <string name="action_create">Nowy trening lub klient</string>
+    <string name="not_available_yet">Ten ekran nie jest jeszcze dostępny</string>
+
+    <!-- Start trenera -->
+    <string name="home_greeting_hey">Hej,</string>
+    <string name="home_today_sessions">Dzisiejsze sesje</string>
+    <string name="home_swipe">Przesuń</string>
+    <string name="home_needs_attention">Wymaga uwagi</string>
+    <string name="home_this_week">Ten tydzień</string>
+    <string name="home_details">Szczegóły</string>
+    <string name="home_see_calendar">Zobacz kalendarz</string>
+
+    <string name="status_confirmed">Potwierdzona</string>
+    <string name="status_requested">Do potwierdzenia</string>
+    <string name="status_pending_chip">Oczekuje</string>
+    <string name="status_cancelled">Odwołana</string>
+    <string name="status_completed">Zakończona</string>
+
+    <string name="day_today_time">Dziś, %1$s</string>
+    <string name="day_tomorrow_time">Jutro, %1$s</string>
+    <string name="day_other_time">%1$s, %2$s</string>
+    <string name="starts_in_minutes">Za %1$d min</string>
+    <string name="starts_in_hours">Za %1$dh %2$dm</string>
+    <string name="session_place_plan">%1$s · Plan: %2$s</string>
+    <string name="session_plan_place">%1$s · %2$s</string>
+
+    <string name="action_check_in">Check-in</string>
+    <string name="action_confirm">Potwierdź</string>
+    <string name="action_message">Napisz</string>
+    <string name="action_retry">Spróbuj ponownie</string>
+    <string name="check_in_needs_connection">Check-in wymaga połączenia z internetem</string>
+    <string name="cd_unread_chats">Nieprzeczytane czaty: %1$d</string>
+
+    <string name="attention_video_label">Wideo techniki</string>
+    <string name="attention_payment_label">Status rozliczenia</string>
+    <string name="attention_overdue">Zaległa płatność</string>
+    <string name="attention_new">Nowe</string>
+    <plurals name="attention_unread_short">
+        <item quantity="one">%1$d wiadomość</item>
+        <item quantity="few">%1$d wiadomości</item>
+        <item quantity="many">%1$d wiadomości</item>
+        <item quantity="other">%1$d wiadomości</item>
+    </plurals>
+
+    <string name="week_sessions">sesji</string>
+    <string name="week_new">nowych</string>
+    <string name="week_cancelled">odwołanie</string>
+
+    <string name="offline_banner">Offline · zaktualizowano %1$s</string>
+    <string name="error_load_home">Nie udało się wczytać Twojego dnia</string>
+    <string name="empty_day_title">Na dziś to już wszystko</string>
+    <string name="empty_day_body">Nic teraz na Ciebie nie czeka.</string>
+    <string name="empty_day_next">Następna: %1$s</string>
+    <string name="empty_new_title">Witaj</string>
+    <string name="empty_new_body">Ustaw dostępność, aby klienci mogli prosić o treningi.</string>
+    <string name="empty_new_action">Dodaj dostępność</string>
+    <!-- Finanse trenera -->
+    <string name="finance_overline">Podsumowanie zysków</string>
+    <string name="finance_title">Panel Finansowy</string>
+    <string name="finance_period_week">Tydzień</string>
+    <string name="finance_period_month">Miesiąc</string>
+    <string name="finance_period_year">Rok</string>
+    <string name="finance_revenue_week">Przychód łączny w tym tygodniu</string>
+    <string name="finance_revenue_month">Przychód łączny w tym miesiącu</string>
+    <string name="finance_revenue_year">Przychód łączny w tym roku</string>
+    <string name="finance_vs_previous">%1$s w porównaniu z poprzednim okresem</string>
+    <string name="finance_goal">Cel: %1$s</string>
+    <string name="finance_chart_title">Przychody w czasie</string>
+    <string name="finance_metrics">Metryki operacyjne</string>
+    <string name="finance_metrics_caption">Bieżące rozliczenie</string>
+    <string name="finance_sessions_value">%1$d sesji</string>
+    <string name="finance_sessions_done">Sesje zrealizowane</string>
+    <string name="finance_sessions_worth">Wartość sesji</string>
+    <string name="finance_cancellation_fees">Opłaty za odwołania</string>
+    <string name="finance_fee_count">%1$d opłat</string>
+    <string name="finance_overdue">Zaległości</string>
+    <string name="finance_overdue_people">%1$d os.</string>
+    <string name="finance_payments_total">Wpłaty łączne</string>
+    <string name="finance_paid_out">Ostatnia wypłata</string>
+    <string name="finance_recent_payments">Ostatnie płatności</string>
+    <string name="finance_see_all">Zobacz wszystkie</string>
+    <string name="finance_method_blik">Blik</string>
+    <string name="finance_method_cash">Gotówka</string>
+    <string name="finance_method_card">Karta</string>
+    <string name="finance_payment_detail">%1$s · %2$s</string>
+    <string name="finance_today_time">Dzisiaj, %1$s</string>
+    <string name="finance_yesterday_time">Wczoraj, %1$s</string>
+    <string name="finance_payout_title">Dostępne do natychmiastowej wypłaty</string>
+    <string name="finance_stripe_balance">Saldo Stripe: %1$s</string>
+    <string name="finance_payout_action">Wypłać</string>
+    <string name="finance_empty_title">Brak płatności</string>
+    <string name="finance_empty_body">Płatności od klientów pojawią się tutaj.</string>
+    <string name="error_load_finance">Nie udało się wczytać finansów</string>
+
+    <!-- Wspólne widoki szczegółów -->
+    <string name="action_back">Wstecz</string>
+    <string name="action_profile">Profil trenera</string>
+    <string name="time_yesterday">Wczoraj</string>
+
+    <!-- Wiadomości -->
+    <string name="chats_title">Wiadomości</string>
+    <string name="error_load_chats">Nie udało się wczytać wiadomości</string>
+    <string name="chats_empty_title">Brak wiadomości</string>
+    <string name="chats_empty_body">Rozmowy z klientami pojawią się tutaj.</string>
+    <string name="chats_you_prefix">Ty: %1$s</string>
+    <string name="error_load_chat">Nie udało się wczytać rozmowy</string>
+    <string name="chat_empty_title">Zacznij rozmowę</string>
+    <string name="chat_empty_body">Napisz pierwszą wiadomość do klienta.</string>
+    <string name="chat_placeholder">Napisz wiadomość</string>
+    <string name="chat_send">Wyślij</string>
+    <string name="chat_send_failed">Nie udało się wysłać wiadomości. Spróbuj ponownie.</string>
+
+    <!-- Powiadomienia -->
+    <string name="notifications_title">Powiadomienia</string>
+    <string name="notifications_mark_all">Oznacz jako przeczytane</string>
+    <string name="notifications_empty_title">Brak powiadomień</string>
+    <string name="notifications_empty_body">Nic nowego. Wrócimy, gdy coś się wydarzy.</string>
+    <string name="error_load_notifications">Nie udało się wczytać powiadomień</string>
+    <string name="notification_title">Powiadomienie</string>
+    <string name="error_load_notification">Nie udało się wczytać powiadomienia</string>
+    <string name="notification_action_chat">Napisz do: %1$s</string>
+    <string name="notification_action_finance">Przejdź do finansów</string>
+    <string name="notification_action_session">Zobacz sesję</string>
+    <string name="notif_type_payment">Płatność</string>
+    <string name="notif_type_session">Sesja</string>
+    <string name="notif_type_message">Wiadomość</string>
+    <string name="notif_type_video">Wideo techniki</string>
+    <string name="notif_type_system">System</string>
+
+    <!-- Profil trenera -->
+    <string name="profile_title">Profil trenera</string>
+    <string name="profile_tab_profile">Profil</string>
+    <string name="profile_tab_settings">Ustawienia</string>
+    <string name="profile_tab_availability">Dostępność</string>
+    <string name="profile_tab_payments">Płatności</string>
+    <string name="error_load_profile">Nie udało się wczytać profilu</string>
+    <string name="profile_manage">Zarządzaj profilem</string>
+    <string name="profile_field_name">Imię i nazwisko</string>
+    <string name="profile_field_phone">Telefon</string>
+    <string name="profile_field_location">Miasto</string>
+    <string name="profile_field_rate">Stawka za sesję</string>
+    <string name="profile_rate_suffix">zł / sesja</string>
+    <string name="profile_field_bio">O mnie</string>
+    <string name="profile_field_specializations">Specjalizacje</string>
+    <string name="profile_save">Zapisz zmiany</string>
+    <string name="profile_saving">Zapisywanie…</string>
+    <string name="profile_saved">Zapisano zmiany</string>
+    <string name="profile_save_failed">Nie udało się zapisać zmian. Spróbuj ponownie.</string>
+
+    <string name="settings_notifications">Powiadomienia</string>
+    <string name="settings_notify_messages">Nowe wiadomości</string>
+    <string name="settings_notify_sessions">Prośby o sesje i zmiany w kalendarzu</string>
+    <string name="settings_notify_payments">Płatności i wypłaty</string>
+    <string name="settings_email_summary">Cotygodniowe podsumowanie e-mail</string>
+    <string name="settings_email_summary_hint">Wysyłane w poniedziałek rano</string>
+    <string name="settings_auto_confirm">Automatyczne potwierdzanie sesji</string>
+    <string name="settings_auto_confirm_hint">Prośby w Twojej dostępności są potwierdzane od razu</string>
+    <string name="settings_policy">Polityka odwołań</string>
+    <string name="settings_policy_free">Bezpłatne odwołanie</string>
+    <string name="settings_policy_free_value">powyżej 24 h</string>
+    <string name="settings_policy_half">Opłata 50%</string>
+    <string name="settings_policy_half_value">12–24 h przed</string>
+    <string name="settings_policy_full">Opłata 100%</string>
+    <string name="settings_policy_full_value">poniżej 12 h</string>
+    <string name="settings_account">Konto</string>
+    <string name="settings_language">Język</string>
+    <string name="settings_language_value">Polski</string>
+    <string name="settings_change_password">Zmień hasło</string>
+    <string name="settings_terms">Regulamin</string>
+    <string name="settings_logout">Wyloguj się</string>
+
+    <string name="availability_title">Godziny pracy</string>
+    <string name="availability_hint">Klienci mogą prosić o sesje tylko w dniach, które włączysz.</string>
+    <string name="availability_closed">Nieczynne</string>
+
+    <string name="payments_connected">Konto połączone</string>
+    <string name="payments_not_connected">Konto niepołączone</string>
+    <string name="payments_balance">Dostępne saldo</string>
+    <string name="payments_last_payout">Ostatnia wypłata</string>
+    <string name="payments_manage">Zarządzaj kontem Stripe</string>
+    <string name="payments_history">Historia wypłat</string>
+</resources>
