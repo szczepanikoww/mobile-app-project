@@ -1,13 +1,13 @@
 # Feature plan: plan creator and exercise library
 
-Status: draft v0.1 · 2026-10-28 · branch `workout-plan`
+Status: v0.3, decisions D1–D10 agreed · 2026-10-28 · branch `workout-plan` · role: **trainer**
 
-This document plans two related features:
+This document plans two related trainer features:
 
-- the **exercise library**, a database of predefined exercises plus a trainer's own exercises, and
-- the **plan creator**, where a trainer builds a workout plan from those exercises.
+- the **plan creator** ("Kreator planu"), where a trainer builds a workout plan, and
+- the **exercise library**, which holds predefined exercises and lets the trainer **create their own exercises**.
 
-It follows [CLAUDE.md](../../CLAUDE.md) and [initial-architecture.md](../initial-architecture.md), sections 5, 6, 9.1 and 10.4. Items marked **Decision** need the team's agreement before the slice that depends on them starts.
+It follows [CLAUDE.md](../../CLAUDE.md) and [initial-architecture.md](../initial-architecture.md), sections 5, 6, 9.1, 9.3 and 10.4. Items marked **Decision** refer to the agreed decisions in section 10.
 
 ---
 
@@ -15,24 +15,24 @@ It follows [CLAUDE.md](../../CLAUDE.md) and [initial-architecture.md](../initial
 
 | Input | State |
 |---|---|
-| Repository | Documentation only. There is no KMP project, shared theme, app shell, navigation, backend or build yet. |
-| Stitch design | **Not pulled yet.** `stitch.google.com` is blocked by this cloud environment's network policy, and Stitch projects need a Google sign-in anyway. Section 4 is built from the visual baseline in CLAUDE.md. It must be checked against the Stitch screens before UI work starts (see section 10). |
-| Exercise data | `free-exercise-db` (yuhonas/free-exercise-db), public domain (Unlicense). Checked 2026-10-28: **876 exercises**, 873 of them with two JPG images (start and end position). |
+| Repository | Documentation only. There is no KMP project, shared theme, app shell, navigation, backend or build yet. Nothing in this plan exists as code. |
+| Stitch design | Reviewed on 2026-10-28. The reference is the screen "Kreator planu" (`projects/10185753988111686080/screens/20cc25ddd7144b5c9d288cf4187f62dc`), saved as [kreator-planu.jpg](../design/stitch/plan-creator/kreator-planu.jpg). Stitch has **no** screens for the exercise library, exercise detail or exercise creation. Those screens reuse patterns from other Stitch screens, mapped in [design/stitch/reference](../design/stitch/reference/README.md). |
+| Exercise data | `free-exercise-db` (yuhonas/free-exercise-db), public domain (Unlicense). It has 876 exercises, 873 of them with two JPG images. |
 
 ### What `free-exercise-db` contains
 
 Each record has `id`, `name`, `category`, `equipment`, `level`, `mechanic`, `force`, `primaryMuscles`, `secondaryMuscles`, `instructions[]` and `images[]`.
 
-- **Categories:** strength 584, stretching 123, plyometrics 61, powerlifting 38, olympic weightlifting 35, strongman 21, cardio 14.
-- **Equipment:** barbell 170, dumbbell 123, other 122, body only 111, cable 81, *none* 77, machine 67, kettlebells 56, bands 20, medicine ball 17, exercise ball 12, foam roll 11, e-z curl bar 9.
-- **Muscles (17):** abdominals, abductors, adductors, biceps, calves, chest, forearms, glutes, hamstrings, lats, lower back, middle back, neck, quadriceps, shoulders, traps, triceps.
+- **Categories:** strength, stretching, plyometrics, powerlifting, olympic weightlifting, strongman, cardio.
+- **Equipment:** barbell, dumbbell, cable, machine, kettlebells, bands, body only, and others.
+- **Muscles:** 17 values, from abdominals to triceps.
 
 Gaps we have to fill:
 
-1. **English only.** The app targets Polish and English.
-2. **Near-duplicates and niche variants**, for example "Barbell Squat" vs "Barbell Full Squat", or "Bench Press with Chains". Showing all 876 makes search noisy.
-3. **No tracking type.** The logger needs to know whether an exercise takes weight × reps, reps only, time or distance.
-4. **Stock images only.** The architecture prefers videos recorded by the trainer. The dataset images are a fallback.
+1. **Polish only.** The app targets Polish and English.
+2. **Near-duplicates and niche variants**, which make search noisy.
+3. **No tracking type.** The logger needs to know whether an exercise takes weight × reps, reps only, time, or distance and time.
+4. **Stock images only.** Videos recorded by the trainer come later, through the media pipeline.
 
 ---
 
@@ -40,30 +40,165 @@ Gaps we have to fill:
 
 ### In scope
 
-- A global exercise library seeded from `free-exercise-db`, with Polish and English names.
-- Browse, search and filter by muscle group and equipment, plus an exercise detail view.
-- Trainer-owned custom exercises.
-- A plan library: the trainer's list of plan templates.
-- The plan creator: create and edit a template made of workout days, exercises and planned sets. Drafts are saved locally.
-- Publishing an immutable plan version.
+- **Plan library:** the trainer's list of plan templates.
+- **Plan creator:** create and edit a template made of workout days, exercises and planned sets. Drafts are saved locally all the time. Saving publishes an immutable plan version.
+- **Exercise library:** browse, search and filter predefined and own exercises, plus an exercise detail view.
+- **Exercise creation:** a trainer creates, edits and hides their own exercises.
+- **Seed data:** a global library imported from `free-exercise-db`, with a curated subset in Polish.
 
 ### Integration points to preserve, not build here
 
-- **Assign a plan version to a client** (`AssignedPlan`). The client's "today's plan" and the workout logger read it.
-- **Trainer demo video** on an exercise, through the shared media pipeline (section 9.3 of the architecture).
+- **Assign to client** ("Przypisz klientowi" in Stitch) creates an `AssignedPlan` that points to one version. The editor links to this flow after a successful save; the flow itself belongs to the clients/assignment feature.
+- **Trainer demo video** on an exercise uses the shared media pipeline (architecture section 9.3). `Exercise.demoMediaId` is reserved for it.
 - Pinning a plan to a session.
 
 ### Out of scope
 
-- Nutrition, calorie estimates, ratings, and AI plan generation, even if Stitch shows them.
-- %1RM-based loading and periodisation blocks. These may come later.
-- Plans as a separately sold digital product. Plans are included in coaching; architecture section 4 explains why.
+- Plan tags, estimated duration, average RPE, calorie estimates, ratings, nutrition and AI generation, even where Stitch shows them.
+- %1RM-based loading and periodisation blocks.
+- Plans sold as a separate digital product.
 
 ---
 
-## 3. Domain model
+## 3. Stitch review: what we keep, change and drop
 
-This extends architecture section 10.4. The one structural change is **`PlanDay`**. The ER diagram links `PLAN_VERSION` straight to `PLANNED_EXERCISE`, but a trainer's plan is normally several workouts ("Day A / Day B", "Push / Pull / Legs").
+The Stitch screen sets the direction. CLAUDE.md section 3 asks for a calmer, simpler version.
+
+| Stitch element | Decision | Reason |
+|---|---|---|
+| Back arrow and title "Kreator Planu" | **Keep.** The title is "Nowy plan" or "Edytuj plan", depending on the mode. | Shared back-navigation pattern. |
+| Chat, notifications and avatar in the top bar | **Drop.** Replace them with an overflow menu (duplicate, archive). | Detail screens do not repeat global controls (CLAUDE.md section 5). |
+| Pulsing "Szkic autozapisu" badge and "Edytowano 2 min temu" | **Change** to one line of supporting text: "Szkic zapisany na urządzeniu". | The local-draft state matters; the badge and animation do not. |
+| Pill-shaped name field with an icon and a tag button | **Change** to the shared text field with a persistent label "Nazwa planu". Tags are dropped. | Inputs need persistent labels; tags are not in scope. |
+| Three stat tiles: total sets, estimated time, average RPE | **Drop.** Show "2 ćwiczenia · 6 serii" in the supporting line instead. | Estimated time needs policy and assumptions. The tiles push the content down. |
+| Section "Kolejność ćwiczeń" with a count | **Keep**, as a plain section header. | |
+| Exercise card: drag handle, thumbnail, muscle label, name | **Keep.** Add move up/down actions to the row menu as an accessible alternative to dragging. | |
+| "Superseria" chip on a single card | **Change.** Linked exercises are grouped with a connector and the label "Superseria A". | A superset is a relation between two or more exercises, not a tag on one. |
+| "Akcesoryjne" chip | **Drop.** | There is no domain field behind it. |
+| Set table with 5 columns: set, weight, reps, RPE, rest | **Change.** The default columns are set, kg and reps. RPE appears only when it is enabled for that exercise. Rest is set once per exercise and shown under the name. | At 390 dp the Stitch inputs clip: "8powt." overlaps the value. Units move to the column headers. |
+| "Dodaj serię", note, more menu | **Keep.** The note opens the exercise settings sheet. | |
+| Orange full-width "Dodaj ćwiczenie z biblioteki" | **Change** to a secondary (outlined) button: "Dodaj ćwiczenia". | Stitch shows three primary-looking buttons on one screen. |
+| Bottom bar "Zapisz szablon" + "Przypisz klientowi" | **Change** to one fixed primary button, "Zapisz plan". After a save, a snackbar shows "Zapisano wersję 3" with the action "Przypisz klientowi". | One dominant action. Assigning requires a published version anyway. |
+| Corner arcs, glow, shadows, blur | **Drop.** | Flat surfaces (CLAUDE.md section 4). |
+| A single workout, with no days | **Extend** with a day selector (**Decision D7**). | Trainers' plans are usually several workouts. |
+
+---
+
+## 4. Screens
+
+All screens use the shared theme: 20 dp gutter, 16 dp radius for cards and inputs, IBM Plex Sans, named type styles and 48 dp touch targets. Copy comes from string resources in Polish and English. Numbers use the locale's format; Polish uses a decimal comma ("82,5").
+
+| # | Screen | Purpose | Primary action | Key states |
+|---|---|---|---|---|
+| S1 | **Plan library** | The trainer's templates: name, number of days, last edited, and a draft badge. | "Nowy plan" | loading; empty ("Utwórz pierwszy plan"); error + retry; offline (cached list); unpublished-draft badge per row |
+| S2 | **Plan editor** ("Kreator planu") | Edit the name and days; add, reorder and remove exercises; edit sets inline. | "Zapisz plan" (publishes a version) | draft saved locally; saving; saved as version N; inline validation; offline; conflict |
+| S3 | **Exercise library / picker** | One screen with two modes: *browse* (from S1) and *pick* (from S2, with multi-select). | browse: "Nowe ćwiczenie"; pick: "Dodaj (3)" | loading; no results + "Utwórz „{query}”"; offline (works from the local cache) |
+| S4 | **Exercise detail** | Images (later, the trainer's video), muscles, equipment, tracking type, instructions. | pick mode: "Dodaj do dnia"; own exercise: "Edytuj" | missing-media placeholder; "Ukryte" label |
+| S5 | **Exercise form** (create or edit) | The trainer creates or edits their own exercise. | "Utwórz ćwiczenie" / "Zapisz zmiany" | validation; saving; pending sync; possible-duplicate warning; tracking type locked when the exercise is in use |
+| S6 | **Exercise settings sheet** | Settings for one exercise in the plan: rest, RPE on/off, tempo, set types, note. | "Gotowe" | |
+
+### S2 Plan editor
+
+```
+←  Nowy plan                                        ⋮
+   Szkic zapisany na urządzeniu · 2 ćwiczenia · 6 serii
+
+   Nazwa planu
+   [ Hipertrofia Góra A – Faza 2                    ]
+
+   (Dzień A) (Dzień B) ( + )
+
+   Kolejność ćwiczeń
+   ⠿ [img] Wyciskanie sztangi leżąc                 ⋮
+           Klatka piersiowa · przerwa 2:00
+       SERIA     KG       POWT.     RPE
+       1        [80   ]  [8    ]   [8  ]
+       2        [82,5 ]  [8    ]   [8,5]
+       3        [85   ]  [6    ]   [9  ]
+       + Dodaj serię
+
+   ⠿ [img] Wiosłowanie hantlem w opadzie            ⋮
+           Plecy · przerwa 1:30
+       ...
+
+   [ + Dodaj ćwiczenia ]                    (secondary)
+
+ ──────────────────────────────────────────────────────
+   [              Zapisz plan               ] (primary, fixed)
+```
+
+- **Top bar:** back, title, and an overflow menu (duplicate plan, archive). Going back with unsaved changes needs no dialog, because the draft is already saved on the device.
+- **Days:** chips "Dzień A · Dzień B · +". The chip menu has rename, duplicate and delete. A new plan starts with one day.
+- **Exercise row:**
+  - It has a drag handle, a thumbnail, the name, and the primary muscle with the rest time.
+  - The row menu has move up, move down, "Połącz w superserię z następnym", exercise settings (S6), replace exercise, and remove.
+  - Removing an exercise shows a snackbar with "Cofnij" instead of a confirmation dialog.
+- **Set table:**
+  - Its columns follow the exercise's `trackingType`: `WEIGHT_REPS` → kg + reps; `REPS` → reps; `TIME` → time; `DISTANCE_TIME` → distance + time.
+  - The RPE column appears only when RPE is enabled for that exercise.
+  - Numeric keyboards are used everywhere. A reps range is entered as "8–10".
+  - Tapping the set number cycles the set type: working "1", warm-up "W", drop set "D".
+  - Swipe left, or the set menu, deletes a set.
+  - "Dodaj serię" copies the values of the last set.
+- **Layout:** the "Zapisz plan" button stays above the keyboard and system bars, and the list scrolls clear of it. While a save runs, the button shows a progress state and ignores taps.
+
+### S3 Exercise library / picker
+
+Visual reference: the Trenerzy, Klienci and Postępy screens. The element-by-element mapping is in [design/stitch/reference](../design/stitch/reference/README.md).
+
+- **Search:** a search field at the top. Search is local and accent-insensitive across the Polish and English names and aliases, so "wyciskanie", "wyciskanie lezac" and "bench" all match.
+- **Filters:** one row of chips, "Partia mięśniowa", "Sprzęt" and "Moje". Each opens a short sheet.
+- **Sections without a query:** "Ostatnio używane" (pick mode), then "Moje ćwiczenia", then A–Z.
+- **Rows:** thumbnail, name and primary muscle. In pick mode each row has a checkbox, and tapping the thumbnail opens S4.
+- **Selection:** the primary button shows the selection count. Exercises are added to the current day in the order they were selected.
+- **No results:** the screen shows "Brak wyników" plus the action "Utwórz „{query}”", which opens S5 with the name prefilled. In pick mode the created exercise is selected automatically.
+- **Hidden exercises** do not appear in search.
+
+### S5 Exercise form: creating an exercise
+
+There is no Stitch reference for this screen; it uses the shared form components. It is a full screen, not a sheet, because it can hold long instructions.
+
+```
+×  Nowe ćwiczenie
+
+   Nazwa *
+   [ Hip thrust na maszynie                         ]
+   Podobne: "Barbell Hip Thrust" – sprawdź      (soft warning)
+
+   Główna partia mięśniowa *
+   [ Pośladki                                     ▾ ]
+
+   Sprzęt *
+   [ Maszyna                                      ▾ ]
+
+   Sposób zapisu *
+   (Ciężar × powt.) (Powtórzenia) (Czas) (Dystans i czas)
+
+   ▸ Więcej szczegółów
+       Mięśnie pomocnicze   [ Dwugłowe uda, … ▾ ]
+       Instrukcja           [                          ]
+                            [                          ]
+
+   [           Utwórz ćwiczenie            ]  (primary)
+```
+
+- **Required fields:** name (2–80 characters), primary muscle, equipment and tracking type. Tracking type defaults to "Ciężar × powt.".
+- **Optional fields:** secondary muscles and instructions, inside "Więcej szczegółów".
+- **Name language:** the name is stored in the trainer's current locale. The other locale falls back to the same text. There are no translation fields.
+- **Duplicate check:** the normalized name is matched against the library. A match shows a soft warning with a link to the existing exercise; it never blocks saving.
+- **Saving:** the exercise is saved locally with a client UUID and appears at once as "Oczekuje na synchronizację". Sync follows in the background (rule 7 in section 6).
+- **Editing:**
+  - Only the owner can edit their exercise.
+  - Name, muscles, equipment and instructions can always be edited.
+  - Tracking type is **locked** once any plan version or workout log uses the exercise. The field explains why.
+- **Hiding:** the overflow menu on S4 has "Ukryj ćwiczenie". Hiding is reversible, and the exercise is never hard-deleted.
+- **Demo video:** this is an integration point (`demoMediaId`). This feature shows no placeholder for it.
+
+---
+
+## 5. Domain model
+
+This extends architecture section 10.4. The structural addition is **`PlanDay`** (**Decision D7**).
 
 ```mermaid
 erDiagram
@@ -82,176 +217,146 @@ erDiagram
 
 | Field | Notes |
 |---|---|
-| `id` | Our UUID. Never expose the source's id as the primary key. |
-| `ownerTrainerId` | `null` = global library; otherwise the trainer's own exercise, visible only to that trainer. |
-| `source`, `sourceId` | e.g. `free-exercise-db` / `Barbell_Squat`. Used for re-imports and attribution. |
-| `names` | Per locale (`pl`, `en`), plus search aliases such as "bench", "wyciskanie leżąc" and "klata". |
-| `primaryMuscles`, `secondaryMuscles` | A shared `MuscleGroup` enum in `:contract`, starting with the 17 dataset values. |
-| `equipment` | A shared `Equipment` enum. The dataset's *none* maps to `OTHER`, after a manual check. |
-| `trackingType` | `WEIGHT_REPS`, `REPS`, `TIME`, `DISTANCE_TIME`. Derived from the category during import, then corrected by hand for the curated set. The logger depends on it. |
-| `category`, `mechanic`, `level` | Kept for filtering and future use; not shown by default. |
-| `instructions` | Per locale. English comes from the dataset; Polish is added for the curated set. |
-| `images`, `demoMediaId` | Dataset images are copied to our storage, not hotlinked. `demoMediaId` is the trainer video integration point. |
-| `status` | `ACTIVE` / `HIDDEN`. Hidden records stay because historical plans and logs reference them. Exercises are never hard-deleted. |
-| `updatedAt` | Drives incremental sync to the app. |
+| `id` | UUID. For custom exercises it is generated on the client, which makes creation idempotent. |
+| `ownerTrainerId` | `null` = global library; otherwise a custom exercise visible only to its owner. |
+| `source`, `sourceId` | e.g. `free-exercise-db` / `Barbell_Squat`; `trainer` for custom exercises. |
+| `names` | Per locale (`pl`, `en`), plus search aliases. |
+| `primaryMuscles`, `secondaryMuscles` | A shared `MuscleGroup` enum in `:contract`, with the 17 dataset values. |
+| `equipment` | A shared `Equipment` enum. |
+| `trackingType` | `WEIGHT_REPS`, `REPS`, `TIME`, `DISTANCE_TIME`. The logger depends on it. |
+| `instructions` | Per locale, optional. |
+| `images`, `demoMediaId` | Dataset images are copied to our storage, not hotlinked. `demoMediaId` is the video integration point. |
+| `featured` | Marks the curated set, which ranks first in search. |
+| `status` | `ACTIVE` / `HIDDEN`. Exercises are never hard-deleted, because plans and logs reference them. |
+| `inUse` (derived) | True once a plan version or workout log references the exercise. It locks `trackingType`. |
+| `updatedAt` | Drives incremental sync. |
 
 ### Plan
 
 | Entity | Fields | Rules |
 |---|---|---|
-| `PlanTemplate` | `id`, `ownerTrainerId`, `name`, `description?`, `latestVersion`, `archivedAt?` | Owned by one trainer. |
-| `PlanVersion` | `id`, `templateId`, `number`, `createdAt`, `basedOnVersion` | **Immutable.** `(templateId, number)` is unique. Saving creates a new version. Old assignments keep their version. |
-| `PlanDay` | `id`, `versionId`, `position`, `name` | e.g. "Day A – Upper". |
-| `PlannedExercise` | `id`, `dayId`, `position`, `exerciseId`, `supersetGroup?`, `note?`, `restSeconds?` | The note is the trainer's cue for that exercise in this plan. |
-| `PlannedSet` | `id`, `plannedExerciseId`, `position`, `type` (warm-up / working / drop), `repsMin?`, `repsMax?`, `weight?` + `unit`, `durationSeconds?`, `distanceMeters?`, `rpe?`, `rir?`, `tempo?`, `restSeconds?` | The fields that apply depend on `trackingType`. A reps range is `repsMin..repsMax`; a fixed rep count has min = max. |
-| `PlanDraft` (local only) | The whole editable tree plus `baseVersion` | Autosaved to SQLDelight on every change and survives process death. Deleted on successful publish. |
+| `PlanTemplate` | `id`, `ownerTrainerId`, `name`, `latestVersion`, `archivedAt?` | Owned by one trainer. |
+| `PlanVersion` | `id`, `templateId`, `number`, `createdAt`, `basedOnVersion` | **Immutable.** `(templateId, number)` is unique. |
+| `PlanDay` | `id`, `versionId`, `position`, `name` | |
+| `PlannedExercise` | `id`, `dayId`, `position`, `exerciseId`, `supersetGroup?`, `restSeconds?`, `rpeEnabled`, `tempo?`, `note?` | The note is the trainer's cue for that exercise in this plan. |
+| `PlannedSet` | `id`, `plannedExerciseId`, `position`, `type` (`WARM_UP` / `WORKING` / `DROP`), `repsMin?`, `repsMax?`, `weightGrams?`, `durationSeconds?`, `distanceMeters?`, `rpe?`, `restSecondsOverride?` | The fields that apply depend on `trackingType`. A fixed rep count has min = max. |
+| `PlanDraft` (local only) | The editable tree plus `templateId?` and `baseVersion?` | Autosaved to SQLDelight on every change. It survives process death and is deleted after a successful publish. |
 
-Notes:
+`PlanValidator` lives in `:contract`, so the app and the server reject the same input:
 
-- Weight is stored as an integer in grams together with its display unit, to avoid floating-point drift in the same way as money. **Decision D6.**
-- Validation (`PlanValidator`) lives in `:contract`, so the app and the server reject the same inputs. A plan needs a name, at least one day, and at least one exercise per day. Reps must satisfy 1 ≤ min ≤ max ≤ 100. RPE must be 1–10 in 0.5 steps. Only one of RPE and RIR may be set.
+- A plan needs a name (1–80 characters), at least one day, and at least one exercise per day.
+- Each exercise needs at least one set.
+- Reps must satisfy 1 ≤ min ≤ max ≤ 100. Weight must be 0–1000 kg. RPE must be 1–10 in 0.5 steps.
 
----
-
-## 4. Screens (trainer role)
-
-The layout follows CLAUDE.md sections 3–6: one purpose per screen, one dominant action, flat surfaces, a 20 dp gutter, 16 dp card radius and IBM Plex Sans. **To be checked against Stitch.**
-
-| # | Screen | Purpose | Primary action | Key states |
-|---|---|---|---|---|
-| S1 | **Plan library** | The trainer's plan templates: name, number of days, last edited, number of clients using them later. | "New plan" | loading, empty ("Create your first plan"), error + retry, offline (cached list, read-only badge), unpublished-draft badge per row |
-| S2 | **Plan editor** | Edit name and days; reorder, add and remove exercises; edit sets inline. | "Save" (publishes a version) | draft autosaved, saving, saved as version N, validation errors inline, offline ("Draft saved on this device – publish when online"), conflict (another device published version N+1) |
-| S3 | **Exercise picker** (full screen) | Search and multi-select exercises to add to a day. | "Add (3)" | loading, no results + "Create custom exercise", offline (works from local cache) |
-| S4 | **Exercise detail** | Images or demo video, muscles, equipment, instructions. | none in the library; "Add to day" when opened from the picker | media placeholder; video upload states once video is in scope |
-| S5 | **Custom exercise form** | A trainer creates their own exercise: name, primary muscle, equipment, tracking type, optional instructions. | "Create exercise" | validation, submitting, duplicate-name warning (soft, not a block) |
-| S6 | **Set details sheet** | Advanced fields for one exercise: set types, RPE/RIR, tempo, rest, note. | "Done" | |
-
-### Plan editor layout (S2)
-
-- **Top app bar:** back, plan name (tap to rename), overflow menu (duplicate, archive). Back with unsaved changes keeps the draft and needs no dialog, because the draft is already saved locally.
-- **Day selector:** pill chips "Day A · Day B · +". Long-press a chip, or use its menu, to rename, duplicate or delete the day.
-- **Exercise list** for the selected day. Each row shows the thumbnail, name and a compact set table:
-
-  ```
-  [img] Barbell Squat                         ⋮
-        SET   REPS    KG     REST
-        1     8–10    60     2:00
-        2     8–10    60     2:00
-        + Add set
-  ```
-
-  - The fields shown match the exercise's tracking type, with numeric keyboards. Editing a set copies its values to the next new set, as in Hevy.
-  - The row menu holds reorder, superset with next, set details (S6) and remove.
-- **Bottom of the list:** "Add exercises" (secondary) opens S3. The fixed primary "Save" button sits above the keyboard and system bars, and the list scrolls clear of it.
-
-### Exercise picker (S3)
-
-- A search field at the top. Search is local and accent-insensitive across both locales' names and aliases, so "wyciskanie", "wyciskanie lezac" and "bench" all match.
-- One row of filter chips: muscle group and equipment. Each opens a short sheet.
-- Sections when there is no query: "Recently used", then "My exercises", then A–Z.
-- Rows show a thumbnail, the name and the primary muscle, with a checkbox. Tapping the thumbnail opens S4.
-- The selection count is shown in the primary button. Exercises are added in the order they were selected.
-
-### Navigation (**Decision D1**)
-
-The reference trainer tabs are Start / Calendar / Clients / Finance, so there is no obvious home for the plan library. Options:
-
-- **A. Clients tab → "Plans" segment** (Clients | Plans). Recommended: plans exist to be assigned to clients.
-- **B. A fifth top-level tab, "Plans".**
-- **C. Start screen shortcut plus a profile menu entry.**
-
-The exercise library opens from inside the plan area (S1 overflow → "Exercise library") and from the picker. It does not need a tab.
+Weight is stored as integer grams. Display uses kg (**Decision D6**).
 
 ---
 
-## 5. Behaviour rules
+## 6. Behaviour rules
 
-1. **Drafts are local and continuous.** Every edit goes to `PlanDraft` in SQLDelight immediately. The editor never loses input to process death, a failed save or going offline.
-2. **Publishing creates a version.** "Save" sends the draft with `baseVersion` and a client-generated `operationId`.
-   - The server returns the new version number. Retries with the same `operationId` return the same version, so a retry never publishes twice.
-   - If `baseVersion` ≠ the server's latest version, the server returns a conflict. The UI then offers "Review latest" or "Save as new plan". There is no silent overwrite.
-3. **Offline publishing (Decision D4):**
-   - **Proposal:** publishing needs the server. While offline, the editor shows "Draft saved on this device". The Save button stays enabled and shows an inline "Not published – you're offline" message.
-   - **Alternative:** queue the publish in the operation queue with a pending badge.
-4. **Editing never rewrites history.** Clients on version N keep version N. After publishing N+1, the editor offers "Update for clients on version N" as a separate, explicit action. That action belongs to the assignment integration.
-5. **Deleting an exercise** used in any plan or log only hides it (`HIDDEN`). Existing plans keep showing it with a "No longer in library" label.
-6. **The exercise library works offline.** The full global library plus the trainer's own exercises sync to the device. The first sync is about 876 rows, then only `updatedSince` changes. Images load lazily and are cached by Coil.
+1. **Drafts are local and continuous.** Every edit is written to `PlanDraft` straight away, through pure reducer functions. The editor never loses input to process death, a failed save or going offline.
+2. **Saving publishes a version.** "Zapisz plan" first validates locally and shows errors inline, scrolling to the first one. It then sends the draft with `baseVersion` and a client-generated `operationId`.
+   - A retry with the same `operationId` returns the same version, so a retry never publishes twice.
+   - A stale `baseVersion` returns a conflict. The UI offers "Zobacz najnowszą wersję" or "Zapisz jako nowy plan", and the draft is kept.
+3. **Publishing needs the server (Decision D4).** While offline, the button stays enabled. Tapping it shows the inline message "Nie zapisano – brak połączenia. Szkic jest na tym urządzeniu." It never shows a fake success.
+4. **Editing never rewrites history.** Clients on version N keep version N. Moving them to N+1 is an explicit action in the assignment flow.
+5. **Custom exercises are local-first.** They are written locally with a client UUID and synced through the operation queue. The server deduplicates by UUID. Pending and failed states are visible in S3, S4 and S5.
+6. **Hidden exercises stay resolvable.** Existing plans keep showing them, labelled "Usunięte z biblioteki".
+7. **Publishing a plan that uses unsynced custom exercises** syncs those exercises first, in the same publish operation. If an exercise sync fails, the publish fails with a clear message, and the draft is kept.
+8. **The library works offline.** The global library and the trainer's own exercises sync to the device: about 876 rows the first time, then only `updatedSince` changes. Images load lazily and are cached by Coil.
 
 ---
 
-## 6. Architecture
+## 7. Architecture
 
 | Layer | Pieces |
 |---|---|
-| `:contract` | `ExerciseDto`, `PlanTemplateDto`, `PlanVersionDto` (nested days, exercises and sets), enums `MuscleGroup`, `Equipment`, `TrackingType`, `SetType`, and `PlanValidator`. |
-| `shared/domain` | Models; use cases `SearchExercises`, `GetExercise`, `CreateCustomExercise`, `GetPlanLibrary`, `OpenPlanDraft`, `UpdatePlanDraft` (pure reducers for add, move, remove and superset), `PublishPlan`. |
-| `shared/data` | `ExerciseRepository`: SQLDelight tables plus an FTS table over normalized names and aliases, and incremental sync. `PlanRepository`: templates, versions, local drafts and the publish call. |
-| `shared/feature/workout-builder` | `PlanLibraryViewModel`, `PlanEditorViewModel`, `ExercisePickerViewModel`, `ExerciseDetailViewModel`, `CustomExerciseViewModel`. Each exposes an immutable state through `StateFlow` and takes explicit events. The screen content is previewable with fixtures. |
-| Backend (Training module) | Tables `exercise`, `exercise_name`, `plan_template`, `plan_version`, `plan_day`, `planned_exercise`, `planned_set`, plus a unique `operation_id`. Endpoints, sketched below. |
-| Seed import | A one-off, repeatable import job (backend `tools/` or a Gradle task). It reads `free-exercise-db` JSON, maps it to our enums, applies a **curation file** (keep/hide, Polish names, aliases, tracking-type overrides), copies images to object storage and upserts by `(source, sourceId)`. |
+| `:contract` | `ExerciseDto`, `CreateExerciseRequest`, `PlanTemplateDto`, `PlanVersionDto` (nested days, exercises and sets), `PublishPlanRequest`; enums `MuscleGroup`, `Equipment`, `TrackingType`, `SetType`; `PlanValidator`, `ExerciseValidator`. |
+| `shared/domain` | Models. Use cases: `SearchExercises`, `GetExercise`, `SaveCustomExercise`, `HideExercise`, `GetPlanLibrary`, `OpenPlanDraft`, `EditPlanDraft` (pure reducers: add, move, remove, superset, add set with copy), `PublishPlan`. |
+| `shared/data` | `ExerciseRepository`: SQLDelight tables plus an FTS table over normalized names and aliases, incremental sync, and a queue for custom-exercise operations. `PlanRepository`: templates, versions, local drafts and publishing. A fake implementation of each is used for slices 1–2. |
+| `shared/feature/workout-builder` | `PlanLibraryViewModel`, `PlanEditorViewModel`, `ExerciseBrowserViewModel` (browse and pick modes), `ExerciseDetailViewModel`, `ExerciseFormViewModel`. Each exposes immutable state through `StateFlow` and takes explicit events. Each screen is split into a route and stateless content that previews with fixtures. |
+| Backend (Training module) | Tables `exercise`, `exercise_name`, `plan_template`, `plan_version`, `plan_day`, `planned_exercise`, `planned_set`, plus a unique `operation_id`. The server enforces ownership: hiding a button in the UI is not authorization. |
+| Seed import | A repeatable import job. It reads the `free-exercise-db` JSON, maps it to our enums, applies a **curation file** (keep/hide, featured, Polish names, aliases, tracking-type overrides), copies images to storage, and upserts by `(source, sourceId)`. |
 
 Endpoint sketch:
 
 ```
-GET  /exercises?updatedSince=…        global + own
-POST /exercises                        custom exercise
-GET  /plans                            trainer's templates
-GET  /plans/{id}/versions/{n}
-POST /plans                            create template + version 1
-POST /plans/{id}/versions              { baseVersion, operationId, body }
+GET   /exercises?updatedSince=…          global + own
+PUT   /exercises/{id}                    create or update own exercise (idempotent, client UUID)
+POST  /exercises/{id}/hide               own exercise
+GET   /plans                             trainer's templates
+GET   /plans/{id}/versions/{n}
+POST  /plans                             { operationId, body } → template + version 1
+POST  /plans/{id}/versions               { baseVersion, operationId, body } → version N+1 or 409
 ```
 
-The server enforces that a trainer reads and writes only their own templates and custom exercises. Hiding a button in the UI is not authorization.
+### Shared components this feature needs
 
-### Curation (Decision D3)
+These do not exist yet. Create them as small shared primitives in the shared UI/theme package, not inside the feature (CLAUDE.md sections 5 and 9):
 
-Proposal: ship the full dataset, but mark a curated set of about 150 common gym exercises as `featured`. The curated set gets Polish names, aliases, a checked tracking type and Polish instructions. Search ranks featured exercises first. The other ~720 keep English names until someone translates them. They can also be hidden if the team prefers a smaller library.
+- top app bar with back and overflow
+- primary, secondary and text buttons
+- text field and numeric field with a persistent label and inline error
+- search field
+- filter chip
+- selector field that opens a sheet
+- list row with thumbnail
+- bottom sheet
+- snackbar host
+- loading, empty and error state blocks
+
+The workout-set row is shared with the future workout logger. Design its API for both uses: planned values here, actual values in the logger.
 
 ---
 
-## 7. Delivery slices
+## 8. Delivery slices
 
 Each slice is runnable and reviewable on its own.
 
 | # | Slice | Depends on | Done when |
 |---|---|---|---|
-| 0 | **Foundations**: KMP project, shared theme tokens (CLAUDE.md section 4), app scaffold, trainer navigation, Koin, SQLDelight. | none | Owned by whoever starts first; coordinate so it is not built twice (**Decision D2**). |
-| 1 | **Exercise library, read-only**, from a bundled fixture of the curated subset: S3 picker without multi-select, S4 detail, search and filters. | 0 | Search works offline, including Polish diacritics; loading, empty and error states are shown. |
-| 2 | **Plan editor with local drafts**: S1, S2, S6 and S3 multi-select. Publishing goes to a fake repository. | 1 | A draft survives process death; validation works; reorder, superset and set-copy work. |
-| 3 | **Backend and sync**: Training module tables, seed import with curation, the endpoints above, real repositories, version publishing, conflicts and idempotent retry. | 2, backend scaffold | Publishing creates immutable versions; a retry never duplicates; a stale `baseVersion` is a conflict. |
-| 4 | **Custom exercises**: S5 and server ownership checks. | 3 | A trainer sees only their own custom exercises. |
-| 5 | **Integration**: assign a version to a client (the client's plan and logger read it) and attach a trainer demo video. | 3, media pipeline, client relationships | Planned-vs-done reads the assigned version. |
+| 0 | **Foundations**: KMP project, shared theme tokens (CLAUDE.md section 4), app scaffold, trainer navigation, Koin, SQLDelight, and the shared components listed above. | none | Coordinate with the team so this is not built twice (**Decision D2**). |
+| 1 | **Exercise library, read-only**, from a bundled fixture of the curated subset: S3 in browse mode, S4, search and filters. | 0 | Search works offline, including Polish diacritics; loading, empty and error states are shown. |
+| 2 | **Plan editor with local drafts**: S1, S2, S6, and S3 in pick mode. Publishing goes to a fake repository. | 1 | A draft survives process death; validation, reorder, superset, set types and set copy all work. |
+| 3 | **Exercise creation**: S5 and the edit and hide flows, stored locally with a pending sync state, including "Utwórz „{query}”" from the picker. | 1 | A created exercise can be added to a plan straight away, offline included. |
+| 4 | **Backend and sync**: Training module tables, seed import with curation, the endpoints, real repositories, version publishing, conflicts, idempotent retries and custom-exercise sync. | 2, 3, backend scaffold | Versions are immutable; retries never duplicate; ownership is enforced on the server. |
+| 5 | **Integration**: the "Przypisz klientowi" snackbar action opens the assignment flow, and trainer demo video is added to exercises. | 4, media pipeline, client relationships | Planned-vs-done reads the assigned version. |
 
 ---
 
-## 8. Tests that matter
+## 9. Tests that matter
 
-- **Draft reducers:** add, move, remove, superset grouping, and set-copy defaults.
-- **`PlanValidator`:** the same cases run on the client and the server.
+- **Draft reducers:** add, move, remove, superset grouping, set type, and set copy.
+- **`PlanValidator` and `ExerciseValidator`:** the same cases run on the client and the server.
 - **Draft persistence:** an edit, then process death, then reopening leaves an identical draft.
 - **Publishing:**
-  - A retry with the same `operationId` yields one version.
+  - A retry with the same `operationId` creates one version.
   - A stale `baseVersion` returns a conflict, and the draft is kept.
-  - Publishing N+1 does not change N or its assignments.
-- **Search:** accent-insensitive Polish and English matching; aliases; featured exercises ranked first.
-- **Seed import:** idempotent upsert; enum mapping covers every dataset value; hidden exercises remain resolvable.
+  - Publishing while offline never reports success.
+- **Custom exercise:**
+  - Creating it twice with the same UUID creates one record.
+  - Its tracking type is locked once a plan or log uses it.
+  - A hidden exercise still resolves in old plans.
+  - A plan that uses an unsynced exercise publishes only after that exercise syncs.
+- **Search:** accent-insensitive Polish and English matching; aliases; featured exercises ranked first; hidden exercises excluded.
+- **Seed import:** idempotent upsert; the enum mapping covers every dataset value.
 - **Authorization:** trainer A cannot read or edit trainer B's templates or custom exercises.
 
 ---
 
-## 9. Decisions needed
+## 10. Decisions
 
-| # | Question | Proposal |
+All ten were agreed on 2026-10-28. D2 is still an action item: check with the team before starting slice 0.
+
+| # | Question | Agreed |
 |---|---|---|
-| D1 | Where does the plan library live in trainer navigation? | A "Plans" segment inside the Clients tab. |
-| D2 | Does this feature build the KMP scaffold and theme (slice 0), or is a teammate already doing it? | Coordinate. If nobody is on it, this branch does the minimum. |
-| D3 | Library size and Polish content. | Full dataset, plus about 150 curated exercises with Polish names, aliases and instructions. |
+| D1 | Where does the plan library live in trainer navigation? The reference tabs are Start / Kalendarz / Klienci / Finanse. The Stitch Klienci screen also shows a central "+ PLAN" button in the trainer nav. | A "Plany" segment inside the Klienci tab (Klienci \| Plany). The exercise library opens from the S1 overflow menu and from the picker. |
+| D2 | Who builds slice 0 (scaffold, theme, shared components)? | Coordinate. If nobody is on it, this branch builds the minimum. |
+| D3 | Library size and Polish content. | The full dataset, plus about 150 curated `featured` exercises with Polish names, aliases and a checked tracking type. |
 | D4 | Can a plan be published while offline (queued)? | No. Drafts are local; publishing needs the server. |
-| D5 | Can clients create their own plans or routines (Hevy-style), or only trainers? | Trainers only for now. Clients can still log independent workouts. |
-| D6 | Weight unit: kg only, or kg/lb per user? | Store grams plus a display unit; kg by default. |
-| D7 | Plan structure: multiple days per plan (`PlanDay`)? | Yes. This needs an update to the ER diagram in architecture section 10.4. |
-| D8 | Are dataset stock images shown at all, or only trainer videos and placeholders? | Show them as thumbnails and in the detail view until a trainer video exists. |
-
-## 10. Next step: the Stitch design
-
-Before UI slices 1–2, export from Stitch the screens for the exercise list or search, the exercise detail and the plan or workout builder. Use Stitch's code/HTML export or screenshots, save them under `docs/design/stitch/plan-creator/`, and update section 4 with what we keep and what we simplify. Alternatively, allow `stitch.google.com` in the cloud environment's network settings. The project still needs a Google sign-in, so an export is the more reliable route.
+| D5 | Can clients create their own plans? | Trainers only for now. Clients can still log independent workouts. |
+| D6 | Weight unit. | Store grams; display kg only for now. |
+| D7 | Several days per plan (`PlanDay`)? Stitch shows a single workout. | Yes. The ER diagram in architecture section 10.4 is updated to match. |
+| D8 | Show dataset stock images? | Yes, as thumbnails and in S4, until a trainer video exists. |
+| D9 | Can custom exercises be created offline? | Yes, local-first with a client UUID (rule 5 in section 6). |
+| D10 | Do the "Zapisz szablon" and "Przypisz klientowi" buttons from Stitch stay as two buttons? | No. One primary "Zapisz plan", followed by an "Przypisz klientowi" snackbar action (section 3). |
