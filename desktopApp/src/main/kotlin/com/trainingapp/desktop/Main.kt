@@ -35,7 +35,7 @@ fun main() {
     application {
         Window(
             onCloseRequest = ::exitApplication,
-            title = "Trainer – desktop preview",
+            title = "Trener – podgląd na komputerze",
             state = rememberWindowState(width = 412.dp, height = 892.dp),
         ) { App() }
     }

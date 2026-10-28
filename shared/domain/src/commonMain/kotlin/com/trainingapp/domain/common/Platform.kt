@@ -31,7 +31,7 @@ interface CurrentUser {
     val trainerId: String
 }
 
-/** The app's selected UI language ("pl", "en"). Names, instructions and number formats follow it. */
+/** The app's language. The app is Polish only for now ("pl"); names, instructions and number formats follow it. */
 fun interface AppLanguage {
     fun current(): String
 }

@@ -35,8 +35,8 @@ data class Exercise(
     fun name(languageTag: String): String =
         names[languageTag] ?: names[FALLBACK_LANGUAGE] ?: names.values.firstOrNull().orEmpty()
 
-    fun instructions(languageTag: String): List<String> =
-        instructions[languageTag] ?: instructions[FALLBACK_LANGUAGE] ?: instructions.values.firstOrNull().orEmpty()
+    /** Instructions are shown only in the requested language; they are never replaced by another language. */
+    fun instructions(languageTag: String): List<String> = instructions[languageTag].orEmpty()
 
     fun toDto() = ExerciseDto(
         id = id,

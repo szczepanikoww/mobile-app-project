@@ -388,7 +388,7 @@ Assumptions made while implementing (not product decisions):
 
 The product owner reviewed slices 0–3 and asked for two changes. Both override section 3, decision D10 and part of D7:
 
-1. **Polish is the app language.** Default resources are Polish (`values/`). English is a translation (`values-en/`), used only when the device language is English.
+1. **The app is Polish only.** There are no English resources; the device language does not matter. Dataset instructions (English) are not shown until they are translated.
 2. **S2 follows the Stitch "Kreator planu" screen element by element.** It has:
    - the "Kreator Planu" header with the messages, notifications and profile buttons;
    - the "SZKIC AUTOZAPISU" badge with "Edytowano … temu";

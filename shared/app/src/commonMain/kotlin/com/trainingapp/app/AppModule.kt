@@ -1,6 +1,5 @@
 package com.trainingapp.app
 
-import androidx.compose.ui.text.intl.Locale
 import app.cash.sqldelight.db.SqlDriver
 import com.trainingapp.app.resources.Res
 import com.trainingapp.data.db.createTrainingDatabase
@@ -53,8 +52,8 @@ fun appModule(platform: AppPlatform) = module {
     single { createTrainingDatabase(get()) }
     single<NetworkMonitor> { platform.networkMonitor }
     single<CurrentUser> { DemoTrainer }
-    // Polish is the app language; English only when the device asks for it.
-    single<AppLanguage> { AppLanguage { if (Locale.current.language == "en") "en" else "pl" } }
+    // The app is Polish only, whatever the device language is.
+    single<AppLanguage> { AppLanguage { "pl" } }
     single<IdGenerator> { IdGenerator.Uuids }
     single<TimeSource> { TimeSource.System }
     single(AppScope) { CoroutineScope(SupervisorJob() + Dispatchers.Default) }
