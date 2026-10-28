@@ -1,0 +1,74 @@
+-- Local working copies. Written on every edit; deleted after a successful publish.
+CREATE TABLE plan_draft (
+    draft_id TEXT NOT NULL PRIMARY KEY,
+    template_id TEXT,
+    json TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+-- Cache of published templates and their immutable versions.
+CREATE TABLE plan_template (
+    id TEXT NOT NULL PRIMARY KEY,
+    owner_trainer_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    latest_version INTEGER NOT NULL,
+    archived_at INTEGER,
+    updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE plan_version (
+    id TEXT NOT NULL PRIMARY KEY,
+    template_id TEXT NOT NULL,
+    number INTEGER NOT NULL,
+    json TEXT NOT NULL,
+    UNIQUE (template_id, number)
+);
+
+-- Used only by the fake remote until the backend exists: remembers which version each operation created.
+CREATE TABLE fake_remote_operation (
+    operation_id TEXT NOT NULL PRIMARY KEY,
+    template_id TEXT NOT NULL,
+    version_number INTEGER NOT NULL
+);
+
+selectDraft:
+SELECT * FROM plan_draft WHERE draft_id = ?;
+
+selectDraftForTemplate:
+SELECT * FROM plan_draft WHERE template_id = ? ORDER BY updated_at DESC LIMIT 1;
+
+selectAllDrafts:
+SELECT * FROM plan_draft;
+
+upsertDraft:
+INSERT OR REPLACE INTO plan_draft(draft_id, template_id, json, updated_at) VALUES (?, ?, ?, ?);
+
+deleteDraft:
+DELETE FROM plan_draft WHERE draft_id = ?;
+
+selectActiveTemplates:
+SELECT * FROM plan_template WHERE archived_at IS NULL;
+
+selectTemplate:
+SELECT * FROM plan_template WHERE id = ?;
+
+upsertTemplate:
+INSERT OR REPLACE INTO plan_template(id, owner_trainer_id, name, latest_version, archived_at, updated_at) VALUES (?, ?, ?, ?, ?, ?);
+
+archiveTemplate:
+UPDATE plan_template SET archived_at = ? WHERE id = ?;
+
+insertVersion:
+INSERT OR IGNORE INTO plan_version(id, template_id, number, json) VALUES (?, ?, ?, ?);
+
+selectVersion:
+SELECT * FROM plan_version WHERE template_id = ? AND number = ?;
+
+selectAllVersionJson:
+SELECT json FROM plan_version;
+
+selectFakeOperation:
+SELECT * FROM fake_remote_operation WHERE operation_id = ?;
+
+insertFakeOperation:
+INSERT INTO fake_remote_operation(operation_id, template_id, version_number) VALUES (?, ?, ?);
