@@ -57,7 +57,7 @@ python3 tools/exercise-seed/build_seed.py --dataset /tmp/exercises.json --images
 ## Status
 
 - **Language:** the app is Polish only, whatever the device language. Exercise instructions from the dataset are English, so they are not shown until they are translated.
-- **Plan creator (S2):** follows the Stitch "Kreator planu" screen; see section 12 of the feature plan.
+- **Design:** every screen follows the Stitch references. The plan library is under the orange "+ PLAN" button of the trainer navigation, and the plan creator (S2) copies the "Kreator planu" screen. See section 12 of the feature plan.
 
 - **Built so far:** the trainer plan creator and exercise library, delivery slices 0–3 of [docs/features/plan-creator.md](docs/features/plan-creator.md), against local storage and fake remotes. There is no backend, sign-in or client list yet.
 - **Verified:** `./gradlew -Ptrainer.ui=false check`, which runs the `:contract`, `:shared:domain` and `:shared:data` tests.

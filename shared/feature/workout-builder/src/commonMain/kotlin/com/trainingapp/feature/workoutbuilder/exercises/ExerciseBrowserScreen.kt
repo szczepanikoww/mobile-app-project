@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -40,7 +41,9 @@ import com.trainingapp.contract.exercise.Equipment
 import com.trainingapp.contract.exercise.MuscleGroup
 import com.trainingapp.designsystem.component.AppFilterChip
 import com.trainingapp.designsystem.component.AppTextButton
-import com.trainingapp.designsystem.component.AppTopBar
+import com.trainingapp.designsystem.component.CardRow
+import com.trainingapp.designsystem.component.CountPill
+import com.trainingapp.designsystem.component.DetailHeader
 import com.trainingapp.designsystem.component.BottomActionBar
 import com.trainingapp.designsystem.component.EmptyState
 import com.trainingapp.designsystem.component.ErrorState
@@ -69,6 +72,9 @@ import com.trainingapp.feature.workoutbuilder.common.muscleAndEquipment
 import com.trainingapp.feature.workoutbuilder.resources.Res
 import com.trainingapp.feature.workoutbuilder.resources.exercises_count
 import com.trainingapp.feature.workoutbuilder.resources.library_add_selected
+import com.trainingapp.feature.workoutbuilder.resources.library_available
+import com.trainingapp.feature.workoutbuilder.resources.library_new_short
+import com.trainingapp.feature.workoutbuilder.resources.library_screen_title
 import com.trainingapp.feature.workoutbuilder.resources.library_badge_failed
 import com.trainingapp.feature.workoutbuilder.resources.library_badge_hidden
 import com.trainingapp.feature.workoutbuilder.resources.library_badge_own
@@ -153,23 +159,13 @@ fun ExerciseBrowserContent(
 ) {
     var sheet by rememberSaveable { mutableStateOf<FilterSheet?>(null) }
     val title = when {
-        !state.pickMode -> Res.string.library_title
+        !state.pickMode -> Res.string.library_screen_title
         state.singleSelect -> Res.string.library_replace_title
         else -> Res.string.library_pick_title
     }
     Scaffold(
         containerColor = AppTheme.colors.background,
-        topBar = {
-            AppTopBar(
-                title = stringResource(title),
-                onNavigate = onBack,
-                actions = {
-                    if (!state.pickMode) {
-                        AppTextButton(stringResource(Res.string.library_new), onClick = { onCreateExercise(null) }, icon = Icons.Outlined.Add)
-                    }
-                },
-            )
-        },
+        topBar = { DetailHeader(title = stringResource(title), onBack = onBack) },
         bottomBar = {
             if (state.pickMode) {
                 BottomActionBar {
@@ -188,7 +184,18 @@ fun ExerciseBrowserContent(
             contentPadding = PaddingValues(start = Spacing.gutter, end = Spacing.gutter, top = Spacing.s, bottom = Spacing.xxl),
         ) {
             item(key = "search") {
-                Column(verticalArrangement = Arrangement.spacedBy(Spacing.m), modifier = Modifier.padding(bottom = Spacing.m)) {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.l), modifier = Modifier.padding(bottom = Spacing.l)) {
+                    // "Trenerzy  38 dostępnych" with the page action on the right, as in the references.
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
+                        Text(stringResource(Res.string.library_title), style = AppTheme.type.screenTitle)
+                        if (!state.loading && !state.error) {
+                            CountPill(stringResource(Res.string.library_available, state.matchCount))
+                        }
+                        Spacer(Modifier.weight(1f))
+                        if (!state.pickMode) {
+                            PrimaryButton(stringResource(Res.string.library_new_short), onClick = { onCreateExercise(null) }, icon = Icons.Outlined.Add)
+                        }
+                    }
                     SearchField(
                         query = state.filter.query,
                         onQueryChange = onQueryChange,
@@ -215,13 +222,6 @@ fun ExerciseBrowserContent(
                             onClick = { sheet = FilterSheet.Equipment },
                         )
                     }
-                    if (!state.loading && !state.error) {
-                        Text(
-                            pluralStringResource(Res.plurals.exercises_count, state.matchCount, state.matchCount),
-                            style = AppTheme.type.compactBody,
-                            color = AppTheme.colors.textSecondary,
-                        )
-                    }
                 }
             }
             when {
@@ -230,19 +230,17 @@ fun ExerciseBrowserContent(
                 state.isEmpty -> item(key = "empty") { NoResults(state, onCreateExercise) }
                 else -> state.sections.forEach { section ->
                     item(key = "header-${section.kind}") { SectionHeader(stringResource(section.kind.titleRes())) }
-                    itemsIndexed(section.exercises, key = { _, exercise -> "${section.kind}-${exercise.id}" }) { index, exercise ->
-                        val shape = groupShape(index, section.exercises.lastIndex)
-                        Column(Modifier.background(AppTheme.colors.surface, shape)) {
-                            if (index > 0) RowDivider()
-                            ExerciseRow(
-                                exercise = exercise,
-                                languageTag = languageTag,
-                                pickMode = state.pickMode,
-                                selected = exercise.id in state.selection,
-                                onClick = { if (state.pickMode) onToggle(exercise.id) else onOpenExercise(exercise.id) },
-                                onOpenDetails = { onOpenExercise(exercise.id) },
-                            )
-                        }
+                    itemsIndexed(section.exercises, key = { _, exercise -> "${section.kind}-${exercise.id}" }) { _, exercise ->
+                        // One white card per exercise, as the Trenerzy and Postępy lists.
+                        ExerciseRow(
+                            exercise = exercise,
+                            languageTag = languageTag,
+                            pickMode = state.pickMode,
+                            selected = exercise.id in state.selection,
+                            onClick = { if (state.pickMode) onToggle(exercise.id) else onOpenExercise(exercise.id) },
+                            onOpenDetails = { onOpenExercise(exercise.id) },
+                            modifier = Modifier.padding(bottom = Spacing.m),
+                        )
                     }
                     item(key = "gap-${section.kind}") { Box(Modifier.padding(bottom = Spacing.l)) }
                 }
@@ -283,13 +281,6 @@ private fun SectionKind.titleRes() = when (this) {
     SectionKind.RESULTS -> Res.string.library_section_results
 }
 
-/** Rows of one section share a single surface: only the first and last rows are rounded. */
-private fun groupShape(index: Int, lastIndex: Int): RoundedCornerShape {
-    val top = if (index == 0) 16.dp else 0.dp
-    val bottom = if (index == lastIndex) 16.dp else 0.dp
-    return RoundedCornerShape(topStart = top, topEnd = top, bottomStart = bottom, bottomEnd = bottom)
-}
-
 @Composable
 private fun NoResults(state: ExerciseBrowserUiState, onCreateExercise: (String?) -> Unit) {
     val query = state.filter.query.trim()
@@ -323,9 +314,11 @@ private fun ExerciseRow(
     selected: Boolean,
     onClick: () -> Unit,
     onOpenDetails: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val name = exercise.name(languageTag)
-    ListRow(
+    CardRow(
+        modifier = modifier,
         title = name,
         supporting = exercise.muscleAndEquipment(),
         onClick = onClick,
@@ -339,9 +332,9 @@ private fun ExerciseRow(
                         onClickLabel = stringResource(Res.string.library_details, name),
                         onClick = onOpenDetails,
                     ),
-                ) { ExerciseImage(exercise, size = 56.dp) }
+                ) { ExerciseImage(exercise, size = 64.dp) }
             } else {
-                ExerciseImage(exercise, size = 56.dp)
+                ExerciseImage(exercise, size = 64.dp)
             }
         },
         badges = if (exercise.isCustom || exercise.isHidden) {

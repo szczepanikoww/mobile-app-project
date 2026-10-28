@@ -9,4 +9,7 @@
     <string name="ds_cancel">Anuluj</string>
     <string name="ds_selected">Zaznaczone</string>
     <string name="ds_image_placeholder">Brak zdjęcia</string>
+    <string name="ds_messages">Wiadomości</string>
+    <string name="ds_notifications">Powiadomienia</string>
+    <string name="ds_profile">Profil</string>
 </resources>

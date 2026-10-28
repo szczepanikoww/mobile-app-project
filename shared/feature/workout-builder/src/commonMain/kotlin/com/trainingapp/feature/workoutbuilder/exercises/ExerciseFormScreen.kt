@@ -14,7 +14,9 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AccessibilityNew
 import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.Icon
@@ -33,6 +35,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.trainingapp.contract.exercise.Equipment
 import com.trainingapp.contract.exercise.ExerciseField
@@ -43,7 +46,8 @@ import com.trainingapp.contract.exercise.MuscleGroup
 import com.trainingapp.contract.exercise.TrackingType
 import com.trainingapp.designsystem.component.AppFilterChip
 import com.trainingapp.designsystem.component.AppTextField
-import com.trainingapp.designsystem.component.AppTopBar
+import com.trainingapp.designsystem.component.DetailHeader
+import com.trainingapp.designsystem.component.PillTextField
 import com.trainingapp.designsystem.component.BottomActionBar
 import com.trainingapp.designsystem.component.ErrorState
 import com.trainingapp.designsystem.component.InlineMessage
@@ -74,6 +78,7 @@ import com.trainingapp.feature.workoutbuilder.resources.form_instructions
 import com.trainingapp.feature.workoutbuilder.resources.form_instructions_supporting
 import com.trainingapp.feature.workoutbuilder.resources.form_more
 import com.trainingapp.feature.workoutbuilder.resources.form_name
+import com.trainingapp.feature.workoutbuilder.resources.form_name_placeholder
 import com.trainingapp.feature.workoutbuilder.resources.form_not_found
 import com.trainingapp.feature.workoutbuilder.resources.form_not_owner
 import com.trainingapp.feature.workoutbuilder.resources.form_primary_muscle
@@ -147,10 +152,9 @@ fun ExerciseFormContent(
     Scaffold(
         containerColor = AppTheme.colors.background,
         topBar = {
-            AppTopBar(
+            DetailHeader(
                 title = stringResource(if (state.isEdit) Res.string.form_title_edit else Res.string.form_title_new),
-                onNavigate = onClose,
-                navigation = TopBarNavigation.Close,
+                onBack = onClose,
             )
         },
         bottomBar = {
@@ -160,7 +164,7 @@ fun ExerciseFormContent(
                         text = stringResource(if (state.isEdit) Res.string.form_save else Res.string.form_create),
                         onClick = onSubmit,
                         loading = state.saving,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
                     )
                 }
             }
@@ -179,12 +183,13 @@ fun ExerciseFormContent(
                 verticalArrangement = Arrangement.spacedBy(Spacing.xl),
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                    AppTextField(
+                    PillTextField(
                         value = state.name,
                         onValueChange = onNameChange,
                         label = stringResource(Res.string.form_name),
+                        placeholder = stringResource(Res.string.form_name_placeholder),
+                        icon = Icons.Outlined.FitnessCenter,
                         error = state.issues.messageFor(ExerciseField.NAME),
-                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                     )
                     state.similar?.let { similar ->
                         // A soft warning only: it never blocks saving.
@@ -204,6 +209,7 @@ fun ExerciseFormContent(
                     value = state.primaryMuscle?.let { stringResource(it.labelRes) },
                     placeholder = stringResource(Res.string.form_select),
                     onClick = { sheet = FormSheet.PrimaryMuscle },
+                    icon = Icons.Outlined.AccessibilityNew,
                     error = state.issues.messageFor(ExerciseField.PRIMARY_MUSCLE),
                 )
                 SelectorField(
@@ -211,6 +217,7 @@ fun ExerciseFormContent(
                     value = state.equipment?.let { stringResource(it.labelRes) },
                     placeholder = stringResource(Res.string.form_select),
                     onClick = { sheet = FormSheet.Equipment },
+                    icon = Icons.Outlined.FitnessCenter,
                     error = state.issues.messageFor(ExerciseField.EQUIPMENT),
                 )
                 TrackingTypeChoice(
@@ -229,6 +236,7 @@ fun ExerciseFormContent(
                         value = state.secondaryMuscles.takeIf { it.isNotEmpty() }?.map { stringResource(it.labelRes) }?.joinToString(),
                         placeholder = stringResource(Res.string.form_secondary_none),
                         onClick = { sheet = FormSheet.SecondaryMuscles },
+                        icon = Icons.Outlined.AccessibilityNew,
                         error = state.issues.messageFor(ExerciseField.SECONDARY_MUSCLES),
                     )
                     AppTextField(

@@ -1,6 +1,19 @@
 package com.trainingapp.feature.workoutbuilder.exercises
 
 import androidx.compose.foundation.layout.Arrangement
+import com.trainingapp.feature.workoutbuilder.resources.detail_title
+import com.trainingapp.designsystem.component.SectionHeader
+import com.trainingapp.designsystem.component.DetailHeader
+import com.trainingapp.designsystem.component.CircleIconButton
+import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -114,29 +127,44 @@ fun ExerciseDetailContent(
     Scaffold(
         containerColor = AppTheme.colors.background,
         topBar = {
-            AppTopBar(
-                title = content?.exercise?.name(languageTag).orEmpty(),
-                onNavigate = onBack,
-                actions = {
-                    if (content != null && content.isOwner) {
-                        IconButton(onClick = onEdit) { Icon(Icons.Outlined.Edit, stringResource(Res.string.detail_edit)) }
-                        OverflowMenu(
-                            actions = listOf(
-                                if (content.exercise.isHidden) {
-                                    MenuAction(stringResource(Res.string.detail_unhide), Icons.Outlined.Visibility) { onSetHidden(false) }
-                                } else {
-                                    MenuAction(stringResource(Res.string.detail_hide), Icons.Outlined.VisibilityOff) { onSetHidden(true) }
-                                },
-                            ),
-                        )
+            DetailHeader(
+                title = stringResource(Res.string.detail_title),
+                onBack = onBack,
+                actions = if (content != null && content.isOwner) {
+                    {
+                        CircleIconButton(Icons.Outlined.Edit, stringResource(Res.string.detail_edit), onEdit)
+                        Box(Modifier.clip(CircleShape).background(AppTheme.colors.surface)) {
+                            OverflowMenu(
+                                actions = listOf(
+                                    if (content.exercise.isHidden) {
+                                        MenuAction(stringResource(Res.string.detail_unhide), Icons.Outlined.Visibility) { onSetHidden(false) }
+                                    } else {
+                                        MenuAction(stringResource(Res.string.detail_hide), Icons.Outlined.VisibilityOff) { onSetHidden(true) }
+                                    },
+                                ),
+                            )
+                        }
                     }
+                } else {
+                    null
                 },
             )
         },
         bottomBar = {
             if (content != null && content.pickMode && !content.exercise.isHidden) {
-                BottomActionBar {
-                    PrimaryButton(stringResource(Res.string.detail_add_to_day), onClick = onAddToDay, modifier = Modifier.fillMaxWidth())
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .background(AppTheme.colors.surface)
+                        .navigationBarsPadding()
+                        .padding(horizontal = Spacing.gutter, vertical = Spacing.m),
+                ) {
+                    PrimaryButton(
+                        stringResource(Res.string.detail_add_to_day),
+                        onClick = onAddToDay,
+                        icon = Icons.Outlined.Add,
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+                    )
                 }
             }
         },
@@ -159,21 +187,35 @@ private fun ExerciseDetailBody(exercise: Exercise, languageTag: String, onRetryS
             .padding(horizontal = Spacing.gutter, vertical = Spacing.l),
         verticalArrangement = Arrangement.spacedBy(Spacing.sectionGap),
     ) {
-        // The bundled start-position photo; a neutral placeholder when there is none. Trainer video comes later.
-        ExerciseImage(
-            exercise,
-            modifier = Modifier
+        // Hero: the photo in a rounded card with a white name card over its lower edge ("Profil trenera").
+        Box(
+            Modifier
                 .fillMaxWidth()
-                .widthIn(max = 560.dp)
-                .aspectRatio(16f / 9f),
-            shape = AppShapes.featureCard,
-        )
-
-        Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
-            Text(exercise.name(languageTag), style = AppTheme.type.screenTitle, modifier = Modifier.semantics { heading() })
-            Text(exercise.muscleAndEquipment(), style = AppTheme.type.body, color = colors.textSecondary)
-            if (exercise.isCustom || exercise.isHidden) {
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) { ExerciseBadges(exercise) }
+                .shadow(10.dp, AppShapes.featureCard, ambientColor = Color(0x14000000), spotColor = Color(0x1F000000))
+                .clip(AppShapes.featureCard)
+                .background(colors.surface)
+                .padding(Spacing.s),
+        ) {
+            ExerciseImage(
+                exercise,
+                modifier = Modifier.fillMaxWidth().aspectRatio(4f / 3f),
+                shape = RoundedCornerShape(20.dp),
+            )
+            Column(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(Spacing.m)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(colors.surface.copy(alpha = 0.95f))
+                    .padding(Spacing.l),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                Text(exercise.name(languageTag), style = AppTheme.type.sectionTitle, modifier = Modifier.semantics { heading() })
+                Text(exercise.muscleAndEquipment(), style = AppTheme.type.bodyStrong, color = colors.brandStrong)
+                if (exercise.isCustom || exercise.isHidden) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) { ExerciseBadges(exercise) }
+                }
             }
         }
 
@@ -188,32 +230,40 @@ private fun ExerciseDetailBody(exercise: Exercise, languageTag: String, onRetryS
         }
         if (exercise.isHidden) InlineMessage(stringResource(Res.string.detail_hidden), tone = MessageTone.Info)
 
-        DetailSection(stringResource(Res.string.detail_muscles)) {
-            Text(stringResource(Res.string.detail_primary), style = AppTheme.type.label, color = colors.textSecondary)
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+            SectionHeader(stringResource(Res.string.detail_muscles), icon = Icons.Outlined.FitnessCenter)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                exercise.primaryMuscles.forEach { StatusChip(stringResource(it.labelRes), tone = StatusTone.Accent) }
-            }
-            if (exercise.secondaryMuscles.isNotEmpty()) {
-                Text(stringResource(Res.string.detail_secondary), style = AppTheme.type.label, color = colors.textSecondary)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                    exercise.secondaryMuscles.forEach { StatusChip(stringResource(it.labelRes)) }
-                }
+                // Primary muscles are highlighted like "Korekta postawy"; secondary ones are white pills.
+                exercise.primaryMuscles.forEach { TagPill(stringResource(it.labelRes), highlighted = true) }
+                exercise.secondaryMuscles.forEach { TagPill(stringResource(it.labelRes), highlighted = false) }
             }
         }
 
-        DetailSection(stringResource(Res.string.detail_tracking)) {
-            Text(stringResource(exercise.trackingType.labelRes), style = AppTheme.type.body)
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+            SectionHeader(stringResource(Res.string.detail_tracking), icon = Icons.Outlined.Tune)
+            TagPill(stringResource(exercise.trackingType.labelRes), highlighted = false)
         }
 
-        DetailSection(stringResource(Res.string.detail_instructions)) {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+            SectionHeader(stringResource(Res.string.detail_instructions), icon = Icons.Outlined.Info)
             val steps = exercise.instructions(languageTag)
-            if (steps.isEmpty()) {
-                Text(stringResource(Res.string.detail_no_instructions), style = AppTheme.type.body, color = colors.textSecondary)
-            } else {
-                steps.forEachIndexed { index, step ->
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(stringResource(Res.string.detail_step, index + 1), style = AppTheme.type.label, color = colors.brandStrong)
-                        Text(step, style = AppTheme.type.body)
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .shadow(8.dp, AppShapes.featureCard, ambientColor = Color(0x14000000), spotColor = Color(0x1F000000))
+                    .clip(AppShapes.featureCard)
+                    .background(colors.surface)
+                    .padding(Spacing.xl),
+                verticalArrangement = Arrangement.spacedBy(Spacing.m),
+            ) {
+                if (steps.isEmpty()) {
+                    Text(stringResource(Res.string.detail_no_instructions), style = AppTheme.type.body, color = colors.textSecondary)
+                } else {
+                    steps.forEachIndexed { index, step ->
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(stringResource(Res.string.detail_step, index + 1).uppercase(), style = AppTheme.type.overline, color = colors.brandAccent)
+                            Text(step, style = AppTheme.type.body, color = colors.textSecondary)
+                        }
                     }
                 }
             }
@@ -221,10 +271,17 @@ private fun ExerciseDetailBody(exercise: Exercise, languageTag: String, onRetryS
     }
 }
 
+/** A tag pill of the "Specjalizacje" section: white, or soft orange when [highlighted]. */
 @Composable
-private fun DetailSection(title: String, content: @Composable () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
-        Text(title, style = AppTheme.type.sectionTitle, modifier = Modifier.semantics { heading() })
-        content()
-    }
+private fun TagPill(text: String, highlighted: Boolean) {
+    val colors = AppTheme.colors
+    Text(
+        text,
+        style = AppTheme.type.bodyStrong,
+        color = if (highlighted) colors.onSoftAccent else colors.text,
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(if (highlighted) colors.softAccent else colors.surface)
+            .padding(horizontal = Spacing.l, vertical = Spacing.s),
+    )
 }

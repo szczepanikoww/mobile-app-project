@@ -1,6 +1,13 @@
 package com.trainingapp.designsystem.component
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -34,6 +41,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -140,7 +148,7 @@ fun SetValueField(
     )
 }
 
-/** Full-width pill search field with a leading icon and a clear button. */
+/** Full-width white pill search field with a soft shadow, a leading icon and a clear button. */
 @Composable
 fun SearchField(
     query: String,
@@ -151,7 +159,9 @@ fun SearchField(
     OutlinedTextField(
         value = query,
         onValueChange = onQueryChange,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .shadow(8.dp, AppShapes.pill, ambientColor = Color(0x14000000), spotColor = Color(0x1F000000)),
         placeholder = { Text(placeholder, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
         trailingIcon = if (query.isNotEmpty()) {
@@ -167,12 +177,21 @@ fun SearchField(
         textStyle = AppTheme.type.body,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
         shape = AppShapes.pill,
-        colors = appFieldColors(),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = AppTheme.colors.surface,
+            unfocusedContainerColor = AppTheme.colors.surface,
+            focusedBorderColor = AppTheme.colors.brandAccent,
+            unfocusedBorderColor = Color.Transparent,
+            cursorColor = AppTheme.colors.brandStrong,
+            unfocusedLeadingIconColor = AppTheme.colors.textSecondary,
+            focusedLeadingIconColor = AppTheme.colors.textSecondary,
+        ),
     )
 }
 
 /**
- * A field that opens a sheet with options. The label stays above the value at all times.
+ * A field that opens a sheet with options, styled as the "WYBRANE ĆWICZENIE" card of the Stitch Postępy screen:
+ * an icon circle, the label above the value at all times, and a chevron.
  */
 @Composable
 fun SelectorField(
@@ -184,35 +203,113 @@ fun SelectorField(
     error: String? = null,
     supportingText: String? = null,
     enabled: Boolean = true,
+    icon: ImageVector? = null,
 ) {
     val colors = AppTheme.colors
+    val shape = RoundedCornerShape(32.dp)
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-        Text(label, style = AppTheme.type.label, color = if (error != null) colors.onErrorContainer else colors.textSecondary)
-        Surface(
-            shape = AppShapes.input,
-            color = if (enabled) colors.surface else colors.subtleSurface,
-            border = BorderStroke(if (error != null) 2.dp else 1.dp, if (error != null) colors.onErrorContainer else colors.outline),
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .defaultMinSize(minHeight = 56.dp)
+                .shadow(8.dp, shape, ambientColor = Color(0x14000000), spotColor = Color(0x1F000000))
+                .clip(shape)
+                .background(if (enabled) colors.surface else colors.subtleSurface)
+                .border(BorderStroke(2.dp, if (error != null) colors.onErrorContainer else Color.Transparent), shape)
                 .clickable(enabled = enabled, role = Role.Button, onClickLabel = label, onClick = onClick)
-                .semantics { if (error != null) this.error(error) },
+                .semantics { if (error != null) this.error(error) }
+                .padding(horizontal = Spacing.l, vertical = Spacing.m),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.m),
         ) {
-            Row(
-                modifier = Modifier.padding(horizontal = Spacing.l, vertical = Spacing.l),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+            if (icon != null) {
+                Box(Modifier.size(44.dp).clip(CircleShape).background(colors.softAccent), contentAlignment = Alignment.Center) {
+                    Icon(icon, contentDescription = null, tint = colors.brandAccent)
+                }
+            }
+            Column(Modifier.weight(1f)) {
+                Text(label.uppercase(), style = AppTheme.type.overline, color = if (error != null) colors.onErrorContainer else colors.textSecondary)
                 Text(
                     text = value ?: placeholder,
-                    style = AppTheme.type.body,
+                    style = AppTheme.type.itemTitle,
                     color = if (value == null || !enabled) colors.textSecondary else colors.text,
-                    modifier = Modifier.weight(1f),
                 )
-                if (enabled) Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = null, tint = colors.textSecondary)
             }
+            if (enabled) Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = null, tint = colors.textSecondary)
         }
         (error ?: supportingText)?.let {
-            Text(it, style = AppTheme.type.compactBody, color = if (error != null) colors.onErrorContainer else colors.textSecondary)
+            Text(
+                it,
+                style = AppTheme.type.compactBody,
+                color = if (error != null) colors.onErrorContainer else colors.textSecondary,
+                modifier = Modifier.padding(horizontal = Spacing.l),
+            )
+        }
+    }
+}
+
+/**
+ * A single-line text field in the white pill of the Stitch "NAZWA JEDNOSTKI" card: an icon circle, an uppercase
+ * label that stays visible, and the value in bold.
+ */
+@Composable
+fun PillTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    placeholder: String = "",
+    icon: ImageVector? = null,
+    error: String? = null,
+    trailing: (@Composable () -> Unit)? = null,
+) {
+    val colors = AppTheme.colors
+    val shape = RoundedCornerShape(40.dp)
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .shadow(8.dp, shape, ambientColor = Color(0x14000000), spotColor = Color(0x1F000000))
+                .clip(shape)
+                .background(colors.surface)
+                .border(BorderStroke(2.dp, if (error != null) colors.onErrorContainer else Color.Transparent), shape)
+                .padding(Spacing.m),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.m),
+        ) {
+            if (icon != null) {
+                Box(Modifier.size(52.dp).clip(CircleShape).background(colors.tonalSurface), contentAlignment = Alignment.Center) {
+                    Icon(icon, contentDescription = null, tint = colors.brandAccent)
+                }
+            }
+            Column(Modifier.weight(1f)) {
+                Text(label.uppercase(), style = AppTheme.type.overline, color = if (error != null) colors.onErrorContainer else colors.textSecondary)
+                BasicTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    singleLine = true,
+                    textStyle = AppTheme.type.sectionTitle.copy(color = colors.text),
+                    cursorBrush = SolidColor(colors.brandStrong),
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics {
+                            contentDescription = label
+                            if (error != null) this.error(error)
+                        },
+                    decorationBox = { inner ->
+                        Box {
+                            if (value.isEmpty() && placeholder.isNotEmpty()) {
+                                Text(placeholder, style = AppTheme.type.sectionTitle, color = colors.textSecondary, maxLines = 1)
+                            }
+                            inner()
+                        }
+                    },
+                )
+            }
+            trailing?.invoke()
+        }
+        if (error != null) {
+            Text(error, style = AppTheme.type.compactBody, color = colors.onErrorContainer, modifier = Modifier.padding(horizontal = Spacing.l))
         }
     }
 }

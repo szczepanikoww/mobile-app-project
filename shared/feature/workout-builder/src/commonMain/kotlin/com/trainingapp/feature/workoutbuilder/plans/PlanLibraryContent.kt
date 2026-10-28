@@ -1,60 +1,72 @@
 package com.trainingapp.feature.workoutbuilder.plans
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Assignment
-import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.trainingapp.designsystem.component.AppFilterChip
+import com.trainingapp.designsystem.component.CardRow
+import com.trainingapp.designsystem.component.CountPill
 import com.trainingapp.designsystem.component.EmptyState
 import com.trainingapp.designsystem.component.ErrorState
-import com.trainingapp.designsystem.component.GroupedSurface
 import com.trainingapp.designsystem.component.InlineMessage
-import com.trainingapp.designsystem.component.ListRow
 import com.trainingapp.designsystem.component.LoadingState
-import com.trainingapp.designsystem.component.MenuAction
 import com.trainingapp.designsystem.component.MessageTone
-import com.trainingapp.designsystem.component.OverflowMenu
 import com.trainingapp.designsystem.component.PrimaryButton
-import com.trainingapp.designsystem.component.RowDivider
+import com.trainingapp.designsystem.component.SearchField
+import com.trainingapp.designsystem.component.SectionHeader
 import com.trainingapp.designsystem.component.StatusChip
 import com.trainingapp.designsystem.component.StatusTone
 import com.trainingapp.designsystem.theme.AppTheme
 import com.trainingapp.designsystem.theme.Spacing
 import com.trainingapp.domain.common.AppLanguage
+import com.trainingapp.domain.exercise.Exercise
 import com.trainingapp.domain.format.LocaleFormats
 import com.trainingapp.domain.plan.PlanLibraryItem
+import com.trainingapp.domain.plan.PlanListFilter
+import com.trainingapp.feature.workoutbuilder.common.ExerciseImage
 import com.trainingapp.feature.workoutbuilder.resources.Res
 import com.trainingapp.feature.workoutbuilder.resources.days_count
 import com.trainingapp.feature.workoutbuilder.resources.exercises_count
 import com.trainingapp.feature.workoutbuilder.resources.plans_badge_draft
 import com.trainingapp.feature.workoutbuilder.resources.plans_badge_unpublished
 import com.trainingapp.feature.workoutbuilder.resources.plans_badge_version
-import com.trainingapp.feature.workoutbuilder.resources.plans_count
 import com.trainingapp.feature.workoutbuilder.resources.plans_empty_action
 import com.trainingapp.feature.workoutbuilder.resources.plans_empty_message
 import com.trainingapp.feature.workoutbuilder.resources.plans_empty_title
 import com.trainingapp.feature.workoutbuilder.resources.plans_error
 import com.trainingapp.feature.workoutbuilder.resources.plans_exercise_library
+import com.trainingapp.feature.workoutbuilder.resources.plans_filter_all
+import com.trainingapp.feature.workoutbuilder.resources.plans_filter_drafts
+import com.trainingapp.feature.workoutbuilder.resources.plans_filter_published
 import com.trainingapp.feature.workoutbuilder.resources.plans_new
+import com.trainingapp.feature.workoutbuilder.resources.plans_no_results
 import com.trainingapp.feature.workoutbuilder.resources.plans_offline
+import com.trainingapp.feature.workoutbuilder.resources.plans_pill
 import com.trainingapp.feature.workoutbuilder.resources.plans_row_edited
 import com.trainingapp.feature.workoutbuilder.resources.plans_row_summary
+import com.trainingapp.feature.workoutbuilder.resources.plans_search
+import com.trainingapp.feature.workoutbuilder.resources.plans_section
 import com.trainingapp.feature.workoutbuilder.resources.plans_untitled
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
@@ -62,8 +74,8 @@ import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * S1, shown in the "Plany" segment of the trainer's Klienci tab (decision D1). The shell owns the tab and its
- * title; this renders the list and its actions.
+ * S1, the trainer's "+ PLAN" destination. The shell renders the "Plany" header and the bottom navigation;
+ * this renders the list, laid out like the Stitch Klienci screen.
  */
 @Composable
 fun PlanLibraryRoute(
@@ -81,6 +93,8 @@ fun PlanLibraryRoute(
         onNewPlan = onNewPlan,
         onOpenPlan = onOpenPlan,
         onOpenExerciseLibrary = onOpenExerciseLibrary,
+        onQueryChange = viewModel::onQueryChange,
+        onFilterChange = viewModel::onFilterChange,
         onRetry = viewModel::retry,
         contentPadding = contentPadding,
     )
@@ -93,9 +107,12 @@ fun PlanLibraryContent(
     onNewPlan: () -> Unit,
     onOpenPlan: (PlanLibraryItem) -> Unit,
     onOpenExerciseLibrary: () -> Unit,
+    onQueryChange: (String) -> Unit,
+    onFilterChange: (PlanListFilter) -> Unit,
     onRetry: () -> Unit,
     contentPadding: PaddingValues = PaddingValues(),
 ) {
+    val content = state as? PlanLibraryUiState.Content
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
@@ -104,27 +121,41 @@ fun PlanLibraryContent(
             top = contentPadding.calculateTopPadding() + Spacing.s,
             bottom = contentPadding.calculateBottomPadding() + Spacing.xxl,
         ),
-        verticalArrangement = Arrangement.spacedBy(Spacing.m),
+        verticalArrangement = Arrangement.spacedBy(Spacing.l),
     ) {
         item(key = "header") {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                val count = (state as? PlanLibraryUiState.Content)?.items?.size
-                Text(
-                    text = count?.let { pluralStringResource(Res.plurals.plans_count, it, it) }.orEmpty(),
-                    style = AppTheme.type.compactBody,
-                    color = AppTheme.colors.textSecondary,
-                    modifier = Modifier.weight(1f),
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.l)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    if (content != null) {
+                        CountPill(
+                            pluralStringResource(Res.plurals.plans_pill, content.totalCount, content.totalCount),
+                            dotColor = AppTheme.colors.success,
+                        )
+                    }
+                    Spacer(Modifier.weight(1f))
+                    PrimaryButton(text = stringResource(Res.string.plans_new), onClick = onNewPlan, icon = Icons.Outlined.Add)
+                }
+                SearchField(
+                    query = content?.query.orEmpty(),
+                    onQueryChange = onQueryChange,
+                    placeholder = stringResource(Res.string.plans_search),
                 )
-                PrimaryButton(text = stringResource(Res.string.plans_new), onClick = onNewPlan, icon = Icons.Outlined.Add)
-                OverflowMenu(
-                    actions = listOf(
-                        MenuAction(
-                            label = stringResource(Res.string.plans_exercise_library),
-                            icon = Icons.AutoMirrored.Outlined.LibraryBooks,
-                            onClick = onOpenExerciseLibrary,
-                        ),
-                    ),
-                )
+                if (content != null) {
+                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                        PlanListFilter.entries.forEach { chip ->
+                            val count = content.counts[chip] ?: 0
+                            AppFilterChip(
+                                label = when (chip) {
+                                    PlanListFilter.ALL -> stringResource(Res.string.plans_filter_all, count)
+                                    PlanListFilter.DRAFTS -> stringResource(Res.string.plans_filter_drafts, count)
+                                    PlanListFilter.PUBLISHED -> stringResource(Res.string.plans_filter_published, count)
+                                },
+                                selected = content.filter == chip,
+                                onClick = { onFilterChange(chip) },
+                            )
+                        }
+                    }
+                }
             }
         }
         when (state) {
@@ -138,8 +169,15 @@ fun PlanLibraryContent(
                 if (state.offline) {
                     item(key = "offline") { InlineMessage(stringResource(Res.string.plans_offline), tone = MessageTone.Offline) }
                 }
-                if (state.items.isEmpty()) {
-                    item(key = "empty") {
+                item(key = "section") {
+                    SectionHeader(
+                        title = stringResource(Res.string.plans_section),
+                        actionLabel = stringResource(Res.string.plans_exercise_library),
+                        onAction = onOpenExerciseLibrary,
+                    )
+                }
+                when {
+                    state.totalCount == 0 -> item(key = "empty") {
                         EmptyState(
                             title = stringResource(Res.string.plans_empty_title),
                             message = stringResource(Res.string.plans_empty_message),
@@ -148,14 +186,11 @@ fun PlanLibraryContent(
                             icon = Icons.AutoMirrored.Outlined.Assignment,
                         )
                     }
-                } else {
-                    item(key = "list") {
-                        GroupedSurface {
-                            state.items.forEachIndexed { index, item ->
-                                if (index > 0) RowDivider()
-                                PlanRow(item, languageTag, onClick = { onOpenPlan(item) })
-                            }
-                        }
+                    state.items.isEmpty() -> item(key = "no-results") {
+                        EmptyState(title = stringResource(Res.string.plans_no_results), message = null, icon = Icons.Outlined.SearchOff)
+                    }
+                    else -> items(state.items, key = { it.key }) { item ->
+                        PlanCard(item, item.firstExerciseId?.let { state.exercises[it] }, languageTag, onClick = { onOpenPlan(item) })
                     }
                 }
             }
@@ -164,25 +199,26 @@ fun PlanLibraryContent(
 }
 
 @Composable
-private fun PlanRow(item: PlanLibraryItem, languageTag: String, onClick: () -> Unit) {
+private fun PlanCard(item: PlanLibraryItem, firstExercise: Exercise?, languageTag: String, onClick: () -> Unit) {
     val summary = stringResource(
         Res.string.plans_row_summary,
         pluralStringResource(Res.plurals.days_count, item.dayCount, item.dayCount),
         pluralStringResource(Res.plurals.exercises_count, item.exerciseCount, item.exerciseCount),
     )
     val edited = stringResource(Res.string.plans_row_edited, LocaleFormats.formatDate(item.updatedAtEpochMs, languageTag))
-    ListRow(
+    CardRow(
         title = item.name.ifBlank { stringResource(Res.string.plans_untitled) },
         supporting = "$summary\n$edited",
         onClick = onClick,
+        leading = { ExerciseImage(firstExercise, size = 64.dp, shape = CircleShape) },
         badges = {
             val version = item.latestVersion
             when {
                 item.isNewDraft -> StatusChip(stringResource(Res.string.plans_badge_draft), tone = StatusTone.Warning)
                 item.hasUnpublishedChanges -> StatusChip(stringResource(Res.string.plans_badge_unpublished), tone = StatusTone.Warning)
-                version != null -> StatusChip(stringResource(Res.string.plans_badge_version, version))
+                version != null -> StatusChip(stringResource(Res.string.plans_badge_version, version), tone = StatusTone.Success)
             }
+            item.tags.take(2).forEach { StatusChip(it) }
         },
-        trailing = { Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, tint = AppTheme.colors.textSecondary) },
     )
 }

@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
@@ -32,8 +33,8 @@ import com.trainingapp.designsystem.theme.Sizes
 import com.trainingapp.designsystem.theme.Spacing
 
 /**
- * A filter or choice chip. Selected chips use the soft accent with dark text (bright orange with white text
- * fails contrast). [showChevron] marks a chip that opens a sheet.
+ * A filter or choice chip as in the Stitch references: a white pill, filled brand orange with white text when
+ * selected ("Cena ▾", "Wszyscy (24)"). [showChevron] marks a chip that opens a sheet.
  */
 @Composable
 fun AppFilterChip(
@@ -48,7 +49,7 @@ fun AppFilterChip(
     FilterChip(
         selected = selected,
         onClick = onClick,
-        label = { Text(label, style = AppTheme.type.compactBody, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        label = { Text(label, style = AppTheme.type.bodyStrong, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         modifier = modifier.defaultMinSize(minHeight = Sizes.minTouchTarget),
         shape = AppShapes.pill,
         leadingIcon = leadingIcon?.let { icon -> { Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp)) } },
@@ -60,24 +61,24 @@ fun AppFilterChip(
         colors = FilterChipDefaults.filterChipColors(
             containerColor = colors.surface,
             labelColor = colors.text,
-            iconColor = colors.textSecondary,
-            selectedContainerColor = colors.softAccent,
-            selectedLabelColor = colors.onSoftAccent,
-            selectedLeadingIconColor = colors.onSoftAccent,
-            selectedTrailingIconColor = colors.onSoftAccent,
+            iconColor = colors.text,
+            selectedContainerColor = colors.brandAccent,
+            selectedLabelColor = colors.onBrandStrong,
+            selectedLeadingIconColor = colors.onBrandStrong,
+            selectedTrailingIconColor = colors.onBrandStrong,
         ),
         border = FilterChipDefaults.filterChipBorder(
             enabled = true,
             selected = selected,
             borderColor = colors.outline,
-            selectedBorderColor = colors.softAccent,
+            selectedBorderColor = colors.brandAccent,
         ),
     )
 }
 
 /**
- * Pill segmented control ("Klienci | Plany", "Wszystkie | Moje"). Each option is a selectable tab for
- * screen readers.
+ * Pill tabs as in the Stitch Postępy screen ("Ćwiczenia | Pomiary | …"): the selected tab is filled brand orange
+ * with white text, the others are white pills. Each option is a selectable tab for screen readers.
  */
 @Composable
 fun SegmentedTabs(
@@ -87,34 +88,30 @@ fun SegmentedTabs(
     modifier: Modifier = Modifier,
 ) {
     val colors = AppTheme.colors
-    Surface(shape = AppShapes.pill, color = colors.subtleSurface, border = BorderStroke(1.dp, colors.outline), modifier = modifier) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(Spacing.xs)
-                .selectableGroup(),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-        ) {
-            options.forEachIndexed { index, option ->
-                val selected = index == selectedIndex
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .defaultMinSize(minHeight = 40.dp)
-                        .then(if (selected) Modifier.background(colors.surface, AppShapes.pill) else Modifier)
-                        .selectable(selected = selected, role = Role.Tab, onClick = { onSelect(index) })
-                        .padding(horizontal = Spacing.m, vertical = Spacing.s),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        option,
-                        style = if (selected) AppTheme.type.bodyStrong else AppTheme.type.body,
-                        color = if (selected) colors.text else colors.textSecondary,
-                        textAlign = TextAlign.Center,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+    Row(
+        modifier.fillMaxWidth().selectableGroup(),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.s),
+    ) {
+        options.forEachIndexed { index, option ->
+            val selected = index == selectedIndex
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .defaultMinSize(minHeight = Sizes.minTouchTarget)
+                    .background(if (selected) colors.brandAccent else colors.surface, AppShapes.pill)
+                    .clip(AppShapes.pill)
+                    .selectable(selected = selected, role = Role.Tab, onClick = { onSelect(index) })
+                    .padding(horizontal = Spacing.m, vertical = Spacing.s),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    option,
+                    style = AppTheme.type.bodyStrong,
+                    color = if (selected) colors.onBrandStrong else colors.text,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }

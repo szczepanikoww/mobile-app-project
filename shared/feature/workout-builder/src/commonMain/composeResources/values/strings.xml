@@ -126,6 +126,7 @@
 
     <!-- S3 Exercise library / picker -->
     <string name="library_title">Ćwiczenia</string>
+    <string name="library_screen_title">Biblioteka ćwiczeń</string>
     <string name="library_pick_title">Dodaj ćwiczenia</string>
     <string name="library_replace_title">Zamień ćwiczenie</string>
     <string name="library_new">Nowe ćwiczenie</string>
@@ -178,7 +179,8 @@
     <!-- S5 Exercise form -->
     <string name="form_title_new">Nowe ćwiczenie</string>
     <string name="form_title_edit">Edytuj ćwiczenie</string>
-    <string name="form_name">Nazwa *</string>
+    <string name="form_name">Nazwa ćwiczenia *</string>
+    <string name="form_name_placeholder">Np. Hip thrust na maszynie</string>
     <string name="form_primary_muscle">Główna partia mięśniowa *</string>
     <string name="form_equipment">Sprzęt *</string>
     <string name="form_tracking">Sposób zapisu *</string>
@@ -304,4 +306,21 @@
         <item quantity="many">%1$d pozycji</item>
         <item quantity="other">%1$d pozycji</item>
     </plurals>
+    <!-- Plany (zakładka „+ PLAN”) -->
+    <string name="plans_title">Plany</string>
+    <string name="plans_search">Szukaj planu po nazwie lub tagu…</string>
+    <string name="plans_filter_all">Wszystkie (%1$d)</string>
+    <string name="plans_filter_drafts">Szkice (%1$d)</string>
+    <string name="plans_filter_published">Zapisane (%1$d)</string>
+    <string name="plans_section">Twoje plany</string>
+    <string name="plans_no_results">Brak planów pasujących do wyszukiwania.</string>
+    <plurals name="plans_pill">
+        <item quantity="one">%1$d plan</item>
+        <item quantity="few">%1$d plany</item>
+        <item quantity="many">%1$d planów</item>
+        <item quantity="other">%1$d planu</item>
+    </plurals>
+    <string name="library_available">%1$d dostępnych</string>
+    <string name="library_new_short">Nowe</string>
+    <string name="detail_title">Ćwiczenie</string>
 </resources>

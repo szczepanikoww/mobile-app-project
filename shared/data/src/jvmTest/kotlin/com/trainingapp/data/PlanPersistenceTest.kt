@@ -129,6 +129,8 @@ class PlanPersistenceTest {
         assertTrue(library[0].isNewDraft)
         assertEquals(2, library[0].dayCount)
         assertEquals(1, library[1].exerciseCount)
+        assertEquals("bench", library[0].firstExerciseId)
+        assertEquals("bench", library[1].firstExerciseId)
 
         val edit = save(editedDraft().copy(templateId = published.response.template.id, baseVersion = 1, name = "Góra A (zmiany)"))
         library = repository.observeLibrary().first()

@@ -41,7 +41,7 @@ val workoutBuilderModule = module {
     factory { SaveCustomExercise(get(), get(), get(), get(), get()) }
     factory { SetExerciseHidden(get(), get()) }
 
-    viewModel { PlanLibraryViewModel(get(), get()) }
+    viewModel { PlanLibraryViewModel(get(), get(), get()) }
     viewModel { (destination: PlanEditorDestination) ->
         PlanEditorViewModel(
             destination = destination,

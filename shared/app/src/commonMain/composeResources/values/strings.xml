@@ -3,6 +3,9 @@
     <string name="tab_calendar">Kalendarz</string>
     <string name="tab_clients">Klienci</string>
     <string name="tab_finance">Finanse</string>
+    <string name="tab_plan">Plan</string>
+    <string name="plans_title">Plany</string>
+    <string name="global_not_available">Wiadomości, powiadomienia i profil pojawią się w kolejnych wersjach aplikacji.</string>
     <string name="segment_clients">Klienci</string>
     <string name="segment_plans">Plany</string>
     <string name="placeholder_title">Ten widok jeszcze powstaje</string>

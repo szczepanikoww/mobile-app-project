@@ -422,3 +422,23 @@ Not on the screen any more (the data model still supports them):
 The exercise photos are bundled. `tools/exercise-seed --images` copies one 400 px photo per curated exercise into the app (≈3 MB), so they are not hotlinked.
 
 Open accessibility issue: CLAUDE.md asks for 4.5:1 contrast. White text on the reference orange `#FF6B00` measures about 2.9:1. It is used as the mockup shows.
+
+### 12.1 Navigation and the other screens follow the Stitch references (2026-10-28)
+
+- **D1 changed.** The plan library sits under the raised orange **"+ PLAN"** circle in the middle of the trainer's bottom navigation (START · KALENDARZ · + PLAN · KLIENCI · FINANSE), as in the Stitch Klienci screen. It is no longer a segment of Klienci, and the app opens on it.
+- **The patterns of all references are shared components** (`:shared:designsystem`):
+  - `TopLevelHeader`: title, messages, notifications, avatar.
+  - `DetailHeader`: round back button, centred uppercase title.
+  - `AppBottomNavigation` with the centre circle.
+  - `CountPill` ("38 dostępnych", "● 24 Podopiecznych").
+  - Orange pill page actions.
+  - The white `SearchField` pill with a shadow.
+  - Filter chips and pill tabs filled orange when selected.
+  - `CardRow`: one white card per list item, with a photo and a chevron.
+  - `SectionHeader` with an orange icon and an "Xyz >" link.
+  - `SelectorField` and `PillTextField`, styled like the "WYBRANE ĆWICZENIE" / "NAZWA JEDNOSTKI" cards.
+- **Which reference each screen follows:**
+  - S1 (Plany) follows Klienci.
+  - S3 (Biblioteka ćwiczeń) follows Trenerzy.
+  - S4 (Ćwiczenie) follows Profil trenera.
+  - S5 uses the Postępy selector cards.

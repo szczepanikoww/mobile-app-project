@@ -1,6 +1,10 @@
 package com.trainingapp.designsystem.component
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.shadow
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -34,11 +38,17 @@ import com.trainingapp.designsystem.theme.AppTheme
 import com.trainingapp.designsystem.theme.Sizes
 import com.trainingapp.designsystem.theme.Spacing
 
-/** A section title in the section-title style (not a small uppercase label), with optional trailing content. */
+/**
+ * A section title in the section-title style (not a small uppercase label). As in the Stitch references it can
+ * have a leading orange icon ("Gdzie trenuję") and an orange link on the right ("Wszystkie >").
+ */
 @Composable
 fun SectionHeader(
     title: String,
     modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    actionLabel: String? = null,
+    onAction: (() -> Unit)? = null,
     trailing: @Composable RowScope.() -> Unit = {},
 ) {
     Row(
@@ -46,7 +56,9 @@ fun SectionHeader(
             .fillMaxWidth()
             .padding(top = Spacing.s, bottom = Spacing.s),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.s),
     ) {
+        if (icon != null) Icon(icon, contentDescription = null, tint = AppTheme.colors.brandAccent)
         Text(
             title,
             style = AppTheme.type.sectionTitle,
@@ -55,7 +67,56 @@ fun SectionHeader(
                 .weight(1f)
                 .semantics { heading() },
         )
+        if (actionLabel != null && onAction != null) {
+            Row(
+                Modifier
+                    .defaultMinSize(minHeight = Sizes.minTouchTarget)
+                    .clickable(role = Role.Button, onClick = onAction),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(actionLabel, style = AppTheme.type.bodyStrong, color = AppTheme.colors.brandAccent)
+                Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, tint = AppTheme.colors.brandAccent)
+            }
+        }
         trailing()
+    }
+}
+
+/**
+ * One list item as a separate white card with a soft shadow, as in the Stitch Klienci and Postępy lists:
+ * leading media, a bold title, a supporting line, optional badges and a trailing chevron or control.
+ */
+@Composable
+fun CardRow(
+    title: String,
+    modifier: Modifier = Modifier,
+    supporting: String? = null,
+    onClick: (() -> Unit)? = null,
+    onClickLabel: String? = null,
+    leading: (@Composable () -> Unit)? = null,
+    badges: (@Composable RowScope.() -> Unit)? = null,
+    trailing: (@Composable () -> Unit)? = {
+        Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, tint = AppTheme.colors.textSecondary)
+    },
+) {
+    val shape = AppShapes.featureCard
+    Box(
+        modifier
+            .fillMaxWidth()
+            .shadow(8.dp, shape, ambientColor = Color(0x14000000), spotColor = Color(0x1F000000))
+            .clip(shape)
+            .background(AppTheme.colors.surface),
+    ) {
+        ListRow(
+            title = title,
+            supporting = supporting,
+            onClick = onClick,
+            onClickLabel = onClickLabel,
+            leading = leading,
+            badges = badges,
+            trailing = trailing,
+            modifier = Modifier.padding(vertical = Spacing.xs),
+        )
     }
 }
 

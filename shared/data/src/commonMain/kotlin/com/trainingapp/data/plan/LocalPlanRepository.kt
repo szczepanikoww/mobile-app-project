@@ -45,6 +45,9 @@ class LocalPlanRepository(
                 exerciseCount = draft?.exerciseCount ?: body?.days?.sumOf { it.exercises.size } ?: 0,
                 latestVersion = template.latest_version.toInt(),
                 updatedAtEpochMs = maxOf(template.updated_at, draft?.updatedAtEpochMs ?: 0),
+                firstExerciseId = draft?.days?.flatMap { it.exercises }?.firstOrNull()?.exerciseId
+                    ?: body?.days?.flatMap { it.exercises }?.firstOrNull()?.exerciseId,
+                tags = draft?.tags ?: body?.tags.orEmpty(),
             )
         }
         val newDrafts = drafts.filter { it.templateId == null }.map { draft ->
@@ -56,6 +59,8 @@ class LocalPlanRepository(
                 exerciseCount = draft.exerciseCount,
                 latestVersion = null,
                 updatedAtEpochMs = draft.updatedAtEpochMs,
+                firstExerciseId = draft.days.flatMap { it.exercises }.firstOrNull()?.exerciseId,
+                tags = draft.tags,
             )
         }
         (published + newDrafts).sortedByDescending { it.updatedAtEpochMs }
