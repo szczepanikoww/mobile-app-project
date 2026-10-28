@@ -1,6 +1,7 @@
 package pl.trainer.ui
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.horizontalScroll
@@ -33,16 +34,8 @@ fun ClientsScreen(state: TrainerUiState, onSearch: (String) -> Unit, onFilter: (
                 shape = Layout.card, modifier = Modifier.fillMaxWidth())
         }
         item {
-            val tabs: @Composable () -> Unit = {
-                ClientTab.entries.forEach { tab ->
-                    Tab(selected = state.clientTab == tab, onClick = { onTab(tab) }, modifier = Modifier.heightIn(min = Layout.target).testTag("clients-tab-$tab"),
-                        text = { Text(tr(if (tab == ClientTab.Current) Res.string.current_clients else Res.string.archive), maxLines = 1, softWrap = false) })
-                }
-            }
-            if (LocalDensity.current.fontScale >= 1.5f) {
-                PrimaryScrollableTabRow(selectedTabIndex = state.clientTab.ordinal, edgePadding = 0.dp,
-                    containerColor = MaterialTheme.colorScheme.background, tabs = tabs)
-            } else PrimaryTabRow(selectedTabIndex = state.clientTab.ordinal, containerColor = MaterialTheme.colorScheme.background, tabs = tabs)
+            PillTabs(ClientTab.entries, state.clientTab,
+                label = { tr(if (it == ClientTab.Current) Res.string.current_clients else Res.string.archive) }, onSelect = onTab)
         }
         if (state.clientTab == ClientTab.Current) item {
             FilterChip(selected = state.clientFilter == ClientFilter.Overdue,
@@ -80,7 +73,8 @@ fun ClientsScreen(state: TrainerUiState, onSearch: (String) -> Unit, onFilter: (
 
 @Composable
 private fun ClientRow(client: Client, next: Session?, onClick: () -> Unit) {
-    Surface(onClick = onClick, shape = Layout.card, color = MaterialTheme.colorScheme.surface) {
+    Surface(onClick = onClick, shape = Layout.tile, color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
         Row(Modifier.fillMaxWidth().padding(Layout.padding), horizontalArrangement = Arrangement.spacedBy(Layout.medium), verticalAlignment = Alignment.Top) {
             Avatar(client)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Layout.small)) {

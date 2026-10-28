@@ -1,6 +1,9 @@
 package pl.trainer.ui
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -39,6 +42,10 @@ fun TrainerApp(model: TrainerViewModel = viewModel { TrainerViewModel(DemoTraine
 @Composable
 private fun TrainerAppContent(state: TrainerUiState, model: TrainerViewModel) {
     val snackbar = remember { SnackbarHostState() }
+    val floatingElevation = FloatingActionButtonDefaults.elevation(
+        defaultElevation = Layout.floatingElevation, pressedElevation = Layout.activeFloatingElevation,
+        focusedElevation = Layout.floatingElevation, hoveredElevation = Layout.activeFloatingElevation,
+    )
     var addMenu by remember { mutableStateOf(false) }
     var infoDialog by remember { mutableStateOf<String?>(null) }
     val savedMessage = tr(Res.string.saved)
@@ -61,17 +68,16 @@ private fun TrainerAppContent(state: TrainerUiState, model: TrainerViewModel) {
         is Route.ClientInformationEditor -> Res.string.edit_client_information
         Route.Availability -> Res.string.availability
     })
-    val displayTitle = if (main && state.destination == Destination.Clients && LocalDensity.current.fontScale >= 1.5f)
-        tr(Res.string.your_clients_reflow) else title
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            Column(Modifier.windowInsetsPadding(WindowInsets.statusBars)) {
-                Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = if (main) Layout.gutter else Layout.small,
+            Surface(color = MaterialTheme.colorScheme.surface) {
+                Row(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars)
+                    .heightIn(min = Layout.headerHeight).padding(horizontal = if (main) Layout.gutter else Layout.small,
                     vertical = Layout.small), verticalAlignment = Alignment.CenterVertically) {
                     if (!main) IconButton(onClick = model::back, enabled = !state.submitting) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, tr(Res.string.back)) }
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Layout.tiny)) {
-                        Text(displayTitle, style = if (main) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.titleLarge,
+                        Text(title, style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.clearAndSetSemantics { heading(); text = AnnotatedString(title) })
                     }
                 }
@@ -79,20 +85,29 @@ private fun TrainerAppContent(state: TrainerUiState, model: TrainerViewModel) {
             }
         },
         bottomBar = {
-            if (main) NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
-                Destination.entries.forEach { destination ->
-                    NavigationBarItem(selected = state.destination == destination, onClick = { model.destination(destination) },
-                        icon = { Icon(if (destination == Destination.Calendar) Icons.Outlined.CalendarMonth else Icons.Outlined.PeopleOutline, null) },
-                        label = { Text(tr(if (destination == Destination.Calendar) Res.string.calendar else Res.string.trainees)) })
+            if (main) Surface(shape = Layout.navigation, color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+                NavigationBar(modifier = Modifier.clip(Layout.navigation), containerColor = Color.Transparent, tonalElevation = 0.dp) {
+                    Destination.entries.forEach { destination ->
+                        NavigationBarItem(selected = state.destination == destination, onClick = { model.destination(destination) },
+                            colors = NavigationBarItemDefaults.colors(indicatorColor = Color.Transparent,
+                                selectedIconColor = MaterialTheme.colorScheme.primary, selectedTextColor = MaterialTheme.colorScheme.primary),
+                            icon = { Icon(if (destination == Destination.Calendar) Icons.Outlined.CalendarMonth else Icons.Outlined.PeopleOutline, null) },
+                            label = { Text(tr(if (destination == Destination.Calendar) Res.string.calendar else Res.string.trainees)) })
+                    }
                 }
             }
         },
         floatingActionButton = {
             if (main && state.destination == Destination.Calendar && state.data != null && !state.loading && state.failure == null) {
                 if (LocalDensity.current.fontScale >= 1.5f) FloatingActionButton(onClick = { addMenu = true },
+                    shape = Layout.pill,
+                    elevation = floatingElevation,
                     containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary) {
                     Icon(Icons.Outlined.Add, tr(Res.string.add))
                 } else ExtendedFloatingActionButton(onClick = { addMenu = true },
+                    shape = Layout.pill,
+                    elevation = floatingElevation,
                     containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary,
                     icon = { Icon(Icons.Outlined.Add, null) }, text = { Text(tr(Res.string.add)) })
             }

@@ -41,3 +41,5 @@ Desktop tests render the shared Compose UI without requiring an unlocked desktop
 **All people and sessions are synthetic. Changes are in memory only and reset on restart.** The app does not send invitations, book sessions, settle payments or store private notes on a server. Use `:desktopApp:runPreview` to switch sample states in a separate window. “Today” refers to the fixed fixture date, 28 October 2026.
 
 See [implementation and integration notes](docs/trainer-ui.md), [project context](docs/context.md), and the [draft architecture](docs/initial-architecture.md).
+
+The [design alignment report](docs/main-design-alignment.md) compares the current views with main, includes before/after previews, and provides a proposed palette/surface patch for main's existing screens.

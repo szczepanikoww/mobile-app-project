@@ -94,3 +94,7 @@ The profile includes age, weight, height, goal, injuries and movement limitation
 `loadClientInformation` / `saveClientInformation` are separate relationship-scoped repository methods; health information is not part of the client-list response or public fixtures. The in-memory repository starts with unknown values and denies inactive/unknown relationships. Production must check health-data grants/consent, audit access, provide read/edit capabilities and establish data ownership; the prototype editor does not finalize those policies or overwrite a client's questionnaire. No real health records or persistence have been added.
 
 Regression coverage includes archive filtering, proposed-date placement without releasing the original slot, trainer/client proposal badges, completed-state rendering, optional private information, scoped reads/writes, age and decimal validation, offline form retention, clean normal-app copy and the unified add menu.
+
+## Alignment with main
+
+The [main design alignment report](main-design-alignment.md) records the comparison against main at `356b4f8`, the shared shape/header/control changes, retained palette, restrained elevation, source/build integration differences and proposed palette migration patch. It supersedes the original scaffold's default segmented/underlined tabs and unframed navigation styling.

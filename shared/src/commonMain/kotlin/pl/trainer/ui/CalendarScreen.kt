@@ -1,6 +1,7 @@
 package pl.trainer.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -46,16 +47,8 @@ fun CalendarScreen(state: TrainerUiState, onDate: (LocalDate) -> Unit, onMode: (
     LazyColumn(modifier = Modifier.testTag("calendar-list"), contentPadding = PaddingValues(start = Layout.gutter, end = Layout.gutter, top = Layout.padding, bottom = 100.dp),
         verticalArrangement = Arrangement.spacedBy(Layout.medium)) {
         item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Layout.medium), verticalAlignment = Alignment.CenterVertically) {
-                SingleChoiceSegmentedButtonRow(Modifier.weight(1f)) {
-                    CalendarMode.entries.forEachIndexed { index, mode ->
-                        SegmentedButton(selected = state.calendarMode == mode, onClick = { onMode(mode) },
-                            shape = SegmentedButtonDefaults.itemShape(index, 2), icon = {}) {
-                            Text(tr(if (mode == CalendarMode.Day) Res.string.day else Res.string.week))
-                        }
-                    }
-                }
-            }
+            PillTabs(CalendarMode.entries, state.calendarMode,
+                label = { tr(if (it == CalendarMode.Day) Res.string.day else Res.string.week) }, onSelect = onMode)
         }
         item {
             TextButton(onClick = { datePicker = true }, modifier = Modifier.fillMaxWidth().heightIn(min = Layout.target), contentPadding = PaddingValues(0.dp)) {
@@ -151,7 +144,9 @@ fun SessionRow(session: Session, client: Client, onClick: () -> Unit, showDate: 
 @Composable
 private fun SessionCard(session: Session, client: Client, onClick: () -> Unit, showDate: Boolean, modifier: Modifier) {
     val language = DateFormats.defaultLanguage()
-    Card(onClick = onClick, modifier = modifier, shape = Layout.card, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+    Card(onClick = onClick, modifier = modifier, shape = Layout.tile, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp, focusedElevation = 0.dp, hoveredElevation = 0.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Column(Modifier.padding(Layout.padding), verticalArrangement = Arrangement.spacedBy(Layout.small)) {
             StatusLabel(session)
             Text(client.name, style = MaterialTheme.typography.titleMedium)
@@ -183,7 +178,8 @@ fun BlockRow(block: AvailabilityBlock, onClick: () -> Unit) {
 
 @Composable
 private fun BlockCard(onClick: () -> Unit, modifier: Modifier) {
-    Surface(onClick = onClick, modifier = modifier, color = MaterialTheme.colorScheme.surfaceVariant, shape = Layout.card) {
+    Surface(onClick = onClick, modifier = modifier, color = MaterialTheme.colorScheme.surfaceVariant, shape = Layout.tile,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
         Column(Modifier.padding(Layout.padding), verticalArrangement = Arrangement.spacedBy(Layout.tiny)) {
             MetaLine(Icons.Outlined.Block, tr(Res.string.blocked))
             Text(tr(Res.string.block_description), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

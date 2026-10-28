@@ -1,6 +1,9 @@
 package pl.trainer.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -13,6 +16,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import org.jetbrains.compose.resources.StringResource
@@ -78,7 +84,7 @@ fun StatusLabel(session: Session) {
 
 @Composable
 fun InfoBanner(text: String, icon: ImageVector = Icons.Outlined.Info, error: Boolean = false, modifier: Modifier = Modifier) {
-    Surface(modifier.fillMaxWidth(), color = if (error) MaterialTheme.colorScheme.errorContainer else AppColors.softAccent, shape = Layout.card) {
+    Surface(modifier.fillMaxWidth(), color = if (error) MaterialTheme.colorScheme.errorContainer else AppColors.softAccent, shape = Layout.panel) {
         Row(Modifier.padding(Layout.padding), horizontalArrangement = Arrangement.spacedBy(Layout.medium)) {
             Icon(icon, null, Modifier.size(20.dp), tint = if (error) MaterialTheme.colorScheme.error else AppColors.onSoftAccent)
             Text(text, style = MaterialTheme.typography.bodyMedium, color = if (error) MaterialTheme.colorScheme.onErrorContainer else AppColors.onSoftAccent)
@@ -112,13 +118,35 @@ fun failureText(failure: Failure): String = tr(when (failure) {
 
 @Composable
 fun PrimaryButton(label: String, enabled: Boolean = true, loading: Boolean = false, onClick: () -> Unit) {
-    Button(onClick = onClick, enabled = enabled && !loading, modifier = Modifier.fillMaxWidth().heightIn(min = Layout.target),
+    Button(onClick = onClick, enabled = enabled && !loading, shape = Layout.pill,
+        modifier = Modifier.fillMaxWidth().heightIn(min = Layout.buttonHeight),
         contentPadding = PaddingValues(horizontal = Layout.padding, vertical = Layout.medium)) {
         if (loading) {
             CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
             Spacer(Modifier.width(Layout.small))
         }
         Text(if (loading) tr(Res.string.saving) else label)
+    }
+}
+
+/** Matches main's inset pill switcher while using our retained, readable brand pair. */
+@Composable
+fun <T> PillTabs(items: List<T>, selected: T, label: @Composable (T) -> String, onSelect: (T) -> Unit, modifier: Modifier = Modifier) {
+    Surface(modifier = modifier, shape = Layout.pill, color = MaterialTheme.colorScheme.surfaceVariant,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+        Row(Modifier.horizontalScroll(rememberScrollState()).padding(Layout.tiny), horizontalArrangement = Arrangement.spacedBy(Layout.tiny)) {
+            items.forEach { item ->
+                val active = item == selected
+                Surface(onClick = { onSelect(item) }, shape = Layout.pill,
+                    color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.semantics { this.selected = active; role = Role.Tab }) {
+                    Box(Modifier.heightIn(min = Layout.target).padding(horizontal = Layout.gutter, vertical = Layout.small), contentAlignment = Alignment.Center) {
+                        Text(label(item), style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false)
+                    }
+                }
+            }
+        }
     }
 }
 

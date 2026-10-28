@@ -1,6 +1,7 @@
 package pl.trainer.ui
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -32,7 +33,7 @@ fun SessionDetailScreen(state: TrainerUiState, session: Session, onClient: () ->
                 StatusLabel(session)
             }
         }
-        Surface(shape = Layout.feature, color = MaterialTheme.colorScheme.surface) {
+        Surface(shape = Layout.frame, color = MaterialTheme.colorScheme.surface, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
             Column(Modifier.padding(Layout.gutter), verticalArrangement = Arrangement.spacedBy(Layout.medium)) {
                 if (session.proposal != null) Text(tr(Res.string.original_time), style = MaterialTheme.typography.labelLarge)
                 TimeSummary(session.start, session.end, session.timeZone)
@@ -45,7 +46,7 @@ fun SessionDetailScreen(state: TrainerUiState, session: Session, onClient: () ->
         session.proposal?.let { proposal ->
             Column(verticalArrangement = Arrangement.spacedBy(Layout.medium)) {
                 SectionTitle(tr(Res.string.proposed_time))
-                Surface(shape = Layout.card, color = AppColors.softAccent) {
+                Surface(shape = Layout.panel, color = AppColors.softAccent) {
                     Column(Modifier.padding(Layout.padding), verticalArrangement = Arrangement.spacedBy(Layout.small)) {
                         TimeSummary(proposal.start, proposal.end, session.timeZone)
                         if (trainerProposal) Text(tr(Res.string.awaiting_client), style = MaterialTheme.typography.labelLarge, color = AppColors.onSoftAccent)
@@ -99,7 +100,7 @@ fun TimeSummary(start: kotlin.time.Instant, end: kotlin.time.Instant, zone: Stri
 
 @Composable
 fun ActionRow(icon: ImageVector, title: String, subtitle: String? = null, onClick: () -> Unit) {
-    Surface(onClick = onClick, shape = Layout.card, color = MaterialTheme.colorScheme.surface) {
+    Surface(onClick = onClick, shape = Layout.tile, color = MaterialTheme.colorScheme.surface, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
         Row(Modifier.fillMaxWidth().heightIn(min = Layout.target).padding(Layout.padding), horizontalArrangement = Arrangement.spacedBy(Layout.medium), verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null, tint = MaterialTheme.colorScheme.primary)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Layout.tiny)) {

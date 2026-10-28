@@ -19,9 +19,17 @@ object Layout {
     val section = 24.dp
     val large = 32.dp
     val target = 48.dp
+    val buttonHeight = 52.dp
+    val headerHeight = 64.dp
+    val floatingElevation = 2.dp
+    val activeFloatingElevation = 3.dp
     val contentWidth = 640.dp
     val card = RoundedCornerShape(16.dp)
+    val panel = RoundedCornerShape(20.dp)
+    val tile = RoundedCornerShape(22.dp)
     val feature = RoundedCornerShape(24.dp)
+    val frame = RoundedCornerShape(28.dp)
+    val navigation = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     val pill = RoundedCornerShape(50)
 }
 
@@ -60,11 +68,11 @@ fun TrainerTheme(content: @Composable () -> Unit) = MaterialTheme(
     ),
     typography = Typography(
         headlineMedium = style(26, 32, FontWeight.Bold),
-        titleLarge = style(20, 26, FontWeight.SemiBold),
-        titleMedium = style(17, 22, FontWeight.SemiBold),
+        titleLarge = style(20, 26, FontWeight.Bold),
+        titleMedium = style(17, 22, FontWeight.Bold),
         bodyLarge = style(16, 24), bodyMedium = style(14, 20), bodySmall = style(12, 16),
         labelLarge = style(14, 20, FontWeight.SemiBold), labelMedium = style(12, 16, FontWeight.SemiBold),
     ),
-    shapes = Shapes(small = Layout.card, medium = Layout.card, large = Layout.feature, extraLarge = Layout.feature),
+    shapes = Shapes(small = RoundedCornerShape(12.dp), medium = Layout.card, large = Layout.feature, extraLarge = Layout.frame),
     content = content,
 )

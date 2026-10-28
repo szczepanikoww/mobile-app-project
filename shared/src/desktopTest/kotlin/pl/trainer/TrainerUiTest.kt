@@ -144,7 +144,7 @@ class TrainerUiTest {
             onNodeWithText("Aktywna współpraca").assertDoesNotExist()
             onNodeWithText("Zaległa płatność: nie").assertDoesNotExist()
             onNodeWithText("Piotr Lewandowski").assertDoesNotExist()
-            onNodeWithTag("clients-tab-Archive").performClick()
+            onNodeWithText("Archiwum").performClick()
             onNodeWithText("Piotr Lewandowski").assertExists()
             capture("clients-archive-pl")
             onNodeWithText("Katarzyna Nowak").assertDoesNotExist()
