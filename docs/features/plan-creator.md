@@ -360,3 +360,26 @@ All ten were agreed on 2026-10-28. D2 is still an action item: check with the te
 | D8 | Show dataset stock images? | Yes, as thumbnails and in S4, until a trainer video exists. |
 | D9 | Can custom exercises be created offline? | Yes, local-first with a client UUID (rule 5 in section 6). |
 | D10 | Do the "Zapisz szablon" and "Przypisz klientowi" buttons from Stitch stay as two buttons? | No. One primary "Zapisz plan", followed by an "Przypisz klientowi" snackbar action (section 3). |
+
+---
+
+## 11. Implementation status (2026-10-28)
+
+Slices 0–3 are implemented on branch `workout-plan` against local storage and fake remotes. Slice 0 was built on this branch (decision D2: nobody else had started it).
+
+| Slice | State |
+|---|---|
+| 0 Foundations | Gradle KMP project; `:shared:designsystem` with the shared theme and the components listed in section 7; trainer shell with the Klienci \| Plany segment (D1); Koin; SQLDelight. |
+| 1 Exercise library | S3 browse mode and S4, from a bundled seed of 171 curated exercises with Polish names, aliases and checked tracking types (`tools/exercise-seed`). |
+| 2 Plan editor | S1, S2, S6 and S3 pick mode. Drafts are written to SQLDelight on every edit. Publishing goes to `FakePlanRemoteDataSource`, which follows the server contract (idempotent `operationId`, conflict on a stale `baseVersion`, no success offline). |
+| 3 Exercise creation | S5 create/edit, hide and show again, local-first with a pending/failed sync state, and "Utwórz „{query}”" from the picker. |
+| 4 Backend and sync | Not started. `:contract` holds the DTOs and validators the server will reuse. |
+| 5 Integration | Not started. "Przypisz klientowi" shows a placeholder dialog. Images show a placeholder until they are copied to our storage. |
+
+Assumptions made while implementing (not product decisions):
+
+- **Required set values.** A planned set needs reps (`WEIGHT_REPS`, `REPS`), a duration (`TIME`) or a distance (`DISTANCE_TIME`). Weight and RPE are optional.
+- **Set-value ranges.** Duration is limited to 10 h, distance to 1000 km, and rest to 0–60 min.
+- **Input formats.** Distance is entered in km. Time is entered as seconds or `min:s`; `1.30` also means 1:30, because numeric keypads have no colon.
+- **Name of a custom exercise.** It is stored in a single language, the trainer's language when they last saved it.
+- **Hidden own exercises.** They are listed under "Moje → Ukryte" so they can be shown again. Search never returns them.

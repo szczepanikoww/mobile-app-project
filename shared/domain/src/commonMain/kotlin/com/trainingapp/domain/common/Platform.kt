@@ -30,3 +30,8 @@ interface NetworkMonitor {
 interface CurrentUser {
     val trainerId: String
 }
+
+/** The app's selected UI language ("pl", "en"). Names, instructions and number formats follow it. */
+fun interface AppLanguage {
+    fun current(): String
+}

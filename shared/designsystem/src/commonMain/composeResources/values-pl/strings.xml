@@ -1,0 +1,12 @@
+<resources>
+    <string name="ds_back">Wstecz</string>
+    <string name="ds_close">Zamknij</string>
+    <string name="ds_more_options">Więcej opcji</string>
+    <string name="ds_clear_search">Wyczyść wyszukiwanie</string>
+    <string name="ds_retry">Spróbuj ponownie</string>
+    <string name="ds_loading">Wczytywanie</string>
+    <string name="ds_done">Gotowe</string>
+    <string name="ds_cancel">Anuluj</string>
+    <string name="ds_selected">Zaznaczone</string>
+    <string name="ds_image_placeholder">Brak zdjęcia</string>
+</resources>

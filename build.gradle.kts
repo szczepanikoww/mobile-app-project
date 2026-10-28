@@ -21,7 +21,10 @@ buildscript {
 
 // One JVM bytecode level for every module: Android, desktop, tests and a future JVM backend.
 subprojects {
-    tasks.withType<JavaCompile>().configureEach { options.release.set(17) }
+    // Android modules set Java 17 through compileOptions; AGP does not accept --release.
+    tasks.withType<JavaCompile>().configureEach {
+        if (!project.plugins.hasPlugin("com.android.base")) options.release.set(17)
+    }
     tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile>().configureEach {
         compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }

@@ -45,10 +45,18 @@ object SetInput {
         return if (thousandths is Parsed.Value) Parsed.Value(thousandths.value / 1000.0) else Parsed.Invalid
     }
 
-    /** "90" (seconds), "1:30" (min:s) or "1:02:03" (h:min:s), to seconds. */
+    /**
+     * "90" (seconds), "1:30" (min:s) or "1:02:03" (h:min:s), to seconds. Numeric keypads have no colon, so
+     * "1.30" and "1,30" are read as 1:30 when exactly two digits follow the separator.
+     */
     fun parseDurationSeconds(text: String): Parsed<Int> {
-        val t = text.trim()
+        var t = text.trim()
         if (t.isEmpty()) return Parsed.Blank
+        val keypadSeparator = t.indexOfFirst { it == '.' || it == ',' }
+        if (keypadSeparator >= 0) {
+            if (':' in t || t.length - keypadSeparator - 1 != 2) return Parsed.Invalid
+            t = t.substring(0, keypadSeparator) + ":" + t.substring(keypadSeparator + 1)
+        }
         val parts = t.split(':')
         if (parts.size > 3 || parts.any { it.isEmpty() || !it.all(Char::isDigit) || it.length > 5 }) return Parsed.Invalid
         val numbers = parts.map { it.toInt() }

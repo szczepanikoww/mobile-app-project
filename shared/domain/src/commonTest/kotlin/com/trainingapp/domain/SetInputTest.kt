@@ -35,6 +35,10 @@ class SetInputTest {
         assertEquals(Parsed.Value(3_725), SetInput.parseDurationSeconds("1:02:05"))
         assertEquals(Parsed.Invalid, SetInput.parseDurationSeconds("1:75"))
         assertEquals(Parsed.Invalid, SetInput.parseDurationSeconds("1:"))
+        // Numeric keypads have no colon.
+        assertEquals(Parsed.Value(90), SetInput.parseDurationSeconds("1.30"))
+        assertEquals(Parsed.Value(90), SetInput.parseDurationSeconds("1,30"))
+        assertEquals(Parsed.Invalid, SetInput.parseDurationSeconds("1.5"))
     }
 
     @Test
