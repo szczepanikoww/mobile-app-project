@@ -5,13 +5,17 @@ plugins {
 }
 kotlin { jvmToolchain(17) }
 dependencies {
+    implementation(project(":shared:app"))
+    implementation(project(":shared:data"))
+    implementation(libs.sqldelight.sqliteDriver)
+
     implementation(project(":shared"))
     implementation(compose.desktop.currentOs)
     implementation(libs.coroutines.swing)
     implementation(libs.lifecycle.viewmodel.compose)
 }
 compose.desktop {
-    application { mainClass = "pl.trainer.desktop.MainKt" }
+    application { mainClass = "com.trainingapp.desktop.MainKt" }
 }
 
 tasks.register<JavaExec>("runPreview") {

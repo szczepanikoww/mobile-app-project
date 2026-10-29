@@ -1,0 +1,174 @@
+# Curated, featured subset of free-exercise-db (decision D3).
+# Columns (tab-separated): dataset id | Polish name | search aliases (";"-separated, any language) | tracking type override (optional)
+# Tracking type defaults: cardio → DISTANCE_TIME, body only → REPS, everything else → WEIGHT_REPS.
+Barbell_Bench_Press_-_Medium_Grip	Wyciskanie sztangi leżąc	bench press;wyciskanie na ławce płaskiej;klata	
+Barbell_Incline_Bench_Press_-_Medium_Grip	Wyciskanie sztangi na ławce skośnej	incline bench press;skos	
+Decline_Barbell_Bench_Press	Wyciskanie sztangi na ławce ujemnej	decline bench press	
+Close-Grip_Barbell_Bench_Press	Wyciskanie sztangi wąskim chwytem	close grip bench press;wąskie	
+Wide-Grip_Barbell_Bench_Press	Wyciskanie sztangi szerokim chwytem	wide grip bench press	
+Dumbbell_Bench_Press	Wyciskanie hantli leżąc	dumbbell press;wyciskanie hantli na ławce płaskiej	
+Incline_Dumbbell_Press	Wyciskanie hantli na ławce skośnej	incline dumbbell press	
+Decline_Dumbbell_Bench_Press	Wyciskanie hantli na ławce ujemnej	decline dumbbell press	
+Dumbbell_Bench_Press_with_Neutral_Grip	Wyciskanie hantli chwytem neutralnym	neutral grip dumbbell press	
+Dumbbell_Floor_Press	Wyciskanie hantli z podłogi	floor press	
+Smith_Machine_Bench_Press	Wyciskanie na suwnicy Smitha	smith bench press	
+Smith_Machine_Incline_Bench_Press	Wyciskanie na suwnicy Smitha na skosie	smith incline press	
+Machine_Bench_Press	Wyciskanie na maszynie siedząc	chest press machine	
+Leverage_Chest_Press	Wyciskanie na maszynie dźwigniowej	hammer strength chest press	
+Cable_Chest_Press	Wyciskanie na wyciągu	cable chest press	
+Dumbbell_Flyes	Rozpiętki z hantlami leżąc	dumbbell fly;rozpiętki	
+Incline_Dumbbell_Flyes	Rozpiętki z hantlami na skosie	incline fly	
+Flat_Bench_Cable_Flyes	Rozpiętki na wyciągu leżąc	cable fly	
+Butterfly	Rozpiętki na maszynie (butterfly)	pec deck;butterfly	
+Incline_Cable_Flye	Rozpiętki na wyciągu na skosie	incline cable fly	
+Pushups	Pompki	push-up;push ups	
+Push-Up_Wide	Pompki szerokie	wide push-up	
+Push-Ups_-_Close_Triceps_Position	Pompki wąskie (diamentowe)	diamond push-up;close push-up	
+Push-Ups_With_Feet_Elevated	Pompki z nogami na podwyższeniu	decline push-up	
+Incline_Push-Up	Pompki na podwyższeniu	incline push-up	
+Dips_-_Chest_Version	Pompki na poręczach (klatka)	chest dips;dipy	
+Dips_-_Triceps_Version	Pompki na poręczach (triceps)	triceps dips;dipy	
+Bench_Dips	Pompki w podporze tyłem	bench dips	
+Pullups	Podciąganie nachwytem	pull-up;pull ups;drążek	
+Chin-Up	Podciąganie podchwytem	chin-up;chin ups;drążek	
+Band_Assisted_Pull-Up	Podciąganie z gumą	assisted pull-up	
+Wide-Grip_Lat_Pulldown	Ściąganie drążka szerokim chwytem	lat pulldown;wyciąg górny	
+Close-Grip_Front_Lat_Pulldown	Ściąganie drążka wąskim chwytem	close grip pulldown	
+V-Bar_Pulldown	Ściąganie drążka V do klatki	v-bar pulldown	
+Underhand_Cable_Pulldowns	Ściąganie drążka podchwytem	reverse grip pulldown	
+Straight-Arm_Pulldown	Ściąganie drążka prostymi rękami	straight arm pulldown;pullover na wyciągu	
+Bent_Over_Barbell_Row	Wiosłowanie sztangą w opadzie	barbell row;wiosło	
+Reverse_Grip_Bent-Over_Rows	Wiosłowanie sztangą podchwytem	reverse grip row;yates row	
+One-Arm_Dumbbell_Row	Wiosłowanie hantlem jednorącz	dumbbell row;wiosłowanie hantlem w opadzie	
+Bent_Over_Two-Dumbbell_Row	Wiosłowanie hantlami w opadzie	two dumbbell row	
+Dumbbell_Incline_Row	Wiosłowanie hantlami na ławce skośnej	chest supported row	
+Seated_Cable_Rows	Wiosłowanie na wyciągu dolnym siedząc	seated cable row;wyciąg dolny	
+Seated_One-arm_Cable_Pulley_Rows	Wiosłowanie na wyciągu jednorącz	one arm cable row	
+T-Bar_Row_with_Handle	Wiosłowanie T-bar	t-bar row	
+Lying_T-Bar_Row	Wiosłowanie T-bar na ławce	chest supported t-bar row	
+Leverage_High_Row	Wiosłowanie na maszynie z góry	high row machine	
+Leverage_Iso_Row	Wiosłowanie na maszynie	machine row	
+Inverted_Row	Wiosłowanie australijskie	inverted row;australian pull-up	
+Face_Pull	Face pull na wyciągu	face pull	
+Barbell_Deadlift	Martwy ciąg	deadlift;mc	
+Sumo_Deadlift	Martwy ciąg sumo	sumo deadlift	
+Romanian_Deadlift	Rumuński martwy ciąg	rdl;romanian deadlift	
+Stiff-Legged_Barbell_Deadlift	Martwy ciąg na prostych nogach	stiff leg deadlift;sldl	
+Stiff-Legged_Dumbbell_Deadlift	Martwy ciąg na prostych nogach z hantlami	dumbbell stiff leg deadlift	
+Trap_Bar_Deadlift	Martwy ciąg z trap bar	hex bar deadlift	
+Deficit_Deadlift	Martwy ciąg z deficytu	deficit deadlift	
+Kettlebell_One-Legged_Deadlift	Martwy ciąg na jednej nodze z kettlebell	single leg deadlift	
+Good_Morning	Skłony ze sztangą (good morning)	good morning	
+Hyperextensions_Back_Extensions	Wyprosty tułowia na ławce rzymskiej	back extension;hyperextension;ławka rzymska	
+Reverse_Hyperextension	Odwrotne wyprosty (reverse hyper)	reverse hyper	
+Barbell_Squat	Przysiad ze sztangą	back squat;przysiad tylny	
+Barbell_Full_Squat	Przysiad głęboki ze sztangą	full squat;atg	
+Front_Barbell_Squat	Przysiad przedni	front squat	
+Box_Squat	Przysiad do skrzyni	box squat	
+Goblet_Squat	Przysiad goblet	goblet squat	
+Dumbbell_Squat	Przysiad z hantlami	dumbbell squat	
+Bodyweight_Squat	Przysiad bez obciążenia	air squat;bodyweight squat	
+Overhead_Squat	Przysiad ze sztangą nad głową	overhead squat	
+Zercher_Squats	Przysiad Zerchera	zercher squat	
+Hack_Squat	Przysiad hack ze sztangą	hack squat	
+Narrow_Stance_Hack_Squats	Przysiad na maszynie hack	hack squat machine	
+Smith_Machine_Squat	Przysiad na suwnicy Smitha	smith squat	
+Split_Squat_with_Dumbbells	Przysiad bułgarski z hantlami	bulgarian split squat;split squat	
+Leg_Press	Wypychanie nóg na suwnicy	leg press;suwnica	
+Narrow_Stance_Leg_Press	Wypychanie nóg wąsko na suwnicy	narrow leg press	
+Leg_Extensions	Prostowanie nóg na maszynie	leg extension;wyprosty nóg	
+Lying_Leg_Curls	Uginanie nóg leżąc	lying leg curl	
+Seated_Leg_Curl	Uginanie nóg siedząc	seated leg curl	
+Standing_Leg_Curl	Uginanie nogi stojąc	standing leg curl	
+Glute_Ham_Raise	Glute ham raise	ghr	
+Natural_Glute_Ham_Raise	Nordic curl (opuszczanie nordyckie)	nordic hamstring curl	
+Barbell_Lunge	Wykroki ze sztangą	barbell lunge	
+Dumbbell_Lunges	Wykroki z hantlami	dumbbell lunge	
+Barbell_Walking_Lunge	Wykroki chodzone ze sztangą	walking lunge	
+Bodyweight_Walking_Lunge	Wykroki chodzone	walking lunge bodyweight	
+Dumbbell_Rear_Lunge	Wykroki w tył z hantlami	reverse lunge	
+Dumbbell_Step_Ups	Wejścia na skrzynię z hantlami	step-up	
+Barbell_Step_Ups	Wejścia na skrzynię ze sztangą	barbell step-up	
+Barbell_Hip_Thrust	Hip thrust ze sztangą	hip thrust;wypychanie bioder	
+Barbell_Glute_Bridge	Mostek biodrowy ze sztangą	glute bridge	
+Single_Leg_Glute_Bridge	Mostek biodrowy na jednej nodze	single leg glute bridge	
+Butt_Lift_Bridge	Mostek biodrowy	bridge;glute bridge bodyweight	
+Glute_Kickback	Odwodzenie nogi w tył w klęku	kickback;donkey kick	
+One-Legged_Cable_Kickback	Odwodzenie nogi w tył na wyciągu	cable kickback	
+Standing_Calf_Raises	Wspięcia na palce stojąc na maszynie	standing calf raise;łydki stojąc	
+Seated_Calf_Raise	Wspięcia na palce siedząc	seated calf raise	
+Calf_Press_On_The_Leg_Press_Machine	Wspięcia na palce na suwnicy	leg press calf raise	
+Donkey_Calf_Raises	Wspięcia na palce w opadzie (donkey)	donkey calf raise	
+Standing_Dumbbell_Calf_Raise	Wspięcia na palce z hantlami	dumbbell calf raise	
+Standing_Military_Press	Wyciskanie żołnierskie	military press;ohp;overhead press	
+Seated_Barbell_Military_Press	Wyciskanie sztangi nad głowę siedząc	seated overhead press	
+Dumbbell_Shoulder_Press	Wyciskanie hantli nad głowę siedząc	dumbbell shoulder press	
+Standing_Dumbbell_Press	Wyciskanie hantli nad głowę stojąc	standing dumbbell press	
+Arnold_Dumbbell_Press	Wyciskanie Arnolda	arnold press	
+Machine_Shoulder_Military_Press	Wyciskanie nad głowę na maszynie	shoulder press machine	
+Push_Press	Podrzut sprzed klatki (push press)	push press	
+Side_Lateral_Raise	Unoszenie hantli bokiem stojąc	lateral raise;wznosy bokiem	
+Seated_Side_Lateral_Raise	Unoszenie hantli bokiem siedząc	seated lateral raise	
+Cable_Seated_Lateral_Raise	Unoszenie ramienia bokiem na wyciągu	cable lateral raise	
+Front_Dumbbell_Raise	Unoszenie hantli w przód	front raise	
+Front_Plate_Raise	Unoszenie talerza w przód	plate front raise	
+Seated_Bent-Over_Rear_Delt_Raise	Unoszenie hantli w opadzie siedząc	rear delt raise;tylny akton	
+Reverse_Machine_Flyes	Odwrotne rozpiętki na maszynie	reverse pec deck;rear delt fly	
+Cable_Rear_Delt_Fly	Odwrotne rozpiętki na wyciągu	cable rear delt fly	
+Upright_Barbell_Row	Podciąganie sztangi wzdłuż tułowia	upright row	
+Barbell_Shrug	Szrugsy ze sztangą	shrug;wzruszanie ramion	
+Dumbbell_Shrug	Szrugsy z hantlami	dumbbell shrug	
+Barbell_Curl	Uginanie ramion ze sztangą stojąc	barbell curl;biceps sztanga	
+EZ-Bar_Curl	Uginanie ramion z gryfem łamanym	ez bar curl	
+Dumbbell_Bicep_Curl	Uginanie ramion z hantlami	dumbbell curl	
+Dumbbell_Alternate_Bicep_Curl	Uginanie ramion z hantlami naprzemiennie	alternate curl	
+Hammer_Curls	Uginanie ramion chwytem młotkowym	hammer curl;młotki	
+Incline_Dumbbell_Curl	Uginanie ramion z hantlami na skosie	incline curl	
+Concentration_Curls	Uginanie ramienia w podporze o udo	concentration curl	
+Preacher_Curl	Uginanie ramion na modlitewniku	preacher curl;modlitewnik	
+Machine_Preacher_Curls	Uginanie ramion na maszynie	machine preacher curl	
+Standing_Biceps_Cable_Curl	Uginanie ramion na wyciągu dolnym	cable curl	
+Spider_Curl	Uginanie ramion spider	spider curl	
+Reverse_Barbell_Curl	Uginanie ramion nachwytem	reverse curl	
+Zottman_Curl	Uginanie ramion Zottmana	zottman curl	
+Triceps_Pushdown	Prostowanie ramion na wyciągu	triceps pushdown;wyciąg górny triceps	
+Triceps_Pushdown_-_Rope_Attachment	Prostowanie ramion na wyciągu z liną	rope pushdown	
+Triceps_Pushdown_-_V-Bar_Attachment	Prostowanie ramion na wyciągu z drążkiem V	v-bar pushdown	
+Triceps_Overhead_Extension_with_Rope	Prostowanie ramion nad głową z liną	overhead rope extension	
+EZ-Bar_Skullcrusher	Wyciskanie francuskie leżąc	skull crusher;francuz	
+Standing_Dumbbell_Triceps_Extension	Wyciskanie francuskie hantlem stojąc	overhead dumbbell extension	
+Lying_Dumbbell_Tricep_Extension	Wyciskanie francuskie hantlami leżąc	lying dumbbell extension	
+Tricep_Dumbbell_Kickback	Prostowanie ramienia w opadzie (kickback)	triceps kickback	
+Machine_Triceps_Extension	Prostowanie ramion na maszynie	triceps machine	
+Weighted_Bench_Dip	Pompki w podporze tyłem z obciążeniem	weighted bench dip	
+Palms-Up_Barbell_Wrist_Curl_Over_A_Bench	Uginanie nadgarstków podchwytem	wrist curl	
+Plank	Deska (plank)	plank;podpór przodem	TIME
+Side_Bridge	Deska bokiem	side plank	TIME
+Crunches	Brzuszki	crunch	
+Cable_Crunch	Spięcia brzucha na wyciągu (allah)	cable crunch;allahy	
+Ab_Crunch_Machine	Spięcia brzucha na maszynie	ab machine	
+Hanging_Leg_Raise	Unoszenie nóg w zwisie	hanging leg raise	
+Flat_Bench_Lying_Leg_Raise	Unoszenie nóg leżąc	lying leg raise	
+Reverse_Crunch	Odwrotne brzuszki	reverse crunch	
+Russian_Twist	Russian twist	skręty tułowia	
+Pallof_Press	Pallof press	antyrotacja	
+Sit-Up	Siady z leżenia	sit-up	
+Decline_Crunch	Brzuszki na ławce skośnej	decline crunch	
+Mountain_Climbers	Wspinaczka (mountain climbers)	mountain climber	REPS
+One-Arm_Kettlebell_Swings	Swing kettlebell jednorącz	kettlebell swing;swing	
+Kettlebell_Turkish_Get-Up_Squat_style	Tureckie wstawanie	turkish get-up;tgu	
+Power_Clean	Zarzut siłowy	power clean	
+Hang_Clean	Zarzut z zawieszenia	hang clean	
+Clean_and_Jerk	Podrzut	clean and jerk	
+Snatch	Rwanie	snatch	
+Power_Snatch	Rwanie siłowe	power snatch	
+Front_Box_Jump	Wskok na skrzynię	box jump	REPS
+Freehand_Jump_Squat	Przysiad z wyskokiem	jump squat	REPS
+Running_Treadmill	Bieg na bieżni	treadmill;bieżnia;bieg	
+Walking_Treadmill	Marsz na bieżni	walking;marsz	
+Recumbent_Bike	Rower poziomy	bike;rower stacjonarny	
+Air_Bike	Rower powietrzny (air bike)	assault bike	
+Rowing_Stationary	Wioślarz (ergometr)	rowing machine;ergometr	
+Elliptical_Trainer	Orbitrek	elliptical;trenażer eliptyczny	
+Rope_Jumping	Skakanka	jump rope	TIME
+Step_Mill	Schody (stepmill)	stair climber;schodki	TIME

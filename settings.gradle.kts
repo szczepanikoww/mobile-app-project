@@ -6,9 +6,15 @@ dependencyResolutionManagement {
 }
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 rootProject.name = "TrainerApp"
-include(":shared", ":androidApp")
-// Feature branches add their modules without replacing the common Android host or theme.
-if (file("desktopApp/build.gradle.kts").exists()) include(":desktopApp")
+val includeUi = providers.gradleProperty("trainer.ui").orNull?.toBooleanStrictOrNull() ?: true
 if (file("contract/build.gradle.kts").exists()) {
-    include(":contract", ":shared:domain", ":shared:data", ":shared:designsystem", ":shared:feature:workout-builder", ":shared:app")
+    include(":contract", ":shared:domain", ":shared:data")
+    if (!includeUi) project(":shared").buildFileName = "headless.gradle.kts"
+}
+if (includeUi) {
+    include(":shared", ":androidApp")
+    if (file("desktopApp/build.gradle.kts").exists()) include(":desktopApp")
+    if (file("shared/app/build.gradle.kts").exists()) {
+        include(":shared:designsystem", ":shared:feature:workout-builder", ":shared:app")
+    }
 }

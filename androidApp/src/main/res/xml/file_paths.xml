@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Trainer demo videos, app-private (see VideoPlatform.android.kt). -->
+    <files-path name="videos" path="videos/" />
+</paths>

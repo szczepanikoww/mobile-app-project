@@ -9,6 +9,8 @@ import pl.trainer.presentation.TrainerViewModel
 import pl.trainer.data.DemoTrainerRepository
 import pl.trainer.ui.TrainerApp
 import pl.trainerapp.shell.TrainerDestination
+import com.trainingapp.app.App
+import com.trainingapp.app.WorkoutCreateActions
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.SystemBarStyle
@@ -39,14 +41,17 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
         )
         setContent {
-            AppTheme {
+            App { actions ->
+              AppTheme {
                 val trainer: TrainerViewModel = viewModel { TrainerViewModel(DemoTrainerRepository()) }
                 TrainerShell(repositories, trainerFeature = { destination, createRequest, onMain ->
                     LaunchedEffect(destination) {
                         trainer.destination(if (destination == TrainerDestination.Calendar) Destination.Calendar else Destination.Clients)
                     }
-                    TrainerApp(trainer, showNavigation = false, createRequest = createRequest, onMainRouteChanged = onMain)
+                    TrainerApp(trainer, showNavigation = false, createRequest = createRequest, onMainRouteChanged = onMain,
+                        extraCreateActions = { dismiss -> WorkoutCreateActions(actions, dismiss) })
                 })
+              }
             }
         }
     }

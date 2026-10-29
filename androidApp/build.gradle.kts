@@ -22,6 +22,12 @@ android {
 }
 kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
 dependencies {
+    implementation(project(":shared:app"))
+    implementation(project(":shared:data"))
+    implementation(libs.koin.android)
+    implementation(libs.sqldelight.androidDriver)
+    implementation(libs.kotlinx.coroutines.android)
+
     implementation(project(":shared"))
     implementation(libs.activity.compose)
     implementation(libs.lifecycle.viewmodel.compose)

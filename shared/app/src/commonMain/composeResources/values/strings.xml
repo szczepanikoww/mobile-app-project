@@ -1,0 +1,21 @@
+<resources>
+    <string name="tab_start">Start</string>
+    <string name="tab_calendar">Kalendarz</string>
+    <string name="tab_clients">Podopieczni</string>
+    <string name="tab_finance">Finanse</string>
+    <string name="assign_message">Przypisywanie planów wymaga połączenia z obsługą przypisań podopiecznych. Zapisana wersja planu jest gotowa do przypisania.</string>
+    <string name="title_calendar">Twój plan</string>
+    <string name="title_clients">Twoi podopieczni</string>
+    <string name="add">Dodaj</string>
+    <string name="add_menu_title">Co chcesz dodać?</string>
+    <string name="add_new_plan">Nowy plan treningowy</string>
+    <string name="add_new_plan_hint">Dni, ćwiczenia i serie</string>
+    <string name="add_plans">Plany treningowe</string>
+    <string name="add_plans_hint">Twoje szablony i szkice</string>
+    <string name="add_exercises">Biblioteka ćwiczeń</string>
+    <string name="add_exercises_hint">Ćwiczenia z bazy i własne, z wideo wzorcowym</string>
+    <string name="screen_integration_pending">Ten widok nie został jeszcze połączony w tej gałęzi.</string>
+    <string name="open_plans">Otwórz plany treningowe</string>
+    <string name="assign_title">Przypisz podopiecznemu</string>
+    <string name="understood">Rozumiem</string>
+</resources>

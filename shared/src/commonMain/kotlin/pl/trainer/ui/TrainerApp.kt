@@ -34,15 +34,16 @@ fun TrainerApp(
     showNavigation: Boolean = true,
     createRequest: Int = 0,
     onMainRouteChanged: (Boolean) -> Unit = {},
+    extraCreateActions: (@Composable (() -> Unit) -> Unit)? = null,
 ) {
     val state by model.state.collectAsState()
     LaunchedEffect(state.route) { onMainRouteChanged(state.route == Route.Main) }
-    TrainerTheme { TrainerAppContent(state, model, showNavigation, createRequest) }
+    TrainerTheme { TrainerAppContent(state, model, showNavigation, createRequest, extraCreateActions) }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TrainerAppContent(state: TrainerUiState, model: TrainerViewModel, showNavigation: Boolean, createRequest: Int) {
+private fun TrainerAppContent(state: TrainerUiState, model: TrainerViewModel, showNavigation: Boolean, createRequest: Int, extraCreateActions: (@Composable (() -> Unit) -> Unit)?) {
     val snackbar = remember { SnackbarHostState() }
     var addMenu by remember { mutableStateOf(false) }
     LaunchedEffect(createRequest) { if (createRequest > 0 && state.data != null && !state.loading && state.failure == null && !state.submitting) addMenu = true }
@@ -160,6 +161,7 @@ private fun TrainerAppContent(state: TrainerUiState, model: TrainerViewModel, sh
             ActionRow(Icons.Outlined.Block, tr(Res.string.availability), tr(Res.string.availability_action_hint), onClick = {
                 addMenu = false; model.navigate(Route.Availability)
             })
+            extraCreateActions?.invoke { addMenu = false }
         }
     }
     infoDialog?.let { kind -> AlertDialog(onDismissRequest = { infoDialog = null },
