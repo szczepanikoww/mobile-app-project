@@ -1,6 +1,7 @@
 package pl.trainer
 
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.graphics.toAwtImage
@@ -189,6 +190,26 @@ class TrainerUiTest {
             model.date(kotlinx.datetime.LocalDate(2026, 10, 26))
             onNodeWithTag("calendar-list").performScrollToNode(hasText("Zrealizowana"))
             capture("calendar-completed-pl")
+        } finally { store.clear() }
+    }
+
+    @Test fun androidHostCanOwnNavigationAndOpenTheSharedCreateMenu() = runDesktopComposeUiTest(width = 390, height = 844) {
+        val model = TrainerViewModel(DemoTrainerRepository(0))
+        val store = ViewModelStore().also { it.put("test", model) }
+        val create = mutableStateOf(0)
+        var mainRoute = false
+        try {
+            setContent { TrainerApp(model, showNavigation = false, createRequest = create.value, onMainRouteChanged = { mainRoute = it }) }
+            waitUntil { !model.state.value.loading && mainRoute }
+            onNodeWithText("Twój plan").assertExists()
+            onNodeWithText("Finanse").assertDoesNotExist()
+            runOnIdle { create.value++ }
+            onNodeWithText("Dodaj sesję").performClick()
+            waitUntil { !mainRoute }
+            onNodeWithText("Podopieczny").assertExists()
+            onNodeWithContentDescription("Wstecz").performClick()
+            waitUntil { mainRoute }
+            onNodeWithText("Twój plan").assertExists()
         } finally { store.clear() }
     }
 

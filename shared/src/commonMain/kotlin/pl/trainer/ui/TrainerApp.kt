@@ -29,16 +29,23 @@ import pl.trainer.resources.*
 expect fun PlatformBackHandler(enabled: Boolean, onBack: () -> Unit)
 
 @Composable
-fun TrainerApp(model: TrainerViewModel = viewModel { TrainerViewModel(DemoTrainerRepository()) }) {
+fun TrainerApp(
+    model: TrainerViewModel = viewModel { TrainerViewModel(DemoTrainerRepository()) },
+    showNavigation: Boolean = true,
+    createRequest: Int = 0,
+    onMainRouteChanged: (Boolean) -> Unit = {},
+) {
     val state by model.state.collectAsState()
-    TrainerTheme { TrainerAppContent(state, model) }
+    LaunchedEffect(state.route) { onMainRouteChanged(state.route == Route.Main) }
+    TrainerTheme { TrainerAppContent(state, model, showNavigation, createRequest) }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TrainerAppContent(state: TrainerUiState, model: TrainerViewModel) {
+private fun TrainerAppContent(state: TrainerUiState, model: TrainerViewModel, showNavigation: Boolean, createRequest: Int) {
     val snackbar = remember { SnackbarHostState() }
     var addMenu by remember { mutableStateOf(false) }
+    LaunchedEffect(createRequest) { if (createRequest > 0 && state.data != null && !state.loading && state.failure == null && !state.submitting) addMenu = true }
     var infoDialog by remember { mutableStateOf<String?>(null) }
     val savedMessage = tr(Res.string.saved)
     val main = state.route == Route.Main
@@ -81,7 +88,7 @@ private fun TrainerAppContent(state: TrainerUiState, model: TrainerViewModel) {
             }
         },
         bottomBar = {
-            if (main) TrainerBottomBar(state.destination, onSelect = model::destination,
+            if (main && showNavigation) TrainerBottomBar(state.destination, onSelect = model::destination,
                 onCreate = { addMenu = true },
                 createEnabled = state.data != null && !state.loading && state.failure == null && !state.submitting)
         },

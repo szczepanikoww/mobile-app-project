@@ -81,3 +81,7 @@ The branch now ports `TrainerBottomBar` / `NavItem` from main's `shell/AppShell.
 Calendar and Trainees retain their existing routes. The create control replaces the calendar's separate floating button and opens the session/availability menu from every tab. Detail/edit routes hide the bottom bar. Start and Finance are explicit integration placeholders; this port does not import main's Android-only feature implementations or resolve the build-stack conflict described above.
 
 Verified with the 27 existing behavior/UI tests (including tab selection, create from Finance, and hidden navigation on editor routes), Android assembly and lint. Updated [calendar](previews/trainer-calendar.png), [trainees](previews/trainer-clients.png), and [200% text navigation](previews/trainer-navigation-font200.png) are actual Compose test renders. Native system-bar/keyboard behavior remains unverified.
+
+## Integrated with main
+
+The palette migration is now applied on main and merged here. The patch above is retained only as historical comparison; do not reapply it. `docs/design-standardization.md` supersedes the earlier foundation-conflict and unapplied-patch notes. The Android launcher keeps main’s host/screens and connects Calendar/Clients to `TrainerApp(showNavigation = false)`, reporting detail-route visibility and receiving create-menu requests from the one shared bottom bar. Desktop remains the calendar/trainee preview.

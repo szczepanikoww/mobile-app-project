@@ -1,6 +1,6 @@
 # Trainer app
 
-Android-first Kotlin Multiplatform / Compose application. The current implementation is a **trainer calendar and trainee prototype**, with a desktop runner for reviewing the same shared UI.
+Android-first Kotlin Multiplatform / Compose application. The Android app combines main’s trainer home, finance, chat, notifications and profile with the **calendar and trainee views**. The desktop runner previews the shared calendar/trainee UI.
 
 ## Run
 
@@ -25,7 +25,7 @@ The debug APK is written to `androidApp/build/outputs/apk/debug/androidApp-debug
 
 ```sh
 ./gradlew :shared:desktopTest :desktopApp:classes
-./gradlew :androidApp:assembleDebug :androidApp:lintDebug
+./gradlew :androidApp:testDebugUnitTest :androidApp:assembleDebug :androidApp:lintDebug
 ```
 
 Desktop tests render the shared Compose UI without requiring an unlocked desktop. Reports and screenshots are in `shared/build/reports/`. UI tests use Polish and cover a 390 × 844 viewport and a 320 × 720 viewport at 200% font scaling. UI resources also include English; the app follows the platform locale.
@@ -43,3 +43,5 @@ Desktop tests render the shared Compose UI without requiring an unlocked desktop
 See [implementation and integration notes](docs/trainer-ui.md), [project context](docs/context.md), and the [draft architecture](docs/initial-architecture.md).
 
 The [design alignment report](docs/main-design-alignment.md) compares the current views with main, includes before/after previews, and provides a proposed palette/surface patch for main's existing screens.
+
+The [shared design/integration decision](docs/design-standardization.md) records the common theme, navigation and build baseline. Android uses one `pl.trainerapp` launcher and one bottom bar; the calendar and trainee feature renders under that host.

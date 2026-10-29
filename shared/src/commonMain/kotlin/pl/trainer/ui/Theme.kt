@@ -38,6 +38,17 @@ object Layout {
 }
 
 object AppColors {
+    val brandStrong = Color(0xFFA04100)
+    val background = Color(0xFFF8F9FA)
+    val surface = Color.White
+    val text = Color(0xFF0F172A)
+    val textSecondary = Color(0xFF565E74)
+    val outline = Color(0xFFE2E8F0)
+    val fieldOutline = Color(0xFF737B8C)
+    val errorText = Color(0xFF93000A)
+    val errorSurface = Color(0xFFFFDAD6)
+    val errorAccent = Color(0xFFEF4444)
+
     val accent = Color(0xFFFF6B00)
     val softAccent = Color(0xFFFFF0E6)
     val onSoftAccent = Color(0xFF572000)
@@ -61,13 +72,13 @@ private fun style(size: Int, line: Int, weight: FontWeight = FontWeight.Normal) 
 @Composable
 fun TrainerTheme(content: @Composable () -> Unit) = MaterialTheme(
     colorScheme = lightColorScheme(
-        primary = Color(0xFFA04100), onPrimary = Color.White,
+        primary = AppColors.brandStrong, onPrimary = AppColors.surface,
         primaryContainer = AppColors.softAccent, onPrimaryContainer = AppColors.onSoftAccent,
-        background = Color(0xFFF8F9FA), onBackground = Color(0xFF0F172A),
-        surface = Color.White, onSurface = Color(0xFF0F172A),
-        surfaceVariant = AppColors.subtleSurface, onSurfaceVariant = Color(0xFF565E74),
-        outline = Color(0xFF737B8C), outlineVariant = Color(0xFFE2E8F0),
-        error = Color(0xFF93000A), errorContainer = Color(0xFFFFDAD6), onErrorContainer = Color(0xFF93000A),
+        background = AppColors.background, onBackground = AppColors.text,
+        surface = AppColors.surface, onSurface = AppColors.text,
+        surfaceVariant = AppColors.subtleSurface, onSurfaceVariant = AppColors.textSecondary,
+        outline = AppColors.fieldOutline, outlineVariant = AppColors.outline,
+        error = AppColors.errorText, errorContainer = AppColors.errorSurface, onErrorContainer = AppColors.errorText,
         secondaryContainer = AppColors.softAccent, onSecondaryContainer = AppColors.onSoftAccent,
     ),
     typography = Typography(
@@ -75,6 +86,7 @@ fun TrainerTheme(content: @Composable () -> Unit) = MaterialTheme(
         titleLarge = style(20, 26, FontWeight.Bold),
         titleMedium = style(17, 22, FontWeight.Bold),
         bodyLarge = style(16, 24), bodyMedium = style(14, 20), bodySmall = style(12, 16),
+        labelSmall = style(12, 16, FontWeight.SemiBold),
         labelLarge = style(14, 20, FontWeight.SemiBold), labelMedium = style(12, 16, FontWeight.SemiBold),
     ),
     shapes = Shapes(small = RoundedCornerShape(12.dp), medium = Layout.card, large = Layout.feature, extraLarge = Layout.frame),

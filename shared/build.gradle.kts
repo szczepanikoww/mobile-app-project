@@ -15,10 +15,10 @@ kotlin {
     jvmToolchain(17)
     sourceSets {
         commonMain.dependencies {
-            implementation(compose.runtime)
-            implementation(compose.foundation)
-            implementation(compose.material3)
-            implementation(compose.materialIconsExtended)
+            api(compose.runtime)
+            api(compose.foundation)
+            api(compose.material3)
+            api(compose.materialIconsExtended)
             implementation(compose.components.resources)
             implementation(libs.coroutines.core)
             implementation(libs.datetime)
