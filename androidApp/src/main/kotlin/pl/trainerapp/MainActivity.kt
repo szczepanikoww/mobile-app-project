@@ -2,6 +2,13 @@ package pl.trainerapp
 
 import android.graphics.Color
 import android.os.Bundle
+import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.viewmodel.compose.viewModel
+import pl.trainer.presentation.Destination
+import pl.trainer.presentation.TrainerViewModel
+import pl.trainer.data.DemoTrainerRepository
+import pl.trainer.ui.TrainerApp
+import pl.trainerapp.shell.TrainerDestination
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.SystemBarStyle
@@ -33,7 +40,13 @@ class MainActivity : ComponentActivity() {
         )
         setContent {
             AppTheme {
-                TrainerShell(repositories)
+                val trainer: TrainerViewModel = viewModel { TrainerViewModel(DemoTrainerRepository()) }
+                TrainerShell(repositories, trainerFeature = { destination, createRequest, onMain ->
+                    LaunchedEffect(destination) {
+                        trainer.destination(if (destination == TrainerDestination.Calendar) Destination.Calendar else Destination.Clients)
+                    }
+                    TrainerApp(trainer, showNavigation = false, createRequest = createRequest, onMainRouteChanged = onMain)
+                })
             }
         }
     }

@@ -13,3 +13,5 @@ The common build foundation uses Kotlin 2.2.21, Compose Multiplatform 1.9.3, AGP
 All current repositories remain explicit synthetic/local data sources. This styling/integration work does not add backend confirmation, fee policies, real payments or health-data persistence.
 
 Main validation: `31` Android unit tests pass; `:androidApp:assembleDebug` and `:androidApp:lintDebug` pass. Native screenshot/keyboard/system-bar checks remain unverified.
+
+Calendar/trainee PR validation: 28 shared behavior/UI tests and 31 Android tests pass; desktop compilation, Android assembly and lint pass. The embedded-host UI test verifies that the host can own navigation, request the create sheet, and hide its bar on detail/edit routes. Android uses main’s home/finance screens plus the calendar/trainee feature under a single launcher and bar.

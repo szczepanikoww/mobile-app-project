@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -90,7 +91,12 @@ private val FabOverhang = 24.dp
  * views (messages, notifications, profile) that open above the tabs. Feature screens render only their content.
  */
 @Composable
-fun TrainerShell(repositories: TrainerRepositories) {
+fun TrainerShell(
+    repositories: TrainerRepositories,
+    trainerFeature: (@Composable (TrainerDestination, Int, (Boolean) -> Unit) -> Unit)? = null,
+) {
+    var featureIsMain by remember { mutableStateOf(true) }
+    var createRequest by remember { mutableStateOf(0) }
     var selected by rememberSaveable { mutableStateOf(TrainerDestination.Start) }
     var routeKeys by rememberSaveable { mutableStateOf<List<String>>(arrayListOf()) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -101,6 +107,7 @@ fun TrainerShell(repositories: TrainerRepositories) {
     val push: (TrainerRoute) -> Unit = { routeKeys = ArrayList(routeKeys + it.key) }
     val pop: () -> Unit = { routeKeys = ArrayList(routeKeys.dropLast(1)) }
     val route = routeKeys.lastOrNull()?.let(TrainerRoute::fromKey)
+    val showingTrainerFeature = trainerFeature != null && selected in listOf(TrainerDestination.Calendar, TrainerDestination.Clients)
 
     BackHandler(enabled = route != null, onBack = pop)
 
@@ -110,7 +117,7 @@ fun TrainerShell(repositories: TrainerRepositories) {
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 // The home screen has its own header (profile, messages, notifications), so it gets no shell bar.
-                if (selected != TrainerDestination.Start) {
+                if (selected != TrainerDestination.Start && !showingTrainerFeature) {
                     TrainerTopBar(
                         title = stringResource(selected.label),
                         onNotifications = { push(TrainerRoute.Notifications) },
@@ -118,9 +125,16 @@ fun TrainerShell(repositories: TrainerRepositories) {
                     )
                 }
             },
-            bottomBar = { TrainerBottomBar(selected, onSelect = { selected = it }, onCreate = showNotAvailable) },
+            bottomBar = {
+                if (!showingTrainerFeature || featureIsMain) TrainerBottomBar(selected, onSelect = { selected = it; createRequest = 0 }, onCreate = {
+                    if (trainerFeature != null) {
+                        if (!showingTrainerFeature) selected = TrainerDestination.Calendar
+                        createRequest++
+                    } else showNotAvailable()
+                })
+            },
         ) { padding ->
-            Box(Modifier.fillMaxSize().padding(padding)) {
+            Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)) {
                 when (selected) {
                     TrainerDestination.Start -> TrainerHomeRoute(
                         repository = repositories.home,
@@ -138,7 +152,9 @@ fun TrainerShell(repositories: TrainerRepositories) {
                         repository = repositories.finance,
                         onNavigate = { showNotAvailable() }, // payment details and payouts are owned by other features
                     )
-                    else -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    else -> if (trainerFeature != null) {
+                        trainerFeature(selected, createRequest) { featureIsMain = it }
+                    } else Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
                             stringResource(R.string.not_available_yet),
                             style = MaterialTheme.typography.bodyLarge,
