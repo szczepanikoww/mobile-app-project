@@ -22,6 +22,7 @@ kotlin {
         }
         commonMain.dependencies {
             implementation(projects.shared.designsystem)
+            implementation(libs.compose.components.resources)
             implementation(projects.shared.domain)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)

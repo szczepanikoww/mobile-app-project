@@ -12,9 +12,13 @@ kotlin {
     jvm("desktop")
 
     sourceSets {
-        all { languageSettings.optIn("org.jetbrains.compose.resources.ExperimentalResourceApi") }
+        all {
+            languageSettings.optIn("org.jetbrains.compose.resources.ExperimentalResourceApi")
+            languageSettings.optIn("androidx.compose.material3.ExperimentalMaterial3Api")
+        }
         commonMain.dependencies {
             api(projects.shared.designsystem)
+            implementation(libs.compose.components.resources)
             implementation(projects.shared.data)
             implementation(projects.shared.feature.workoutBuilder)
             implementation(libs.androidx.navigation.compose)
