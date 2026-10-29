@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -253,7 +254,7 @@ private fun HomeHeader(summary: TrainerHomeSummary, onAction: (TrainerHomeAction
             Box(
                 modifier = Modifier
                     .size(48.dp)
-                    .shadow(2.dp, CircleShape)
+
                     .background(colors.softBrand, CircleShape)
                     .border(1.dp, colors.brandBorder, CircleShape)
                     .clip(CircleShape)
@@ -291,7 +292,7 @@ private fun HomeHeader(summary: TrainerHomeSummary, onAction: (TrainerHomeAction
                             .align(Alignment.TopEnd)
                             .padding(top = Spacing.xs, end = Spacing.xs)
                             .size(20.dp)
-                            .shadow(2.dp, CircleShape)
+
                             .background(colors.brand, CircleShape),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -395,8 +396,8 @@ private fun SessionCard(
     Column(
         modifier = Modifier
             .width(SessionCardWidth)
-            .shadow(12.dp, AppShapes.frame)
-            .background(Color.White.copy(alpha = 0.72f), AppShapes.frame)
+
+            .background(MaterialTheme.colorScheme.surface, AppShapes.frame)
             .border(1.dp, colors.border, AppShapes.frame)
             .padding(6.dp),
     ) {
@@ -522,9 +523,9 @@ private fun CardButton(
     val colors = AppTheme.colors
     val content = if (primary) Color.White else colors.textStrong
     val base = modifier
-        .height(40.dp)
+        .heightIn(min = 52.dp)
         .alpha(if (enabled) 1f else 0.4f)
-        .then(if (primary) Modifier.shadow(4.dp, AppShapes.pill, ambientColor = colors.brand, spotColor = colors.brand) else Modifier)
+
         .background(if (primary) colors.brand else colors.chipSurface, AppShapes.pill)
         .then(if (primary) Modifier else Modifier.border(1.dp, colors.border, AppShapes.pill))
         .clip(AppShapes.pill)
@@ -550,9 +551,9 @@ private fun CardButton(
 @Composable
 private fun SessionStatusBadge(status: SessionStatus, colors: AppColors) {
     val (label, container, content, border) = when (status) {
-        SessionStatus.Confirmed, SessionStatus.Completed ->
-            BadgeStyle(stringResource(if (status == SessionStatus.Confirmed) R.string.status_confirmed else R.string.status_completed), colors.successContainer, colors.success, colors.successBorder)
-        SessionStatus.Requested -> BadgeStyle(stringResource(R.string.status_requested), colors.softBrand, colors.warning, colors.warningBorder)
+        SessionStatus.Confirmed -> BadgeStyle(stringResource(R.string.status_confirmed), colors.successContainer, colors.success, colors.successBorder)
+        SessionStatus.Completed -> BadgeStyle(stringResource(R.string.status_completed), colors.completedContainer, colors.completed, colors.border)
+        SessionStatus.Requested -> BadgeStyle(stringResource(R.string.status_requested), colors.warningContainer, colors.warning, colors.warningBorder)
         SessionStatus.Cancelled -> BadgeStyle(stringResource(R.string.status_cancelled), colors.chipSurface, colors.textMuted, colors.border)
     }
     Text(
@@ -579,7 +580,7 @@ private fun PhotoCard(
     Box(
         modifier = Modifier
             .size(AttentionCardWidth, AttentionCardHeight)
-            .shadow(6.dp, AppShapes.media)
+
             .clip(AppShapes.media)
             .border(1.dp, AppTheme.colors.border, AppShapes.media)
             .clickable(onClick = onClick),

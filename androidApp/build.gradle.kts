@@ -1,46 +1,33 @@
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.compose")
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.compose.compiler)
 }
-
 android {
     namespace = "pl.trainerapp"
-    compileSdk { version = release(36) { minorApiLevel = 1 } }
-    buildToolsVersion = "36.1.0"
-
+    compileSdk = 35
     defaultConfig {
         applicationId = "pl.trainerapp"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
     }
-
+    buildFeatures { compose = true }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions { jvmTarget = "17" }
-
-    buildFeatures { compose = true }
-
-    sourceSets["main"].java.srcDir("src/main/kotlin")
-    sourceSets["test"].java.srcDir("src/test/kotlin")
+    packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
 }
-
+kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2025.06.00")
-    implementation(composeBom)
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    debugImplementation("androidx.compose.ui:ui-tooling")
-
-    implementation("androidx.activity:activity-compose:1.10.1")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.1")
+    implementation(project(":shared"))
+    implementation(libs.activity.compose)
+    implementation(libs.lifecycle.viewmodel.compose)
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.1")
-
+    implementation("androidx.compose.ui:ui-tooling-preview:1.9.4")
+    debugImplementation("androidx.compose.ui:ui-tooling:1.9.4")
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+    testImplementation(libs.coroutines.test)
 }

@@ -241,7 +241,6 @@ private fun TrainerTopBar(title: String, onNotifications: () -> Unit, onProfile:
             Box(
                 modifier = Modifier
                     .size(32.dp)
-                    .shadow(2.dp, CircleShape)
                     .background(colors.brand, CircleShape)
                     .clip(CircleShape)
                     .clickable(role = Role.Button, onClick = onProfile)
@@ -260,69 +259,11 @@ private fun TrainerBottomBar(
     onSelect: (TrainerDestination) -> Unit,
     onCreate: () -> Unit,
 ) {
-    val colors = AppTheme.colors
-    val create = stringResource(R.string.action_create)
-    val barShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
-    // The "+" button overhangs the bar by [FabOverhang], so the bar's slot reserves that space and the button stays tappable.
-    Box(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = FabOverhang)
-                .shadow(8.dp, barShape)
-                .background(Color.White.copy(alpha = 0.95f), barShape)
-                .border(1.dp, colors.border, barShape)
-                .navigationBarsPadding(),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().height(NavBarHeight).padding(horizontal = Spacing.screenGutter),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                NavItem(TrainerDestination.Start, selected, onSelect)
-                NavItem(TrainerDestination.Calendar, selected, onSelect)
-                Spacer(Modifier.width(64.dp))
-                NavItem(TrainerDestination.Clients, selected, onSelect)
-                NavItem(TrainerDestination.Finance, selected, onSelect)
-            }
-        }
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .size(FabSize)
-                .shadow(16.dp, CircleShape, ambientColor = colors.brand, spotColor = colors.brand)
-                .background(colors.brand, CircleShape)
-                .clickable(role = Role.Button, onClick = onCreate)
-                .semantics { contentDescription = create },
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(Icons.Outlined.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(30.dp))
-        }
-    }
-}
-
-@Composable
-private fun RowScope.NavItem(
-    destination: TrainerDestination,
-    selected: TrainerDestination,
-    onSelect: (TrainerDestination) -> Unit,
-) {
-    val active = destination == selected
-    val tint: Color = if (active) AppTheme.colors.brand else AppTheme.colors.textMuted
-    Column(
-        modifier = Modifier
-            .weight(1f)
-            .fillMaxSize()
-            .clickable(role = Role.Tab) { onSelect(destination) }
-            .semantics { this.selected = active },
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs, Alignment.CenterVertically),
-    ) {
-        Icon(destination.icon, contentDescription = null, tint = tint, modifier = Modifier.size(24.dp))
-        Text(
-            stringResource(destination.label).uppercase(),
-            style = MaterialTheme.typography.labelSmall.copy(fontWeight = if (active) FontWeight.Bold else FontWeight.Medium),
-            color = tint,
-            maxLines = 1,
-        )
-    }
+    pl.trainer.ui.SharedBottomBar(
+        items = TrainerDestination.entries.map { destination ->
+            pl.trainer.ui.SharedNavItem(stringResource(destination.label), destination.icon, destination == selected) { onSelect(destination) }
+        },
+        createLabel = stringResource(R.string.action_create),
+        onCreate = onCreate,
+    )
 }

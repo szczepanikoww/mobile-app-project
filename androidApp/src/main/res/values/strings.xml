@@ -5,7 +5,7 @@
     <!-- Powłoka -->
     <string name="nav_start">Start</string>
     <string name="nav_calendar">Kalendarz</string>
-    <string name="nav_clients">Klienci</string>
+    <string name="nav_clients">Podopieczni</string>
     <string name="nav_finance">Finanse</string>
     <string name="action_chat">Wiadomości</string>
     <string name="action_notifications">Powiadomienia</string>

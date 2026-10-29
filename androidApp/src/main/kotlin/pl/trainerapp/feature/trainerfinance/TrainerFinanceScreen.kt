@@ -348,7 +348,7 @@ private fun GoalProgress(goal: String, progress: Float) {
                     .fillMaxHeight()
                     .fillMaxWidth(progress.coerceAtLeast(0.02f))
                     .clip(AppShapes.pill)
-                    .background(Brush.horizontalGradient(listOf(colors.brand, Color(0xFFFFB693)))),
+                    .background(colors.brandAccent),
             )
         }
     }
@@ -421,8 +421,7 @@ private fun ChartColumn(bar: RevenueBar, ratio: Float, current: Boolean, modifie
                     .height((ChartTrackHeight * ratio).coerceAtLeast(MinChartFill))
                     .clip(AppShapes.pill)
                     .background(
-                        if (current) Brush.verticalGradient(listOf(colors.brand, Color(0xFFA04100)))
-                        else Brush.verticalGradient(listOf(Color(0xFFCBD5E1), Color(0xFFB6C3D6))),
+                        if (current) colors.brandAccent else colors.textMuted.copy(alpha = 0.35f),
                     ),
             )
         }
@@ -526,7 +525,7 @@ private fun MetricTile(
         Tone.Neutral -> colors.chipSurface to colors.textMuted
         Tone.Success -> colors.successContainer to colors.success
         Tone.Warning -> colors.softBrand to colors.warning
-        Tone.Danger -> Color(0xFFFFDAD6) to colors.danger
+        Tone.Danger -> MaterialTheme.colorScheme.errorContainer to colors.danger
     }
     Column(modifier = modifier.frosted(AppShapes.tile, alpha = 0.9f).padding(14.dp)) {
         Row(

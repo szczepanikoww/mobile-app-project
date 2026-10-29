@@ -26,7 +26,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -99,8 +98,8 @@ fun InlineBanner(text: String, modifier: Modifier = Modifier, icon: ImageVector 
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        Icon(icon, contentDescription = null, tint = colors.warning)
-        Text(text, style = MaterialTheme.typography.bodyMedium, color = colors.warning)
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+        Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
     }
 }
 
@@ -174,16 +173,15 @@ fun BoxScope.CornerArc(corner: Corner, size: Dp) {
         modifier = Modifier
             .align(corner.alignment)
             .size(size)
-            .background(AppTheme.colors.brand.copy(alpha = 0.3f), inward)
+            .background(AppTheme.colors.brandAccent.copy(alpha = 0.3f), inward)
             .clearAndSetSemantics { },
     )
 }
 
-/** Semi-transparent white pill/panel surface used over photos (no backdrop blur on Android Compose). */
+/** Low-emphasis white panel; retained for existing photo overlays, with no decorative shadow. */
 fun Modifier.frosted(shape: androidx.compose.ui.graphics.Shape, alpha: Float = 0.82f): Modifier = this
-    .shadow(4.dp, shape)
     .background(Color.White.copy(alpha = alpha), shape)
-    .border(1.dp, Color.White.copy(alpha = 0.9f), shape)
+    .border(1.dp, SurfaceOutline, shape)
 
 /** Frosted white panel docked to the bottom of a photo card. */
 @Composable
