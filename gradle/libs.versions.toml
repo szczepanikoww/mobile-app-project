@@ -1,25 +1,37 @@
 [versions]
-# Versions were checked against Maven Central and the Compose Multiplatform changelog in October 2026.
-# AGP 8.11.1 is the version the trainer-calendar-clients branch builds and lints with.
-kotlin = "2.4.21"
+kotlin = "2.2.21"
+compose = "1.9.3"
 agp = "8.11.1"
-compose-multiplatform = "1.12.2"
+coroutines = "1.10.2"
+datetime = "0.7.1"
+lifecycle = "2.9.6"
+activity = "1.10.1"
+
+compose-multiplatform = "1.9.3"
 compose-material3 = "1.9.0"
 compose-material-icons = "1.7.3"
-androidx-lifecycle = "2.11.0"
-androidx-navigation = "2.10.0"
-androidx-activity = "1.11.0"
+androidx-lifecycle = "2.9.6"
+androidx-navigation = "2.9.1"
+androidx-activity = "1.10.1"
 androidx-media3 = "1.8.0"
-koin = "4.2.2"
-kotlinx-coroutines = "1.11.0"
-kotlinx-serialization = "1.12.0"
-kotlinx-datetime = "0.8.0"
-sqldelight = "2.4.1"
-android-compileSdk = "36"
+koin = "4.1.1"
+kotlinx-coroutines = "1.10.2"
+kotlinx-serialization = "1.9.0"
+kotlinx-datetime = "0.7.1"
+sqldelight = "2.1.0"
+android-compileSdk = "35"
 android-minSdk = "26"
-android-targetSdk = "36"
+android-targetSdk = "35"
 
 [libraries]
+coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "coroutines" }
+coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
+datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "datetime" }
+lifecycle-viewmodel-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity" }
+
+
 # Gradle plugins (root build script classpath)
 kotlin-gradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 kotlin-serializationPlugin = { module = "org.jetbrains.kotlin:kotlin-serialization", version.ref = "kotlin" }
@@ -60,3 +72,15 @@ koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
 koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
 koin-compose = { module = "io.insert-koin:koin-compose", version.ref = "koin" }
 koin-composeViewmodel = { module = "io.insert-koin:koin-compose-viewmodel", version.ref = "koin" }
+
+[plugins]
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }

@@ -1,9 +1,9 @@
 .gradle/
-build/
 .kotlin/
+**/build/
 local.properties
 .idea/
 *.iml
 .DS_Store
-captures/
-*.db
+.tools/
+artifacts/

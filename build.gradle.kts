@@ -1,27 +1,17 @@
-// Plugins go on the root build script classpath so the Kotlin and Android plugins share one class loader.
-// The UI plugins are added only when the Compose/Android modules are part of the build (see settings.gradle.kts).
-buildscript {
-    val includeUi = (findProperty("trainer.ui") as String?)?.toBooleanStrictOrNull() ?: true
-    repositories {
-        gradlePluginPortal()
-        mavenCentral()
-        if (includeUi) google()
-    }
-    dependencies {
-        classpath(libs.kotlin.gradlePlugin)
-        classpath(libs.kotlin.serializationPlugin)
-        classpath(libs.sqldelight.gradlePlugin)
-        if (includeUi) {
-            classpath(libs.android.gradlePlugin)
-            classpath(libs.compose.gradlePlugin)
-            classpath(libs.kotlin.composeCompilerPlugin)
-        }
-    }
+plugins {
+    alias(libs.plugins.kotlin.serialization) apply false
+    alias(libs.plugins.sqldelight) apply false
+    alias(libs.plugins.kotlin.multiplatform) apply false
+    alias(libs.plugins.kotlin.jvm) apply false
+    alias(libs.plugins.kotlin.android) apply false
+    alias(libs.plugins.android.application) apply false
+    alias(libs.plugins.android.library) apply false
+    alias(libs.plugins.compose.multiplatform) apply false
+    alias(libs.plugins.compose.compiler) apply false
 }
 
-// One JVM bytecode level for every module: Android, desktop, tests and a future JVM backend.
+// Retain workout-plan's JVM 17 contract across Android, desktop and pure Kotlin modules.
 subprojects {
-    // Android modules set Java 17 through compileOptions; AGP does not accept --release.
     tasks.withType<JavaCompile>().configureEach {
         if (!project.plugins.hasPlugin("com.android.base")) options.release.set(17)
     }

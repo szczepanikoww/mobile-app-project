@@ -16,6 +16,13 @@ kotlin {
             languageSettings.optIn("org.jetbrains.compose.resources.ExperimentalResourceApi")
             languageSettings.optIn("androidx.compose.material3.ExperimentalMaterial3Api")
         }
+        named("desktopTest").dependencies {
+            implementation(kotlin("test"))
+            implementation(compose.desktop.uiTestJUnit4)
+            implementation(libs.sqldelight.sqliteDriver)
+            implementation(libs.kotlinx.coroutines.swing)
+            implementation(libs.androidx.lifecycle.viewmodelCompose)
+        }
         commonMain.dependencies {
             api(projects.shared.designsystem)
             implementation(libs.compose.components.resources)
@@ -42,4 +49,9 @@ android {
 
 compose.resources {
     packageOfResClass = "com.trainingapp.app.resources"
+}
+
+tasks.withType<Test>().configureEach {
+    systemProperty("user.language", "pl")
+    systemProperty("user.country", "PL")
 }

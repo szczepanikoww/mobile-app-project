@@ -5,6 +5,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import pl.trainer.ui.AppColors as SharedColors
 
 /**
  * Semantic colour roles from CLAUDE.md section 4. Feature screens use these roles (or the Material scheme built
@@ -42,29 +43,29 @@ data class AppColors(
 )
 
 val LightAppColors = AppColors(
-    background = Color(0xFFF8F9FA),
-    surface = Color(0xFFFFFFFF),
-    subtleSurface = Color(0xFFF8FAFC),
-    tonalSurface = Color(0xFFF1F4F9),
-    text = Color(0xFF0F172A),
-    textSecondary = Color(0xFF565E74),
-    outline = Color(0xFFE2E8F0),
-    fieldOutline = Color(0xFF737B8C),
-    brandAccent = Color(0xFFFF6B00),
-    brandStrong = Color(0xFFA04100),
-    onBrandStrong = Color(0xFFFFFFFF),
-    softAccent = Color(0xFFFFF0E6),
-    onSoftAccent = Color(0xFF572000),
-    success = Color(0xFF15803D),
-    successContainer = Color(0xFFDCFCE7),
-    onSuccessContainer = Color(0xFF14532D),
-    warning = Color(0xFFD97706),
+    background = SharedColors.background,
+    surface = SharedColors.surface,
+    subtleSurface = SharedColors.subtleSurface,
+    tonalSurface = SharedColors.subtleSurface,
+    text = SharedColors.text,
+    textSecondary = SharedColors.textSecondary,
+    outline = SharedColors.outline,
+    fieldOutline = SharedColors.fieldOutline,
+    brandAccent = SharedColors.accent,
+    brandStrong = SharedColors.brandStrong,
+    onBrandStrong = SharedColors.surface,
+    softAccent = SharedColors.softAccent,
+    onSoftAccent = SharedColors.onSoftAccent,
+    success = SharedColors.success,
+    successContainer = SharedColors.successSurface,
+    onSuccessContainer = SharedColors.success,
+    warning = SharedColors.warningText,
     // Same readable warning pair as the trainer calendar/clients branch.
-    warningContainer = Color(0xFFFFF0DA),
-    onWarningContainer = Color(0xFF783B00),
-    errorAccent = Color(0xFFEF4444),
-    errorContainer = Color(0xFFFFDAD6),
-    onErrorContainer = Color(0xFF93000A),
+    warningContainer = SharedColors.warningSurface,
+    onWarningContainer = SharedColors.warningText,
+    errorAccent = SharedColors.errorAccent,
+    errorContainer = SharedColors.errorSurface,
+    onErrorContainer = SharedColors.errorText,
 )
 
 internal fun AppColors.toMaterialScheme(): ColorScheme = lightColorScheme(

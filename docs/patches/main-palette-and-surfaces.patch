@@ -1,0 +1,223 @@
+--- a/androidApp/src/main/kotlin/pl/trainerapp/core/designsystem/Theme.kt
++++ b/androidApp/src/main/kotlin/pl/trainerapp/core/designsystem/Theme.kt
+@@ -45,6 +45,7 @@
+ @Immutable
+ data class AppColors(
+     val brand: Color,
++    val brandAccent: Color,
+     val softBrand: Color,
+     val brandBorder: Color,
+     val textMuted: Color,
+@@ -54,27 +55,36 @@
+     val success: Color,
+     val successContainer: Color,
+     val successBorder: Color,
++    val completed: Color,
++    val completedContainer: Color,
++    val warningContainer: Color,
+     val warning: Color,
+     val warningBorder: Color,
+     val danger: Color,
+     val dangerText: Color,
+ )
+ 
++internal val SurfaceOutline = Color(0xFFE2E8F0)
++
+ private val LightAppColors = AppColors(
+-    brand = Color(0xFFFF6B00),
++    brand = Color(0xFFA04100),
++    brandAccent = Color(0xFFFF6B00),
+     softBrand = Color(0xFFFFF0E6),
+     brandBorder = Color(0x33FF6B00),
+-    textMuted = Color(0xFF64748B),
+-    textStrong = Color(0xFF1E293B),
+-    border = Color(0xFFE2E8F0),
+-    chipSurface = Color(0xFFF1F5F9),
++    textMuted = Color(0xFF565E74),
++    textStrong = Color(0xFF0F172A),
++    border = SurfaceOutline,
++    chipSurface = Color(0xFFF8FAFC),
+     success = Color(0xFF15803D),
+     successContainer = Color(0xFFDCFCE7),
+     successBorder = Color(0xFFBBF7D0),
+-    warning = Color(0xFFD97706),
++    completed = Color(0xFF3D5368),
++    completedContainer = Color(0xFFE9EEF2),
++    warningContainer = Color(0xFFFFF0DA),
++    warning = Color(0xFF783B00),
+     warningBorder = Color(0xFFFDE68A),
+-    danger = Color(0xFFEF4444),
+-    dangerText = Color(0xFFDC2626),
++    danger = Color(0xFF93000A),
++    dangerText = Color(0xFF93000A),
+ )
+ 
+ private val LocalAppColors = staticCompositionLocalOf { LightAppColors }
+@@ -89,17 +99,17 @@
+     onBackground = Color(0xFF0F172A),
+     surface = Color(0xFFFFFFFF),
+     onSurface = Color(0xFF0F172A),
+-    onSurfaceVariant = Color(0xFF64748B),
+-    surfaceVariant = Color(0xFFF1F5F9),
+-    outline = Color(0xFF64748B),
+-    outlineVariant = Color(0xFFE2E8F0),
+-    primary = Color(0xFFFF6B00),
++    onSurfaceVariant = Color(0xFF565E74),
++    surfaceVariant = Color(0xFFF8FAFC),
++    outline = Color(0xFF737B8C),
++    outlineVariant = SurfaceOutline,
++    primary = Color(0xFFA04100),
+     onPrimary = Color(0xFFFFFFFF),
+     primaryContainer = Color(0xFFFFF0E6),
+-    onPrimaryContainer = Color(0xFFFF6B00),
++    onPrimaryContainer = Color(0xFF572000),
+     secondaryContainer = Color(0xFFFFF0E6),
+-    onSecondaryContainer = Color(0xFFD97706),
+-    error = Color(0xFFEF4444),
++    onSecondaryContainer = Color(0xFF572000),
++    error = Color(0xFF93000A),
+     onError = Color(0xFFFFFFFF),
+     errorContainer = Color(0xFFFFDAD6),
+     onErrorContainer = Color(0xFF93000A),
+--- a/androidApp/src/main/kotlin/pl/trainerapp/core/designsystem/Components.kt
++++ b/androidApp/src/main/kotlin/pl/trainerapp/core/designsystem/Components.kt
+@@ -99,8 +99,8 @@
+         verticalAlignment = Alignment.CenterVertically,
+         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+     ) {
+-        Icon(icon, contentDescription = null, tint = colors.warning)
+-        Text(text, style = MaterialTheme.typography.bodyMedium, color = colors.warning)
++        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
++        Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+     }
+ }
+ 
+@@ -174,16 +174,15 @@
+         modifier = Modifier
+             .align(corner.alignment)
+             .size(size)
+-            .background(AppTheme.colors.brand.copy(alpha = 0.3f), inward)
++            .background(AppTheme.colors.brandAccent.copy(alpha = 0.3f), inward)
+             .clearAndSetSemantics { },
+     )
+ }
+ 
+-/** Semi-transparent white pill/panel surface used over photos (no backdrop blur on Android Compose). */
++/** Low-emphasis white panel; retained for existing photo overlays, with no decorative shadow. */
+ fun Modifier.frosted(shape: androidx.compose.ui.graphics.Shape, alpha: Float = 0.82f): Modifier = this
+-    .shadow(4.dp, shape)
+     .background(Color.White.copy(alpha = alpha), shape)
+-    .border(1.dp, Color.White.copy(alpha = 0.9f), shape)
++    .border(1.dp, SurfaceOutline, shape)
+ 
+ /** Frosted white panel docked to the bottom of a photo card. */
+ @Composable
+--- a/androidApp/src/main/kotlin/pl/trainerapp/feature/trainerhome/TrainerHomeScreen.kt
++++ b/androidApp/src/main/kotlin/pl/trainerapp/feature/trainerhome/TrainerHomeScreen.kt
+@@ -253,7 +253,7 @@
+             Box(
+                 modifier = Modifier
+                     .size(48.dp)
+-                    .shadow(2.dp, CircleShape)
++
+                     .background(colors.softBrand, CircleShape)
+                     .border(1.dp, colors.brandBorder, CircleShape)
+                     .clip(CircleShape)
+@@ -291,7 +291,7 @@
+                             .align(Alignment.TopEnd)
+                             .padding(top = Spacing.xs, end = Spacing.xs)
+                             .size(20.dp)
+-                            .shadow(2.dp, CircleShape)
++
+                             .background(colors.brand, CircleShape),
+                         contentAlignment = Alignment.Center,
+                     ) {
+@@ -395,8 +395,8 @@
+     Column(
+         modifier = Modifier
+             .width(SessionCardWidth)
+-            .shadow(12.dp, AppShapes.frame)
+-            .background(Color.White.copy(alpha = 0.72f), AppShapes.frame)
++
++            .background(MaterialTheme.colorScheme.surface, AppShapes.frame)
+             .border(1.dp, colors.border, AppShapes.frame)
+             .padding(6.dp),
+     ) {
+@@ -524,7 +524,7 @@
+     val base = modifier
+         .height(40.dp)
+         .alpha(if (enabled) 1f else 0.4f)
+-        .then(if (primary) Modifier.shadow(4.dp, AppShapes.pill, ambientColor = colors.brand, spotColor = colors.brand) else Modifier)
++
+         .background(if (primary) colors.brand else colors.chipSurface, AppShapes.pill)
+         .then(if (primary) Modifier else Modifier.border(1.dp, colors.border, AppShapes.pill))
+         .clip(AppShapes.pill)
+@@ -550,9 +550,9 @@
+ @Composable
+ private fun SessionStatusBadge(status: SessionStatus, colors: AppColors) {
+     val (label, container, content, border) = when (status) {
+-        SessionStatus.Confirmed, SessionStatus.Completed ->
+-            BadgeStyle(stringResource(if (status == SessionStatus.Confirmed) R.string.status_confirmed else R.string.status_completed), colors.successContainer, colors.success, colors.successBorder)
+-        SessionStatus.Requested -> BadgeStyle(stringResource(R.string.status_requested), colors.softBrand, colors.warning, colors.warningBorder)
++        SessionStatus.Confirmed -> BadgeStyle(stringResource(R.string.status_confirmed), colors.successContainer, colors.success, colors.successBorder)
++        SessionStatus.Completed -> BadgeStyle(stringResource(R.string.status_completed), colors.completedContainer, colors.completed, colors.border)
++        SessionStatus.Requested -> BadgeStyle(stringResource(R.string.status_requested), colors.warningContainer, colors.warning, colors.warningBorder)
+         SessionStatus.Cancelled -> BadgeStyle(stringResource(R.string.status_cancelled), colors.chipSurface, colors.textMuted, colors.border)
+     }
+     Text(
+@@ -579,7 +579,7 @@
+     Box(
+         modifier = Modifier
+             .size(AttentionCardWidth, AttentionCardHeight)
+-            .shadow(6.dp, AppShapes.media)
++
+             .clip(AppShapes.media)
+             .border(1.dp, AppTheme.colors.border, AppShapes.media)
+             .clickable(onClick = onClick),
+--- a/androidApp/src/main/kotlin/pl/trainerapp/shell/AppShell.kt
++++ b/androidApp/src/main/kotlin/pl/trainerapp/shell/AppShell.kt
+@@ -241,7 +241,6 @@
+             Box(
+                 modifier = Modifier
+                     .size(32.dp)
+-                    .shadow(2.dp, CircleShape)
+                     .background(colors.brand, CircleShape)
+                     .clip(CircleShape)
+                     .clickable(role = Role.Button, onClick = onProfile)
+@@ -269,7 +268,6 @@
+             modifier = Modifier
+                 .fillMaxWidth()
+                 .padding(top = FabOverhang)
+-                .shadow(8.dp, barShape)
+                 .background(Color.White.copy(alpha = 0.95f), barShape)
+                 .border(1.dp, colors.border, barShape)
+                 .navigationBarsPadding(),
+@@ -289,7 +287,7 @@
+             modifier = Modifier
+                 .align(Alignment.TopCenter)
+                 .size(FabSize)
+-                .shadow(16.dp, CircleShape, ambientColor = colors.brand, spotColor = colors.brand)
++                .shadow(2.dp, CircleShape)
+                 .background(colors.brand, CircleShape)
+                 .clickable(role = Role.Button, onClick = onCreate)
+                 .semantics { contentDescription = create },
+--- a/androidApp/src/main/kotlin/pl/trainerapp/feature/trainerfinance/TrainerFinanceScreen.kt
++++ b/androidApp/src/main/kotlin/pl/trainerapp/feature/trainerfinance/TrainerFinanceScreen.kt
+@@ -348,7 +348,7 @@
+                     .fillMaxHeight()
+                     .fillMaxWidth(progress.coerceAtLeast(0.02f))
+                     .clip(AppShapes.pill)
+-                    .background(Brush.horizontalGradient(listOf(colors.brand, Color(0xFFFFB693)))),
++                    .background(Brush.horizontalGradient(listOf(colors.brandAccent, Color(0xFFFFB693)))),
+             )
+         }
+     }
+@@ -421,7 +421,7 @@
+                     .height((ChartTrackHeight * ratio).coerceAtLeast(MinChartFill))
+                     .clip(AppShapes.pill)
+                     .background(
+-                        if (current) Brush.verticalGradient(listOf(colors.brand, Color(0xFFA04100)))
++                        if (current) Brush.verticalGradient(listOf(colors.brandAccent, MaterialTheme.colorScheme.primary))
+                         else Brush.verticalGradient(listOf(Color(0xFFCBD5E1), Color(0xFFB6C3D6))),
+                     ),
+             )

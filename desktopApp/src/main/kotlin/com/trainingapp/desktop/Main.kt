@@ -1,6 +1,12 @@
 package com.trainingapp.desktop
 
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
@@ -35,10 +41,12 @@ private object DesktopPlatform : AppPlatform {
 fun main() {
     initKoin(DesktopPlatform)
     application {
+        val owner = remember { object : ViewModelStoreOwner { override val viewModelStore = ViewModelStore() } }
+        DisposableEffect(owner) { onDispose { owner.viewModelStore.clear() } }
         Window(
             onCloseRequest = ::exitApplication,
             title = "Trener – podgląd na komputerze",
             state = rememberWindowState(width = 412.dp, height = 892.dp),
-        ) { App() }
+        ) { CompositionLocalProvider(LocalViewModelStoreOwner provides owner) { App() } }
     }
 }

@@ -4,16 +4,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Shapes
 import androidx.compose.ui.unit.dp
+import pl.trainer.ui.Layout
 
 /** The shared spacing scale: 4, 8, 12, 16, 20, 24, 32 dp. */
 object Spacing {
-    val xs = 4.dp
-    val s = 8.dp
-    val m = 12.dp
-    val l = 16.dp
-    val xl = 20.dp
-    val xxl = 24.dp
-    val xxxl = 32.dp
+    val xs = Layout.tiny
+    val s = Layout.small
+    val m = Layout.medium
+    val l = Layout.padding
+    val xl = Layout.gutter
+    val xxl = Layout.section
+    val xxxl = Layout.large
 
     /** Default screen gutter. */
     val gutter = xl
@@ -23,35 +24,35 @@ object Spacing {
 
 /** The same radii as the trainer calendar/clients branch: card 16, panel 20, tile 22, feature 24, frame 28. */
 object AppShapes {
-    val card = RoundedCornerShape(16.dp)
-    val panel = RoundedCornerShape(20.dp)
+    val card = Layout.card
+    val panel = Layout.panel
     /** List rows and action rows. */
-    val tile = RoundedCornerShape(22.dp)
-    val frame = RoundedCornerShape(28.dp)
-    val navigation = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
-    val input = RoundedCornerShape(16.dp)
+    val tile = Layout.tile
+    val frame = Layout.frame
+    val navigation = Layout.navigation
+    val input = Layout.card
     val sheet = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
-    val featureCard = RoundedCornerShape(24.dp)
+    val featureCard = Layout.feature
     val pill = CircleShape
 
     /** Exercise thumbnails and small media. */
-    val thumbnail = RoundedCornerShape(16.dp)
+    val thumbnail = Layout.card
 }
 
 object Sizes {
     val icon = 24.dp
-    val minTouchTarget = 48.dp
+    val minTouchTarget = Layout.target
     val thumbnail = 56.dp
-    val buttonHeight = 52.dp
-    val headerHeight = 64.dp
-    val navigationHeight = 68.dp
-    val navigationOverhang = 24.dp
-    val navigationCreateSize = 56.dp
-    val navigationCreateGap = 64.dp
+    val buttonHeight = Layout.buttonHeight
+    val headerHeight = Layout.headerHeight
+    val navigationHeight = Layout.navigationHeight
+    val navigationOverhang = Layout.navigationOverhang
+    val navigationCreateSize = Layout.navigationCreateSize
+    val navigationCreateGap = Layout.navigationCreateGap
     /** Floating controls only; cards and bars are flat. */
-    val floatingElevation = 2.dp
-    val activeFloatingElevation = 3.dp
-    val contentWidth = 640.dp
+    val floatingElevation = Layout.floatingElevation
+    val activeFloatingElevation = Layout.activeFloatingElevation
+    val contentWidth = Layout.contentWidth
 }
 
 internal val MaterialShapes = Shapes(

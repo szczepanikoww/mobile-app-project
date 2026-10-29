@@ -1,17 +1,15 @@
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.compose")
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.compose.compiler)
 }
-
 android {
-    namespace = "com.trainingapp.android"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
-
+    namespace = "pl.trainerapp"
+    compileSdk = 35
     defaultConfig {
-        applicationId = "com.trainingapp.android"
-        minSdk = libs.versions.android.minSdk.get().toInt()
-        targetSdk = libs.versions.android.targetSdk.get().toInt()
+        applicationId = "pl.trainerapp"
+        minSdk = 26
+        targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
     }
@@ -20,16 +18,22 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    packaging {
-        resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
-    }
+    packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
 }
-
+kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
 dependencies {
-    implementation(projects.shared.app)
-    implementation(projects.shared.data)
-    implementation(libs.androidx.activity.compose)
+    implementation(project(":shared:app"))
+    implementation(project(":shared:data"))
     implementation(libs.koin.android)
     implementation(libs.sqldelight.androidDriver)
     implementation(libs.kotlinx.coroutines.android)
+
+    implementation(project(":shared"))
+    implementation(libs.activity.compose)
+    implementation(libs.lifecycle.viewmodel.compose)
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.1")
+    implementation("androidx.compose.ui:ui-tooling-preview:1.9.4")
+    debugImplementation("androidx.compose.ui:ui-tooling:1.9.4")
+    testImplementation("junit:junit:4.13.2")
+    testImplementation(libs.coroutines.test)
 }

@@ -12,19 +12,14 @@ import androidx.compose.runtime.remember
  */
 @Composable
 fun AppTheme(content: @Composable () -> Unit) {
-    val family = plexSans()
+    val family = androidx.compose.ui.text.font.FontFamily.SansSerif
     val typography = remember(family) { appTypography(family) }
     val colors = LightAppColors
     CompositionLocalProvider(
         LocalAppColors provides colors,
         LocalAppTypography provides typography,
     ) {
-        MaterialTheme(
-            colorScheme = remember(colors) { colors.toMaterialScheme() },
-            typography = remember(typography) { typography.toMaterial() },
-            shapes = MaterialShapes,
-            content = content,
-        )
+        pl.trainer.ui.TrainerTheme(content)
     }
 }
 

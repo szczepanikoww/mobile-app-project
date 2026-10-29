@@ -1,17 +1,63 @@
-# mobile-app-project
+# Trainer app
 
-This project is about creating a gym app: an Android-first personal-training application for trainers, clients and guests.
+Android-first Kotlin Multiplatform / Compose application. The Android app combines main’s trainer home, finance, chat, notifications and profile with the **calendar and trainee views**. The desktop runner previews the shared calendar/trainee UI, plan builder and exercise library.
 
-Start with [CLAUDE.md](CLAUDE.md) (identical to `AGENTS.md`), [docs/context.md](docs/context.md) and the draft [architecture](docs/initial-architecture.md).
+## Run
+
+Requirements: JDK 17. Android builds additionally require Android SDK Platform 35 and Build Tools 35.0.0. Configure the SDK in Android Studio or an untracked `local.properties` (`sdk.dir=/absolute/path/to/sdk`). The Gradle wrapper is included.
+
+```sh
+./gradlew :desktopApp:run
+./gradlew :androidApp:assembleDebug
+```
+
+To open scenario controls in a **separate developer window**, use:
+
+```sh
+./gradlew :desktopApp:runPreview
+```
+
+The ordinary app has no preview banner or developer controls.
+
+The debug APK is written to `androidApp/build/outputs/apk/debug/androidApp-debug.apk`. Open the repository in Android Studio to run it on a device or emulator.
+
+## Validate
+
+```sh
+./gradlew :shared:desktopTest :shared:app:desktopTest :contract:jvmTest :shared:domain:jvmTest :shared:data:jvmTest :desktopApp:classes
+./gradlew :androidApp:testDebugUnitTest :androidApp:assembleDebug :androidApp:lintDebug
+```
+
+Desktop tests render the shared Compose UI without requiring an unlocked desktop. Reports and screenshots are in `shared/build/reports/`. UI tests use Polish and cover a 390 × 844 viewport and a 320 × 720 viewport at 200% font scaling. UI resources also include English; the app follows the platform locale.
+
+## Current scope
+
+- Day/week calendar, date selection, session and reschedule requests.
+- Session creation, trainer cancellation, completion and one-time availability blocks.
+- Current trainees and archive, search, overdue-payment indicators, profile, private client information and trainer notes.
+- Loading, empty, recoverable error, offline and permission-denied previews.
+- Plan library/editor, exercise library and technique/demo-video attachment, using the existing local repositories.
+- Shared theme, shell, components, resources, state and repository boundaries.
+
+**All people and sessions are synthetic. Calendar/trainee changes are in memory and reset on restart; plans/exercises use the workout feature’s local SQLite store.** The app does not send invitations, book sessions, settle payments or store private notes on a server. Use `:desktopApp:runPreview` to switch sample states in a separate window. “Today” refers to the fixed fixture date, 28 October 2026.
+
+See [implementation and integration notes](docs/trainer-ui.md), [project context](docs/context.md), and the [draft architecture](docs/initial-architecture.md).
+
+The [design alignment report](docs/main-design-alignment.md) compares the current views with main, includes before/after previews, and provides a proposed palette/surface patch for main's existing screens.
+
+The [shared design/integration decision](docs/design-standardization.md) records the common theme, navigation and build baseline. Android uses one `pl.trainerapp` launcher and one bottom bar; the calendar and trainee feature renders under that host.
+
+PR merge order: merge calendar/trainee PR #1 before workout PR #2. Workout-plan contains the calendar integration so the combined Android app has one host; its diff against main shrinks when #1 is merged. Both branches preserve main’s existing home, finance, chat, notification and profile screens. The Android `TrainingApplication` still initializes the workout repository/SQLite driver; video FileProvider and network permissions are retained.
 
 ## Modules
 
 | Module | Contents | Targets |
 |---|---|---|
+| `:shared` | Canonical trainer theme/navigation and calendar/trainee feature. | Android, desktop |
 | `:contract` | DTOs and rules shared with the server: exercise and plan DTOs, enums, `PlanValidator`, `ExerciseValidator`, `SearchText`. | JVM (Android uses it too) |
 | `:shared:domain` | Models, plan-draft reducers, set-input parsing, search, use cases, locale formats. | JVM |
 | `:shared:data` | SQLDelight database (drafts, cached plan versions, own exercises), repositories, fake remotes. | JVM |
-| `:shared:designsystem` | The one shared theme (colours, IBM Plex Sans, spacing, shapes) and shared components. | Android, desktop |
+| `:shared:designsystem` | Workout component API; colours, Material theme, spacing, shapes and navigation delegate to `:shared`. | Android, desktop |
 | `:shared:feature:workout-builder` | Plan library, plan editor, exercise library/picker, exercise detail, exercise form ([plan](docs/features/plan-creator.md)). | Android, desktop |
 | `:shared:app` | App shell: theme, trainer navigation, navigation host, Koin wiring, bundled exercise seed. | Android, desktop |
 | `:androidApp` | The Android application. | Android |
@@ -20,49 +66,14 @@ Start with [CLAUDE.md](CLAUDE.md) (identical to `AGENTS.md`), [docs/context.md](
 
 The domain, data and contract modules have no Android or Compose dependencies, so they also build on a plain JVM (for example on a backend machine).
 
-## Build
 
-Requirements: JDK 17 or newer. The Android and Compose modules also need the Android SDK (`local.properties` with `sdk.dir`, or `ANDROID_HOME`) and access to Google's Maven repository.
+Pure Kotlin validation can still run without an Android SDK:
 
-```bash
-./gradlew :androidApp:installDebug
+```sh
+./gradlew -Ptrainer.ui=false :contract:jvmTest :shared:domain:jvmTest :shared:data:jvmTest
 ```
 
-```bash
-./gradlew :desktopApp:run
-```
-
-```bash
-./gradlew check
-```
-
-Only the pure Kotlin modules (no Android SDK or Google Maven needed):
-
-```bash
-./gradlew -Ptrainer.ui=false check
-```
-
-Regenerate the bundled exercise library after editing `tools/exercise-seed/curation.tsv`:
-
-```bash
-curl -sSLo /tmp/exercises.json https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json
-```
-
-```bash
-python3 tools/exercise-seed/build_seed.py --dataset /tmp/exercises.json --images
-```
-
-`--images` also bundles one resized photo per exercise and needs Pillow (`pip install Pillow`).
-
-## Status
-
-- **Language:** the app is Polish only, whatever the device language. Exercise instructions from the dataset are English, so they are not shown until they are translated.
-- **Design:** aligned with the `trainer-calendar-clients` branch (same colours, shapes, headers, controls and bottom bar). Training plans are in the "+" menu ("Co chcesz dodać?"). See section 14 of the feature plan.
-
-- **Built so far:** the trainer plan creator and exercise library, delivery slices 0–3 of [docs/features/plan-creator.md](docs/features/plan-creator.md), against local storage and fake remotes. There is no backend, sign-in or client list yet.
-- **Trainer demo video:** an own exercise can have a recorded or picked video that uploads in the background (fake server). See section 13 of the feature plan.
-- **Verified:** `./gradlew -Ptrainer.ui=false check`, which runs the `:contract`, `:shared:domain` and `:shared:data` tests.
-- **Not verified:** the Compose/Android modules have not been compiled or run yet. Google Maven was unreachable where they were written. The AGP version (8.11.1) is the one the `trainer-calendar-clients` branch builds with.
+The calendar/trainee resources support Polish and English; the workout feature retains its existing Polish UI and hides untranslated dataset instructions. The exercise seed can be regenerated with `tools/exercise-seed/build_seed.py`; its `--images` option requires Pillow.
 
 ## Third-party content
 

@@ -1,43 +1,20 @@
-rootProject.name = "mobile-app-project"
-
-enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
-
-// Pure Kotlin modules build anywhere. The Compose/Android modules need Google Maven and the Android SDK.
-val includeUi = providers.gradleProperty("trainer.ui").orNull?.toBooleanStrictOrNull() ?: true
-
 pluginManagement {
-    repositories {
-        gradlePluginPortal()
-        mavenCentral()
-        google()
-    }
+    repositories { google(); mavenCentral(); gradlePluginPortal() }
 }
-
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    repositories {
-        if (providers.gradleProperty("trainer.ui").orNull?.toBooleanStrictOrNull() != false) {
-            google {
-                content {
-                    includeGroupByRegex("androidx.*")
-                    includeGroupByRegex("com\\.android.*")
-                    includeGroupByRegex("com\\.google\\.android.*")
-                    includeGroup("com.google.testing.platform")
-                }
-            }
-        }
-        mavenCentral()
-    }
+    repositories { google(); mavenCentral() }
 }
-
-include(":contract")
-include(":shared:domain")
-include(":shared:data")
-
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+rootProject.name = "TrainerApp"
+val includeUi = providers.gradleProperty("trainer.ui").orNull?.toBooleanStrictOrNull() ?: true
+if (file("contract/build.gradle.kts").exists()) {
+    include(":contract", ":shared:domain", ":shared:data")
+    if (!includeUi) project(":shared").buildFileName = "headless.gradle.kts"
+}
 if (includeUi) {
-    include(":shared:designsystem")
-    include(":shared:feature:workout-builder")
-    include(":shared:app")
-    include(":androidApp")
-    include(":desktopApp")
+    include(":shared", ":androidApp")
+    if (file("desktopApp/build.gradle.kts").exists()) include(":desktopApp")
+    if (file("shared/app/build.gradle.kts").exists()) {
+        include(":shared:designsystem", ":shared:feature:workout-builder", ":shared:app")
+    }
 }

@@ -12,6 +12,7 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
+            api(project(":shared"))
             api(libs.compose.runtime)
             api(libs.compose.foundation)
             api(libs.compose.ui)

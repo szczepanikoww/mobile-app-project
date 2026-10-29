@@ -32,22 +32,23 @@ data object TrainerHomeDestination
  * guest shells will switch on the active role here, with the same theme.
  */
 @Composable
-fun App() {
+fun App(host: (@Composable (WorkoutNavigationActions) -> Unit)? = null) {
     AppTheme {
         val navController = rememberNavController()
         var showAssignInfo by rememberSaveable { mutableStateOf(false) }
 
         NavHost(navController = navController, startDestination = TrainerHomeDestination) {
             composable<TrainerHomeDestination> {
-                TrainerShell(
+                val actions = WorkoutNavigationActions(
                     onNewPlan = { navController.navigate(PlanEditorDestination()) },
                     onOpenPlans = { navController.navigate(PlanLibraryDestination) },
-                    onOpenExerciseLibrary = { navController.navigate(ExerciseBrowserDestination()) },
+                    onOpenExercises = { navController.navigate(ExerciseBrowserDestination()) },
                 )
+                if (host != null) host(actions) else TrainerShell(actions)
             }
             workoutBuilderGraph(
                 navController = navController,
-                // Integration point: the assignment flow belongs to the clients feature, which does not exist yet.
+                // Integration point: the assignment flow belongs to the relationship-scoped assignment API, which is not connected yet.
                 onAssignToClient = { _, _ -> showAssignInfo = true },
             )
         }

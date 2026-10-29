@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -439,25 +441,29 @@ private fun ExerciseOrderHeader(count: Int) {
     )
 }
 
-/** "Zapisz szablon" and "Przypisz podopiecznemu" side by side, above the keyboard and system bars. */
+/** Actions stack on phones/large text so full Polish labels remain readable. */
 @Composable
 private fun CreatorBottomBar(publishing: Boolean, onSaveTemplate: () -> Unit, onAssign: () -> Unit) {
+    val largeLabels = LocalDensity.current.fontScale >= 1.5f
+    val save: @Composable (Modifier) -> Unit = { modifier ->
+        TonalButton(text = stringResource(Res.string.creator_save_template), onClick = onSaveTemplate,
+            loading = publishing, icon = if (largeLabels) null else Icons.Outlined.BookmarkBorder, modifier = modifier)
+    }
+    val assign: @Composable (Modifier) -> Unit = { modifier ->
+        PrimaryButton(text = stringResource(Res.string.editor_assign), onClick = onAssign,
+            enabled = !publishing, icon = if (largeLabels) null else Icons.Outlined.PersonAddAlt, modifier = modifier)
+    }
     BottomActionBar {
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
-            TonalButton(
-                text = stringResource(Res.string.creator_save_template),
-                onClick = onSaveTemplate,
-                loading = publishing,
-                icon = Icons.Outlined.BookmarkBorder,
-                modifier = Modifier.weight(1f),
-            )
-            PrimaryButton(
-                text = stringResource(Res.string.editor_assign),
-                onClick = onAssign,
-                enabled = !publishing,
-                icon = Icons.Outlined.PersonAddAlt,
-                modifier = Modifier.weight(1f),
-            )
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            if (maxWidth < 480.dp || LocalDensity.current.fontScale >= 1.5f) {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                    save(Modifier.fillMaxWidth())
+                    assign(Modifier.fillMaxWidth())
+                }
+            } else Row(horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
+                save(Modifier.weight(1f))
+                assign(Modifier.weight(1f))
+            }
         }
     }
 }

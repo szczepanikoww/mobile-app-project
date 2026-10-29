@@ -3,7 +3,7 @@
     <string name="tab_calendar">Kalendarz</string>
     <string name="tab_clients">Podopieczni</string>
     <string name="tab_finance">Finanse</string>
-    <string name="assign_message">Przypisywanie planów pojawi się razem z listą podopiecznych. Zapisana wersja planu jest gotowa do przypisania.</string>
+    <string name="assign_message">Przypisywanie planów wymaga połączenia z obsługą przypisań podopiecznych. Zapisana wersja planu jest gotowa do przypisania.</string>
     <string name="title_calendar">Twój plan</string>
     <string name="title_clients">Twoi podopieczni</string>
     <string name="add">Dodaj</string>
