@@ -50,7 +50,7 @@ class MainActivity : ComponentActivity() {
                     }
                     TrainerApp(trainer, showNavigation = false, createRequest = createRequest, onMainRouteChanged = onMain,
                         extraCreateActions = { dismiss -> WorkoutCreateActions(actions, dismiss) })
-                })
+                }, onLogOut = actions.onLogOut)
               }
             }
         }

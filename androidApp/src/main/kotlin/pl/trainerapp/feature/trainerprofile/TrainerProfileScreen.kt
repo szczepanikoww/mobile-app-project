@@ -75,17 +75,21 @@ import pl.trainerapp.feature.trainerprofile.model.TrainerSettings
 
 private val Gutter = Modifier.padding(horizontal = Spacing.screenGutter)
 
-/** Navigation- and DI-aware entry point. [onUnavailable] covers actions whose features do not exist yet. */
+/**
+ * Navigation- and DI-aware entry point. [onUnavailable] covers actions whose features do not exist yet;
+ * [onLogOut] signs out and returns to the guest views.
+ */
 @Composable
 fun TrainerProfileRoute(
     repository: TrainerProfileRepository,
     onBack: () -> Unit,
     onUnavailable: () -> Unit,
     modifier: Modifier = Modifier,
+    onLogOut: () -> Unit = onUnavailable,
 ) {
     val viewModel = viewModel { TrainerProfileViewModel(repository) }
     val state by viewModel.state.collectAsStateWithLifecycle()
-    TrainerProfileScreen(state, viewModel::onAction, onBack, onUnavailable, modifier)
+    TrainerProfileScreen(state, viewModel::onAction, onBack, onUnavailable, modifier, onLogOut)
 }
 
 @Composable
@@ -106,6 +110,7 @@ fun TrainerProfileScreen(
     onBack: () -> Unit,
     onUnavailable: () -> Unit,
     modifier: Modifier = Modifier,
+    onLogOut: () -> Unit = onUnavailable,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
         DetailHeader(title = stringResource(R.string.profile_title), onBack = onBack)
@@ -135,7 +140,7 @@ fun TrainerProfileScreen(
                             modifier = Gutter,
                         )
                     }
-                    ProfileLoadStatus.Content -> content(state, onAction, onUnavailable)
+                    ProfileLoadStatus.Content -> content(state, onAction, onUnavailable, onLogOut)
                 }
             }
         }
@@ -146,6 +151,7 @@ private fun LazyListScope.content(
     state: TrainerProfileUiState,
     onAction: (TrainerProfileAction) -> Unit,
     onUnavailable: () -> Unit,
+    onLogOut: () -> Unit,
 ) {
     item {
         PillTabs(
@@ -172,7 +178,7 @@ private fun LazyListScope.content(
         ProfileTab.Settings -> if (settings != null) {
             item { NotificationSettings(settings, onAction) }
             item { PolicyCard() }
-            item { AccountCard(onUnavailable) }
+            item { AccountCard(onUnavailable, onLogOut) }
         }
         ProfileTab.Availability -> item { AvailabilityCard(state.availability, onAction) }
         ProfileTab.Payments -> if (payout != null) {
@@ -420,7 +426,7 @@ private fun PolicyCard() {
 }
 
 @Composable
-private fun AccountCard(onUnavailable: () -> Unit) {
+private fun AccountCard(onUnavailable: () -> Unit, onLogOut: () -> Unit) {
     val colors = AppTheme.colors
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
         SectionTitle(stringResource(R.string.settings_account))
@@ -431,7 +437,7 @@ private fun AccountCard(onUnavailable: () -> Unit) {
             Divider()
             ActionRow(stringResource(R.string.settings_terms), MaterialTheme.colorScheme.onSurface, onUnavailable)
             Divider()
-            ActionRow(stringResource(R.string.settings_logout), colors.dangerText, onUnavailable)
+            ActionRow(stringResource(R.string.settings_logout), colors.dangerText, onLogOut)
         }
     }
 }

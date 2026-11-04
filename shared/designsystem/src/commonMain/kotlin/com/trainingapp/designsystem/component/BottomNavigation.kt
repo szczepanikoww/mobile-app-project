@@ -8,8 +8,9 @@ import pl.trainer.ui.SharedNavItem
 
 data class NavItem(val label: String, val icon: ImageVector, val selected: Boolean, val onClick: () -> Unit)
 
+/** The role-aware bottom bar. The guest shell has no create action, so [onCreate] is optional. */
 @Composable
-fun AppBottomNavigation(items: List<NavItem>, createLabel: String, onCreate: () -> Unit, modifier: Modifier = Modifier) {
+fun AppBottomNavigation(items: List<NavItem>, createLabel: String? = null, onCreate: (() -> Unit)? = null, modifier: Modifier = Modifier) {
     androidx.compose.foundation.layout.Box(modifier) {
         SharedBottomBar(items.map { SharedNavItem(it.label, it.icon, it.selected, it.onClick) }, createLabel, onCreate)
     }

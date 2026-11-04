@@ -9,4 +9,10 @@ expect object LocaleFormats {
 
     /** Short time, e.g. "14:05" / "2:05 PM". */
     fun formatTime(epochMs: Long, languageTag: String): String
+
+    /** Money in the locale's style, e.g. "1 200 zł" / "PLN 1,200". Whole amounts are shown without decimals. */
+    fun formatMoney(money: Money, languageTag: String): String
+
+    /** A decimal number with at most [maxFractionDigits] digits, e.g. "4,9" / "4.9". */
+    fun formatDecimal(value: Double, languageTag: String, maxFractionDigits: Int = 1): String
 }

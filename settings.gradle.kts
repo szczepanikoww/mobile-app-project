@@ -15,6 +15,6 @@ if (includeUi) {
     include(":shared", ":androidApp")
     if (file("desktopApp/build.gradle.kts").exists()) include(":desktopApp")
     if (file("shared/app/build.gradle.kts").exists()) {
-        include(":shared:designsystem", ":shared:feature:workout-builder", ":shared:app")
+        include(":shared:designsystem", ":shared:feature:workout-builder", ":shared:feature:guest", ":shared:app")
     }
 }

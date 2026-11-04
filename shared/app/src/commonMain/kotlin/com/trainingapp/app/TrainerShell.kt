@@ -10,7 +10,13 @@ import org.jetbrains.compose.resources.stringResource
 import pl.trainer.ui.ActionRow
 import pl.trainer.ui.TrainerApp
 
-data class WorkoutNavigationActions(val onNewPlan: () -> Unit, val onOpenPlans: () -> Unit, val onOpenExercises: () -> Unit)
+/** Actions the trainer shell needs from the app. [onLogOut] returns to the guest views (Android profile screen). */
+data class WorkoutNavigationActions(
+    val onNewPlan: () -> Unit,
+    val onOpenPlans: () -> Unit,
+    val onOpenExercises: () -> Unit,
+    val onLogOut: () -> Unit = {},
+)
 
 /** Desktop uses the calendar/trainee shell; Android supplies main's host through App.host. */
 @Composable

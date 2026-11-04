@@ -24,6 +24,10 @@ import com.trainingapp.domain.exercise.ExerciseUsage
 import com.trainingapp.domain.media.LocalFiles
 import com.trainingapp.domain.media.MediaRepository
 import com.trainingapp.domain.plan.PlanRepository
+import com.trainingapp.feature.guest.data.DemoAccounts
+import com.trainingapp.feature.guest.guestModule
+import com.trainingapp.feature.guest.model.AuthRepository
+import com.trainingapp.feature.guest.model.Role
 import com.trainingapp.feature.workoutbuilder.workoutBuilderModule
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -42,9 +46,15 @@ interface AppPlatform {
     val localFiles: LocalFiles
 }
 
-/** Sign-in is not implemented yet; every session acts as this synthetic trainer. */
+/** The demo trainer whose synthetic data the trainer views show. Signing in as the demo trainer maps to this id. */
 object DemoTrainer : CurrentUser {
-    override val trainerId: String = "demo-trainer"
+    override val trainerId: String = DemoAccounts.DEMO_TRAINER_ID
+}
+
+/** The signed-in trainer from the session; the demo trainer until a trainer signs in (no identity provider yet). */
+private class SessionCurrentUser(private val auth: AuthRepository) : CurrentUser {
+    override val trainerId: String
+        get() = auth.session.value?.takeIf { Role.Trainer in it.roles }?.userId ?: DemoTrainer.trainerId
 }
 
 private val AppScope = named("appScope")
@@ -57,7 +67,7 @@ fun appModule(platform: AppPlatform) = module {
     single<SqlDriver> { platform.createDriver() }
     single { createTrainingDatabase(get()) }
     single<NetworkMonitor> { platform.networkMonitor }
-    single<CurrentUser> { DemoTrainer }
+    single<CurrentUser> { SessionCurrentUser(get()) }
     // The app is Polish only, whatever the device language is.
     single<AppLanguage> { AppLanguage { "pl" } }
     single<IdGenerator> { IdGenerator.Uuids }
@@ -91,5 +101,5 @@ fun appModule(platform: AppPlatform) = module {
 
 fun initKoin(platform: AppPlatform, platformDeclaration: KoinAppDeclaration = {}) = startKoin {
     platformDeclaration()
-    modules(appModule(platform), workoutBuilderModule)
+    modules(appModule(platform), workoutBuilderModule, guestModule)
 }
