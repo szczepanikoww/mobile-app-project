@@ -1,9 +1,14 @@
 package pl.trainer.domain
 
+import com.trainingapp.contract.money.Money
 import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
 
-enum class SessionStatus { Requested, Confirmed, Completed, Rejected, CancelledByTrainer, NoShow }
+/**
+ * Server-reported session states. [CancelledByClient] and [Expired] (architecture 7.1) were added for the client
+ * views; every `when` over this enum must handle them.
+ */
+enum class SessionStatus { Requested, Confirmed, Completed, Rejected, CancelledByTrainer, NoShow, CancelledByClient, Expired }
 enum class RequestKind { Booking, Reschedule }
 
 /** [id] is the trainer–client relationship ID in the active trainer's scoped repository. */
@@ -37,7 +42,13 @@ data class ClientInformation(
 }
 
 enum class ProposalAuthor { Client, Trainer }
-data class RescheduleProposal(val start: Instant, val end: Instant, val author: ProposalAuthor = ProposalAuthor.Client)
+/** [requestedAt] is the server's receipt time of the proposal; a late-reschedule fee is calculated from it. */
+data class RescheduleProposal(
+    val start: Instant,
+    val end: Instant,
+    val author: ProposalAuthor = ProposalAuthor.Client,
+    val requestedAt: Instant? = null,
+)
 
 data class Session(
     val id: String,
@@ -53,6 +64,14 @@ data class Session(
     val planTitle: String? = null,
     /** How the session is paid, as the server reports it. Read-only here; choosing a method belongs to finance (D3). */
     val payment: SessionPayment? = null,
+    /** The cancellation policy version the client accepted when booking. Quotes and the grace period use it. */
+    val policyVersionId: String? = null,
+    /** The session price as the server reports it. Fees are a percentage of it, in minor units. */
+    val price: Money? = null,
+    /** The trainer the session belongs to; null means the repository's own trainer. */
+    val trainerId: String? = null,
+    /** The server's receipt time of a booking request. */
+    val requestedAt: Instant? = null,
 )
 
 enum class PaymentKind { Package, Online, Cash }
@@ -88,7 +107,8 @@ data class TrainerDashboard(
 )
 
 enum class DemoScenario { Normal, Loading, Empty, Error, Offline, Denied }
-enum class Failure { Load, Offline, Denied, Conflict, InvalidInput, InvalidClientInfo, Save }
+/** [QuoteExpired]: a fee quote is no longer valid; a fresh quote is needed before confirming. */
+enum class Failure { Load, Offline, Denied, Conflict, InvalidInput, InvalidClientInfo, Save, QuoteExpired }
 class TrainerException(val failure: Failure) : Exception()
 
 /** Integration boundary: production implementations must enforce role/relationship and revisions. */
@@ -109,9 +129,45 @@ interface TrainerRepository {
     suspend fun saveNote(clientId: String, note: String): TrainerDashboard
     suspend fun loadClientInformation(clientId: String): ClientInformation
     suspend fun saveClientInformation(clientId: String, information: ClientInformation): ClientInformation
+
+    /** B4: what the trainer needs to answer a booking or reschedule request. */
+    suspend fun requestReview(id: String): RequestReview = throw TrainerException(Failure.Load)
+
+    /**
+     * Accepts a request. For a late reschedule the server charges the fee of the client's policy version unless
+     * [waiver] is given (full waivers only in this phase, D8).
+     */
+    suspend fun acceptRequest(id: String, revision: Int, waiver: FeeWaiver?): TrainerDashboard = acceptRequest(id, revision)
 }
 
+/** A full fee waiver with an optional reason the client can see. */
+data class FeeWaiver(val reason: String? = null)
+
+/**
+ * The trainer's view of one open request. [requestedStart]–[requestedEnd] is the asked-for time; for a reschedule
+ * the session's own start and end stay the confirmed time until acceptance succeeds. [lateFee] is the fee the
+ * client's policy version proposes for a late reschedule, null when there is none.
+ */
+data class RequestReview(
+    val session: Session,
+    val client: Client,
+    val kind: RequestKind,
+    val requestedAt: Instant?,
+    val requestedStart: Instant,
+    val requestedEnd: Instant,
+    val slotAvailable: Boolean,
+    val policy: com.trainingapp.contract.policy.CancellationPolicy?,
+    val lateFee: com.trainingapp.contract.policy.FeeQuote?,
+)
+
 fun TrainerDashboard.client(id: String): Client = clients.first { it.id == id }
+
+/** A booking or reschedule request the trainer still has to answer (B4 "Szczegóły prośby"). */
+fun Session.isOpenRequest() = status == SessionStatus.Requested || proposal?.author == ProposalAuthor.Client
+
+/** Cancelled, rejected or expired: hidden from the trainer agenda. */
+fun Session.isClosedWithoutTraining() = status == SessionStatus.Rejected || status == SessionStatus.CancelledByTrainer ||
+    status == SessionStatus.CancelledByClient || status == SessionStatus.Expired
 fun Session.isActive() = status == SessionStatus.Confirmed
 fun Session.needsAttention() = status == SessionStatus.Requested || proposal != null
 /** Agenda placement only. The original start/end still reserve the confirmed slot. */

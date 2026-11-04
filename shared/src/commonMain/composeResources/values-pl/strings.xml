@@ -185,4 +185,7 @@
     <string name="check_in_unavailable">Check-in jest dostępny tylko dla potwierdzonych sesji.</string>
     <string name="check_in_not_sent">Niewysłane. Sprawdź połączenie i spróbuj ponownie; nic nie zostało zapisane.</string>
     <string name="check_in_conflict">Ta sesja zmieniła się w międzyczasie. Odśwież, aby zobaczyć aktualny stan.</string>
+    <string name="cancelled_client">Odwołana przez klienta</string>
+    <string name="expired">Wygasła</string>
+    <string name="quote_expired_error">Wycena wygasła albo sesja się zmieniła. Sprawdź nową kwotę i potwierdź ponownie.</string>
 </resources>

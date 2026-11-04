@@ -133,11 +133,12 @@ class TrainerBehaviorTest {
     @Test fun invalidTimesDoNotSaveOrPopTheForm() = runTest {
         val model = model(DemoTrainerRepository(0))
         advanceUntilIdle()
+        val before = model.state.value.data!!.sessions.size
         model.navigate(Route.SessionEditor())
         model.saveTime(DemoDate, "14:00", "13:00", "c1", "Demo studio")
         assertEquals(Failure.InvalidInput, model.state.value.actionFailure)
         assertIs<Route.SessionEditor>(model.state.value.route)
-        assertEquals(7, model.state.value.data!!.sessions.size)
+        assertEquals(before, model.state.value.data!!.sessions.size)
     }
 
     @Test fun nonexistentDstTimeIsRejectedInsteadOfShifted() = runTest {

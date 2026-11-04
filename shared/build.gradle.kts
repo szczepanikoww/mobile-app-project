@@ -20,6 +20,8 @@ kotlin {
             api(compose.material3)
             api(compose.materialIconsExtended)
             implementation(compose.components.resources)
+            // Money, the cancellation policy rules and locale formats (client-shell-sessions-wallet plan §2).
+            api(project(":shared:domain"))
             implementation(libs.coroutines.core)
             implementation(libs.datetime)
             implementation(libs.lifecycle.viewmodel.compose)

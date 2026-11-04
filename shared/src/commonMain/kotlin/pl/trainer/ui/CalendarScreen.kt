@@ -42,7 +42,7 @@ fun CalendarScreen(state: TrainerUiState, onDate: (LocalDate) -> Unit, onMode: (
     val dayScroll = rememberScrollState()
     val density = LocalDensity.current
     val visibleDays = if (state.calendarMode == CalendarMode.Day) listOf(state.selectedDate) else dates
-    val visibleSessions = data.sessions.filter { it.status != SessionStatus.Rejected && it.status != SessionStatus.CancelledByTrainer }
+    val visibleSessions = data.sessions.filterNot { it.isClosedWithoutTraining() }
 
     LazyColumn(modifier = Modifier.testTag("calendar-list"), contentPadding = PaddingValues(start = Layout.gutter, end = Layout.gutter, top = Layout.padding, bottom = Layout.padding),
         verticalArrangement = Arrangement.spacedBy(Layout.medium)) {

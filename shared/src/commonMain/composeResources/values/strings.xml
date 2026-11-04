@@ -185,4 +185,7 @@
     <string name="check_in_unavailable">Check-in is only available for confirmed sessions.</string>
     <string name="check_in_not_sent">Not sent. Check your connection and try again; nothing has been recorded.</string>
     <string name="check_in_conflict">This session changed in the meantime. Refresh to see the current state.</string>
+    <string name="cancelled_client">Cancelled by client</string>
+    <string name="expired">Expired</string>
+    <string name="quote_expired_error">The fee quote has expired or the session has changed. Check the new amount and confirm again.</string>
 </resources>
