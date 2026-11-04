@@ -14,4 +14,9 @@
     <string name="ds_profile">Profil</string>
     <string name="ds_search">Szukaj</string>
     <string name="ds_add">Dodaj</string>
+    <string name="ds_show_password">Pokaż hasło</string>
+    <string name="ds_hide_password">Ukryj hasło</string>
+    <string name="ds_password_visible">Hasło widoczne</string>
+    <string name="ds_password_hidden">Hasło ukryte</string>
+    <string name="ds_share">Udostępnij</string>
 </resources>

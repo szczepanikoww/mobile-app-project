@@ -28,6 +28,7 @@ kotlin {
             implementation(libs.compose.components.resources)
             implementation(projects.shared.data)
             implementation(projects.shared.feature.workoutBuilder)
+            implementation(projects.shared.feature.guest)
             implementation(libs.androidx.navigation.compose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(libs.kotlinx.serialization.json)

@@ -21,14 +21,18 @@ import androidx.compose.ui.unit.dp
 
 data class SharedNavItem(val label: String, val icon: ImageVector, val selected: Boolean, val onClick: () -> Unit)
 
-/** Main's four-tab shell and central create action, adapted to the shared theme. */
+/**
+ * Main's four-tab shell and central create action, adapted to the shared theme. Without [onCreate] (the guest
+ * shell) there is no create button, no overhang and no centre gap.
+ */
 @Composable
-fun SharedBottomBar(items: List<SharedNavItem>, createLabel: String, onCreate: () -> Unit, createEnabled: Boolean = true) {
+fun SharedBottomBar(items: List<SharedNavItem>, createLabel: String? = null, onCreate: (() -> Unit)? = null, createEnabled: Boolean = true) {
+    val hasCreate = onCreate != null
     val half = items.size / 2
     val expandedLabels = LocalDensity.current.fontScale >= 1.5f
     Box(Modifier.fillMaxWidth()) {
         Surface(
-            modifier = Modifier.fillMaxWidth().padding(top = Layout.navigationOverhang),
+            modifier = Modifier.fillMaxWidth().padding(top = if (hasCreate) Layout.navigationOverhang else 0.dp),
             shape = Layout.navigation,
             color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
@@ -38,7 +42,7 @@ fun SharedBottomBar(items: List<SharedNavItem>, createLabel: String, onCreate: (
                     verticalAlignment = Alignment.CenterVertically) {
                     items.take(half).forEach { NavItem(it) }
                     if (!expandedLabels) {
-                        Spacer(Modifier.width(Layout.navigationCreateGap))
+                        if (hasCreate) Spacer(Modifier.width(Layout.navigationCreateGap))
                         items.drop(half).forEach { NavItem(it) }
                     }
                 }
@@ -47,7 +51,7 @@ fun SharedBottomBar(items: List<SharedNavItem>, createLabel: String, onCreate: (
                 }
             }
         }
-        FloatingActionButton(
+        if (onCreate != null) FloatingActionButton(
             onClick = { if (createEnabled) onCreate() },
             modifier = Modifier.align(Alignment.TopCenter).size(Layout.navigationCreateSize)
                 .semantics { if (!createEnabled) disabled() },

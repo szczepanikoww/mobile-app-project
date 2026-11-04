@@ -26,6 +26,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -48,6 +57,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.trainingapp.designsystem.resources.Res
 import com.trainingapp.designsystem.resources.ds_clear_search
+import com.trainingapp.designsystem.resources.ds_hide_password
+import com.trainingapp.designsystem.resources.ds_password_hidden
+import com.trainingapp.designsystem.resources.ds_password_visible
+import com.trainingapp.designsystem.resources.ds_show_password
 import com.trainingapp.designsystem.resources.ds_search
 import com.trainingapp.designsystem.theme.AppShapes
 import com.trainingapp.designsystem.theme.AppTheme
@@ -265,6 +278,54 @@ fun PillTextField(
         singleLine = true,
         textStyle = AppTheme.type.body,
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+        shape = AppShapes.input,
+        colors = appFieldColors(),
+    )
+}
+
+/**
+ * A password input: the outlined field with a persistent label, the password keyboard and a trailing show/hide
+ * toggle with a state description. Callers keep the value in screen-local state, never in saved state.
+ */
+@Composable
+fun PasswordField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    error: String? = null,
+    supportingText: String? = null,
+    imeAction: ImeAction = ImeAction.Done,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+) {
+    var visible by remember { mutableStateOf(false) }
+    val visibleLabel = stringResource(Res.string.ds_password_visible)
+    val hiddenLabel = stringResource(Res.string.ds_password_hidden)
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics { if (error != null) this.error(error) },
+        label = { Text(label) },
+        textStyle = AppTheme.type.body,
+        isError = error != null,
+        supportingText = (error ?: supportingText)?.let { message -> { Text(message, style = AppTheme.type.compactBody) } },
+        singleLine = true,
+        visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
+        trailingIcon = {
+            IconButton(
+                onClick = { visible = !visible },
+                modifier = Modifier.semantics { stateDescription = if (visible) visibleLabel else hiddenLabel },
+            ) {
+                Icon(
+                    if (visible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                    stringResource(if (visible) Res.string.ds_hide_password else Res.string.ds_show_password),
+                )
+            }
+        },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false, imeAction = imeAction),
+        keyboardActions = keyboardActions,
         shape = AppShapes.input,
         colors = appFieldColors(),
     )

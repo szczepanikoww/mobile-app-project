@@ -38,10 +38,14 @@ fun SectionTitle(title: String, modifier: Modifier = Modifier, action: (@Composa
 }
 
 @Composable
-fun Avatar(client: Client, large: Boolean = false) {
+fun Avatar(client: Client, large: Boolean = false) = Avatar(client.initials, large)
+
+/** Initials in a soft accent circle. Decorative: the name next to it is what screen readers announce. */
+@Composable
+fun Avatar(initials: String, large: Boolean = false) {
     Box(Modifier.size(if (large || LocalDensity.current.fontScale >= 1.5f) 64.dp else Layout.target)
         .background(AppColors.softAccent, CircleShape).clearAndSetSemantics {}, contentAlignment = Alignment.Center) {
-        Text(client.initials, style = if (large) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleMedium, color = AppColors.onSoftAccent)
+        Text(initials, style = if (large) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleMedium, color = AppColors.onSoftAccent)
     }
 }
 
