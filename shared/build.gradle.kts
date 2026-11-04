@@ -23,12 +23,16 @@ kotlin {
             implementation(libs.coroutines.core)
             implementation(libs.datetime)
             implementation(libs.lifecycle.viewmodel.compose)
+            implementation(libs.androidx.lifecycle.runtimeCompose)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
             implementation(libs.coroutines.test)
         }
-        androidMain.dependencies { implementation(libs.activity.compose) }
+        androidMain.dependencies {
+            implementation(libs.activity.compose)
+            implementation(compose.preview)
+        }
         named("desktopMain").dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.coroutines.swing)

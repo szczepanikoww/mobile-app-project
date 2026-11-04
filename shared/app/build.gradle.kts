@@ -30,6 +30,7 @@ kotlin {
             implementation(projects.shared.feature.workoutBuilder)
             implementation(libs.androidx.navigation.compose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
+            implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.kotlinx.serialization.json)
             api(libs.koin.core)
             implementation(libs.koin.compose)
