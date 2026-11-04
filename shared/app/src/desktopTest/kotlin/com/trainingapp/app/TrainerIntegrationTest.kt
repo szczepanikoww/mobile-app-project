@@ -19,6 +19,7 @@ import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.trainingapp.data.db.TrainingDatabase
 import com.trainingapp.domain.common.NetworkMonitor
 import com.trainingapp.domain.media.LocalFiles
+import com.trainingapp.feature.guest.data.DemoAccounts
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.koin.core.context.stopKoin
@@ -52,7 +53,7 @@ class TrainerIntegrationTest {
             override val localFiles = LocalFiles { false }
         })
         try {
-            setContent { CompositionLocalProvider(LocalViewModelStoreOwner provides owner, LocalLifecycleOwner provides owner, LocalDensity provides Density(1f, fontScale.value)) { App() } }
+            setContent { CompositionLocalProvider(LocalViewModelStoreOwner provides owner, LocalLifecycleOwner provides owner, LocalDensity provides Density(1f, fontScale.value)) { App(initialSession = DemoAccounts.trainer) } }
             waitUntil(timeoutMillis = 10_000) { onAllNodes(hasText("Katarzyna Nowak")).fetchSemanticsNodes().isNotEmpty() }
             clickOnUi(onNodeWithText("Podopieczni"))
             onNodeWithText("Twoi podopieczni").assertExists()

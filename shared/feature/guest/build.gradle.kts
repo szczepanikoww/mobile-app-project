@@ -37,13 +37,6 @@ kotlin {
             implementation(kotlin("test"))
             implementation(libs.kotlinx.coroutines.test)
         }
-        val desktopTest by getting {
-            dependencies {
-                implementation(libs.kotlinx.coroutines.swing)
-                implementation(compose.desktop.uiTestJUnit4)
-                implementation(compose.desktop.currentOs)
-            }
-        }
     }
 }
 

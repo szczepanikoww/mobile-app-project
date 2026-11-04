@@ -24,11 +24,24 @@ The debug APK is written to `androidApp/build/outputs/apk/debug/androidApp-debug
 ## Validate
 
 ```sh
-./gradlew :shared:desktopTest :shared:app:desktopTest :contract:jvmTest :shared:domain:jvmTest :shared:data:jvmTest :desktopApp:classes
+./gradlew :shared:feature:guest:desktopTest :shared:desktopTest :shared:app:desktopTest :contract:jvmTest :shared:domain:jvmTest :shared:data:jvmTest :desktopApp:classes
 ./gradlew :androidApp:testDebugUnitTest :androidApp:assembleDebug :androidApp:lintDebug
 ```
 
 Desktop tests render the shared Compose UI without requiring an unlocked desktop. Reports and screenshots are in `shared/build/reports/`. UI tests use Polish and cover a 390 × 844 viewport and a 320 × 720 viewport at 200% font scaling. UI resources also include English; the app follows the platform locale.
+
+## Guest views and demo accounts
+
+The app opens on the guest **Welcome** screen on first launch (once per install), then on the guest shell: Start, Trenerzy, Siłownie and Zaloguj się ([plan](docs/plans/guest-views.md), [handoff](docs/features/guest-views.md)). Signing in replaces the back stack with the role shell.
+
+Sign-in is an in-memory demo until an identity provider is chosen. Reserved accounts (any password; registration needs at least 8 characters):
+
+| E-mail | Opens |
+|---|---|
+| `trener@example.com` | The existing trainer shell with the demo trainer's data |
+| `klient@example.com` | The client placeholder (no client shell exists yet) |
+
+Registering a new e-mail signs in with the chosen starting role. Nothing is stored on a server and no password is kept. To see Welcome again on desktop, delete the `com/trainingapp/guest` node from Java user preferences; on Android, clear the app's data. Tests pass a demo session to `App(initialSession = …)` to start directly in a role shell.
 
 ## Current scope
 
@@ -59,7 +72,8 @@ PR merge order: merge calendar/trainee PR #1 before workout PR #2. Workout-plan 
 | `:shared:data` | SQLDelight database (drafts, cached plan versions, own exercises), repositories, fake remotes. | JVM |
 | `:shared:designsystem` | Workout component API; colours, Material theme, spacing, shapes and navigation delegate to `:shared`. | Android, desktop |
 | `:shared:feature:workout-builder` | Plan library, plan editor, exercise library/picker, exercise detail, exercise form ([plan](docs/features/plan-creator.md)). | Android, desktop |
-| `:shared:app` | App shell: theme, trainer navigation, navigation host, Koin wiring, bundled exercise seed. | Android, desktop |
+| `:shared:feature:guest` | Guest views: welcome, start, trainers, trainer profile, gyms, gym detail, log in / register, login-required sheet; demo catalogue and demo sign-in. | Android, desktop |
+| `:shared:app` | App shell: theme, session-based start, trainer navigation, navigation host, Koin wiring, bundled exercise seed. | Android, desktop |
 | `:androidApp` | The Android application. | Android |
 | `:desktopApp` | A phone-sized desktop preview for development. Android remains the product target. | Desktop JVM |
 | `tools/exercise-seed` | Builds the bundled exercise library from `free-exercise-db` and `curation.tsv`. | Python 3 |

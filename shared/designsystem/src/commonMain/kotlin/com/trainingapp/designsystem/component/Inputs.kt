@@ -162,7 +162,10 @@ fun SetValueField(
     )
 }
 
-/** The search field of the trainer calendar/clients branch: an outlined field labelled "Szukaj" with a clear button. */
+/**
+ * The search field of the trainer calendar/clients branch: an outlined field labelled "Szukaj" with a clear button.
+ * [onSearch] runs on the keyboard's search action.
+ */
 @Composable
 fun SearchField(
     query: String,
@@ -170,6 +173,7 @@ fun SearchField(
     placeholder: String,
     modifier: Modifier = Modifier,
     label: String = stringResource(Res.string.ds_search),
+    onSearch: (() -> Unit)? = null,
 ) {
     OutlinedTextField(
         value = query,
@@ -190,6 +194,7 @@ fun SearchField(
         singleLine = true,
         textStyle = AppTheme.type.body,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardActions = KeyboardActions(onSearch = { onSearch?.invoke() }),
         shape = AppShapes.input,
         colors = appFieldColors(),
     )

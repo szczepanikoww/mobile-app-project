@@ -94,6 +94,7 @@ private val FabOverhang = 24.dp
 fun TrainerShell(
     repositories: TrainerRepositories,
     trainerFeature: (@Composable (TrainerDestination, Int, (Boolean) -> Unit) -> Unit)? = null,
+    onLogOut: (() -> Unit)? = null,
 ) {
     var featureIsMain by remember { mutableStateOf(true) }
     var createRequest by remember { mutableStateOf(0) }
@@ -206,6 +207,7 @@ fun TrainerShell(
                             repository = repositories.profile,
                             onBack = pop,
                             onUnavailable = showNotAvailable,
+                            onLogOut = onLogOut ?: showNotAvailable,
                         )
                     }
                 }

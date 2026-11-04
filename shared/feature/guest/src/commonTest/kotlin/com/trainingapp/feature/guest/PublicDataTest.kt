@@ -38,3 +38,13 @@ class PublicDataTest {
         listOf("injur", "kontuzj", "notatk", "health", "zdrowi", "@").forEach { word -> assertFalse(word in text.lowercase(), word) }
     }
 }
+
+class MapsLinkTest {
+    @Test
+    fun addressIsPercentEncodedAsUtf8() {
+        kotlin.test.assertEquals(
+            "https://www.google.com/maps/search/?api=1&query=ul.%20Pr%C3%B3bna%2030%2C%20Warszawa",
+            com.trainingapp.feature.guest.data.mapsUrl("ul. Próbna 30, Warszawa"),
+        )
+    }
+}
