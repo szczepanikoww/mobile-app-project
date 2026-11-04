@@ -224,4 +224,44 @@
     <!-- Check-in (A4) -->
     <string name="check_in_recorded_present">Obecność potwierdzona</string>
     <string name="check_in_recorded_no_show">Zapisano nieobecność</string>
+    <!-- B5 Polityka odwołań (docs/features/client-shell-sessions-wallet.md) -->
+    <string name="policy_editor_title">Polityka odwołań</string>
+    <string name="policy_current_version">Obecna wersja %1$d · od %2$s</string>
+    <string name="policy_saved">Zapisano wersję %1$d. Obowiązuje dla nowych rezerwacji.</string>
+    <string name="policy_presets">Gotowe ustawienia</string>
+    <string name="policy_preset_flexible">Elastyczna</string>
+    <string name="policy_preset_standard">Standardowa</string>
+    <string name="policy_preset_strict">Restrykcyjna</string>
+    <string name="policy_preset_custom">Własna konfiguracja</string>
+    <string name="policy_tiers">Progi opłat</string>
+    <string name="policy_free_until">Bezpłatne odwołanie do %1$d h przed sesją</string>
+    <string name="policy_tier_label">Odwołanie później niż na:</string>
+    <string name="policy_hours_value">%1$d h przed</string>
+    <string name="policy_percent">%1$d%%</string>
+    <string name="policy_amount">Opłata przy Twojej stawce: %1$s</string>
+    <string name="policy_add_tier">Dodaj próg</string>
+    <string name="policy_remove_tier">Usuń próg</string>
+    <string name="policy_decrease">Zmniejsz</string>
+    <string name="policy_increase">Zwiększ</string>
+    <string name="policy_no_show_title">Nieobecność bez odwołania</string>
+    <string name="policy_grace_title">Na spóźnionego klienta czekasz</string>
+    <string name="policy_grace_value">%1$d min</string>
+    <string name="policy_grace_hint">Dopiero po tym czasie możesz oznaczyć nieobecność przy check-inie.</string>
+    <string name="policy_leniency_title">Wyrozumiałość trenerska</string>
+    <string name="policy_leniency_value">Bezpłatne późne odwołania: %1$d w miesiącu</string>
+    <string name="policy_error_order">Każdy późniejszy próg musi mieć mniej godzin i co najmniej taką samą opłatę.</string>
+    <string name="policy_error_generic">Sprawdź ustawienia: niektóre wartości są poza dozwolonym zakresem.</string>
+    <string name="policy_warning">Tak wysokie opłaty mogą zostać uznane za klauzulę abuzywną w świetle polskiego prawa konsumenckiego (art. 385¹ KC). Możesz je zapisać, ale rozważ łagodniejsze zasady.</string>
+    <string name="policy_preview_title">Podgląd z perspektywy klienta</string>
+    <string name="policy_applies_note">Dotyczy rezerwacji złożonych po zapisaniu. Istniejące sesje zachowują swoją wersję.</string>
+    <string name="policy_save">Zapisz nową wersję</string>
+    <string name="policy_save_offline">Niezapisane: brak połączenia. Zmiany zostały na ekranie.</string>
+    <string name="policy_save_conflict">W międzyczasie zapisano inną wersję. Wczytaliśmy ją – sprawdź zmiany i zapisz ponownie.</string>
+    <string name="policy_save_error">Nie udało się zapisać. Spróbuj ponownie.</string>
+    <string name="policy_discard_title">Odrzucić zmiany?</string>
+    <string name="policy_discard_body">Niezapisane zmiany zasad zostaną utracone. Obecna wersja pozostanie bez zmian.</string>
+    <string name="policy_discard_confirm">Odrzuć zmiany</string>
+    <string name="policy_edit">Edytuj zasady</string>
+    <string name="policy_load_error">Nie udało się wczytać zasad odwołań.</string>
+    <string name="policy_retry">Spróbuj ponownie</string>
 </resources>

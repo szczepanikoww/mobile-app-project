@@ -66,6 +66,7 @@ private fun TrainerAppContent(state: TrainerUiState, model: TrainerViewModel, sh
             else -> state.destination.label()
         }
         is Route.SessionDetail -> if (state.data?.sessions?.find { it.id == route.id }?.needsAttention() == true) Res.string.request_detail else Res.string.session_detail
+        is Route.RequestDetail -> Res.string.request_detail
         is Route.ClientDetail -> Res.string.client_detail
         is Route.SessionEditor -> if (route.sessionId == null) Res.string.new_session else Res.string.propose_time
         is Route.NoteEditor -> Res.string.edit_notes
@@ -120,7 +121,7 @@ private fun TrainerAppContent(state: TrainerUiState, model: TrainerViewModel, sh
                         when (val route = state.route) {
                             Route.Main -> when (state.destination) {
                                 Destination.Calendar -> CalendarScreen(state, model::date, model::mode,
-                                    { model.navigate(Route.Availability) }, { model.navigate(Route.SessionDetail(it)) }, { model.navigate(Route.SessionEditor()) })
+                                    { model.navigate(Route.Availability) }, { id -> model.openSessionById(id) }, { model.navigate(Route.SessionEditor()) })
                                 Destination.Clients -> ClientsScreen(state, model::search, model::filter, model::clientTab,
                                     { model.navigate(Route.ClientDetail(it)) }, { infoDialog = "invite" })
                                 Destination.Start, Destination.Finance -> Box(Modifier.fillMaxSize().padding(Layout.gutter), contentAlignment = Alignment.Center) {
@@ -134,8 +135,16 @@ private fun TrainerAppContent(state: TrainerUiState, model: TrainerViewModel, sh
                                     onClient = { model.navigate(Route.ClientDetail(session.clientId)) }, onEdit = { model.navigate(Route.SessionEditor(sessionId = session.id)) },
                                     onAccept = { model.accept(session) }, onReject = { model.reject(session) }, onCancel = { model.cancel(session) }, onComplete = { model.complete(session) })
                             }
+                            is Route.RequestDetail -> state.data.sessions.find { it.id == route.id }?.let { session ->
+                                RequestDetailScreen(state, session,
+                                    onRetry = { model.loadReview(session.id) },
+                                    onClient = { model.navigate(Route.ClientDetail(session.clientId)) },
+                                    onAccept = { waive, reason -> model.acceptRequest(session, waive, reason) },
+                                    onProposeOther = { model.navigate(Route.SessionEditor(sessionId = session.id)) },
+                                    onReject = { model.rejectRequest(session) })
+                            }
                             is Route.ClientDetail -> state.data.clients.find { it.id == route.id }?.let { client ->
-                                ClientDetailScreen(state, client, onSession = { model.navigate(Route.SessionDetail(it)) },
+                                ClientDetailScreen(state, client, onSession = { id -> model.openSessionById(id) },
                                     onNewSession = { model.navigate(Route.SessionEditor(clientId = client.id)) }, onNotes = { model.navigate(Route.NoteEditor(client.id)) },
                                     onInformation = { model.navigate(Route.ClientInformationEditor(client.id)) }, onRetryInformation = { model.loadClientInformation(client.id) }, onIntegration = { infoDialog = "integration" })
                             }

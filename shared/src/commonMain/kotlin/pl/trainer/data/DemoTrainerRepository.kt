@@ -198,6 +198,7 @@ class DemoTrainerRepository(
                 lateFee = if (proposal?.author == ProposalAuthor.Client) {
                     FeeCalculator.reschedule(policy, session.start, proposal.requestedAt ?: serverNow(), priceFor(session)).takeIf { it.late }
                 } else null,
+                serverNow = serverNow(),
             )
         }
     }

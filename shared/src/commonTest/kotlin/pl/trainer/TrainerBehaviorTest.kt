@@ -238,4 +238,28 @@ class TrainerBehaviorTest {
         assertEquals(72.5, model.state.value.clientInformation!!.weightKg)
         assertIs<Route.ClientInformationEditor>(model.state.value.route)
     }
+
+    @Test fun openRequestsOpenTheRequestDetailsWithAReviewAndAWaivedAcceptCloses() = runTest {
+        val repo = DemoTrainerRepository(0)
+        val model = model(repo)
+        advanceUntilIdle()
+        val confirmed = model.state.value.data!!.sessions.first { it.id == "s1" }
+        model.openSession(confirmed)
+        assertIs<Route.SessionDetail>(model.state.value.route)
+        model.back()
+        // A late reschedule requested by the client (s4, 28 Oct 16:00, asked at 09:20).
+        val request = model.state.value.data!!.sessions.first { it.id == "s4" }
+        model.openSession(request)
+        assertIs<Route.RequestDetail>(model.state.value.route)
+        advanceUntilIdle()
+        val review = assertNotNull(model.state.value.review)
+        assertEquals(RequestKind.Reschedule, review.kind)
+        assertTrue(review.slotAvailable)
+        assertEquals(50, review.lateFee?.policyPercent)
+        model.acceptRequest(request, waiveFee = true, reason = " ")
+        advanceUntilIdle()
+        assertEquals(Route.Main, model.state.value.route)
+        assertNull(model.state.value.data!!.sessions.first { it.id == "s4" }.proposal)
+        assertTrue(repo.store.charges["c2"].orEmpty().isEmpty())
+    }
 }

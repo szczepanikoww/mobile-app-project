@@ -196,4 +196,18 @@
     <string name="policy_no_show">No-show without cancelling: %1$s</string>
     <string name="policy_grace">The trainer waits %1$d min before marking a no-show</string>
     <string name="policy_free_late">Free late cancellations: %1$d per month</string>
+    <string name="requested_time">Requested time</string>
+    <string name="request_package">Package %1$d/%2$d</string>
+    <string name="requested_just_now">Requested just now</string>
+    <string name="requested_minutes_ago">Requested %1$d min ago</string>
+    <string name="requested_hours_ago">Requested %1$d h ago</string>
+    <string name="requested_on">Requested on %1$s</string>
+    <string name="slot_available">The slot is free in your schedule</string>
+    <string name="slot_taken">This time is taken. Propose another time or reject the request.</string>
+    <string name="late_change_policy">Cancellation and change policy (version %1$d)</string>
+    <string name="late_change_fee">Late change: %1$s (%2$s)</string>
+    <string name="waive_fee">Waive the fee</string>
+    <string name="waive_fee_hint">The client will not be charged for this change.</string>
+    <string name="waive_reason">Reason (optional)</string>
+    <string name="propose_other_time">Propose another time</string>
 </resources>

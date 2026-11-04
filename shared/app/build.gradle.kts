@@ -15,6 +15,7 @@ kotlin {
         all {
             languageSettings.optIn("org.jetbrains.compose.resources.ExperimentalResourceApi")
             languageSettings.optIn("androidx.compose.material3.ExperimentalMaterial3Api")
+            languageSettings.optIn("kotlin.time.ExperimentalTime")
         }
         named("desktopTest").dependencies {
             implementation(kotlin("test"))

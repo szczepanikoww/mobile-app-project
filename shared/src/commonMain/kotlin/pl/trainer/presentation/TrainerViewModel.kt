@@ -19,6 +19,8 @@ enum class CalendarMode { Day, Week }
 sealed interface Route {
     data object Main : Route
     data class SessionDetail(val id: String) : Route
+    /** B4: an open booking or reschedule request. */
+    data class RequestDetail(val id: String) : Route
     data class ClientDetail(val id: String) : Route
     data class SessionEditor(val sessionId: String? = null, val clientId: String? = null) : Route
     data object Availability : Route
@@ -45,6 +47,9 @@ data class TrainerUiState(
     val clientInformation: ClientInformation? = null,
     val informationLoading: Boolean = false,
     val informationFailure: Failure? = null,
+    val review: RequestReview? = null,
+    val reviewLoading: Boolean = false,
+    val reviewFailure: Failure? = null,
 ) {
     val route get() = routes.last()
     val offline get() = scenario == DemoScenario.Offline
@@ -61,6 +66,7 @@ class TrainerViewModel(private val repository: TrainerRepository) : ViewModel() 
     val state = mutableState.asStateFlow()
     private var loadingJob: Job? = null
     private var informationJob: Job? = null
+    private var reviewJob: Job? = null
 
     init { reload() }
 
@@ -95,6 +101,7 @@ class TrainerViewModel(private val repository: TrainerRepository) : ViewModel() 
         when (route) {
             is Route.ClientDetail -> loadClientInformation(route.id)
             is Route.ClientInformationEditor -> if (state.value.informationClientId != route.clientId || state.value.clientInformation == null) loadClientInformation(route.clientId)
+            is Route.RequestDetail -> loadReview(route.id)
             else -> Unit
         }
     }
@@ -133,6 +140,36 @@ class TrainerViewModel(private val repository: TrainerRepository) : ViewModel() 
     }
 
     fun accept(session: Session) = mutate { repository.acceptRequest(session.id, session.revision) }
+
+    /** Opens an open request in B4, or a confirmed session in the session details. */
+    fun openSession(session: Session) = navigate(if (session.isOpenRequest()) Route.RequestDetail(session.id) else Route.SessionDetail(session.id))
+
+    fun openSessionById(id: String) {
+        val session = state.value.data?.sessions?.find { it.id == id }
+        if (session != null) openSession(session) else navigate(Route.SessionDetail(id))
+    }
+
+    fun loadReview(id: String) {
+        reviewJob?.cancel()
+        mutableState.update { it.copy(review = null, reviewLoading = true, reviewFailure = null) }
+        reviewJob = viewModelScope.launch {
+            try {
+                val review = repository.requestReview(id)
+                mutableState.update { it.copy(review = review, reviewLoading = false) }
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e
+            } catch (e: Exception) {
+                mutableState.update { it.copy(reviewLoading = false, reviewFailure = (e as? TrainerException)?.failure ?: Failure.Load) }
+            }
+        }
+    }
+
+    /** B4: accepts the request and closes the details. [waiveFee] removes a late-reschedule fee (full waiver, D8). */
+    fun acceptRequest(session: Session, waiveFee: Boolean, reason: String) = mutate(pop = true) {
+        repository.acceptRequest(session.id, session.revision, if (waiveFee) FeeWaiver(reason.trim().ifBlank { null }) else null)
+    }
+
+    /** B4: rejects the request and closes the details. A rejected reschedule keeps the original time. */
+    fun rejectRequest(session: Session) = mutate(pop = true) { repository.rejectRequest(session.id, session.revision) }
     fun reject(session: Session) = mutate { repository.rejectRequest(session.id, session.revision) }
     fun cancel(session: Session) = mutate { repository.cancelSession(session.id, session.revision) }
     fun complete(session: Session) = mutate { repository.completeSession(session.id, session.revision) }

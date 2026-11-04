@@ -86,10 +86,12 @@ fun TrainerProfileRoute(
     onUnavailable: () -> Unit,
     modifier: Modifier = Modifier,
     onLogOut: () -> Unit = onUnavailable,
+    /** The current cancellation policy version with the editor entry (B5); the static summary when null. */
+    cancellationPolicy: (@Composable () -> Unit)? = null,
 ) {
     val viewModel = viewModel { TrainerProfileViewModel(repository) }
     val state by viewModel.state.collectAsStateWithLifecycle()
-    TrainerProfileScreen(state, viewModel::onAction, onBack, onUnavailable, modifier, onLogOut)
+    TrainerProfileScreen(state, viewModel::onAction, onBack, onUnavailable, modifier, onLogOut, cancellationPolicy)
 }
 
 @Composable
@@ -111,6 +113,7 @@ fun TrainerProfileScreen(
     onUnavailable: () -> Unit,
     modifier: Modifier = Modifier,
     onLogOut: () -> Unit = onUnavailable,
+    cancellationPolicy: (@Composable () -> Unit)? = null,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
         DetailHeader(title = stringResource(R.string.profile_title), onBack = onBack)
@@ -140,7 +143,7 @@ fun TrainerProfileScreen(
                             modifier = Gutter,
                         )
                     }
-                    ProfileLoadStatus.Content -> content(state, onAction, onUnavailable, onLogOut)
+                    ProfileLoadStatus.Content -> content(state, onAction, onUnavailable, onLogOut, cancellationPolicy)
                 }
             }
         }
@@ -152,6 +155,7 @@ private fun LazyListScope.content(
     onAction: (TrainerProfileAction) -> Unit,
     onUnavailable: () -> Unit,
     onLogOut: () -> Unit,
+    cancellationPolicy: (@Composable () -> Unit)?,
 ) {
     item {
         PillTabs(
@@ -177,7 +181,7 @@ private fun LazyListScope.content(
         }
         ProfileTab.Settings -> if (settings != null) {
             item { NotificationSettings(settings, onAction) }
-            item { PolicyCard() }
+            item { if (cancellationPolicy != null) cancellationPolicy() else PolicyCard() }
             item { AccountCard(onUnavailable, onLogOut) }
         }
         ProfileTab.Availability -> item { AvailabilityCard(state.availability, onAction) }

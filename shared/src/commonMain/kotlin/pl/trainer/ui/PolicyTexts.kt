@@ -9,7 +9,12 @@ import androidx.compose.ui.Modifier
 import com.trainingapp.contract.money.Money
 import com.trainingapp.contract.policy.PolicyRules
 import com.trainingapp.domain.format.LocaleFormats
+import kotlinx.datetime.toLocalDateTime
 import pl.trainer.resources.*
+
+/** "1 września 2026": when a policy version was created, in the trainer's zone. */
+fun formatPolicyDate(instant: kotlin.time.Instant): String =
+    DateFormats.date(instant.toLocalDateTime(TrainerZone).date, DateFormats.defaultLanguage(), "d MMMM yyyy")
 
 /** A money amount in the app's locale ("60 zł"). */
 fun formatMoney(money: Money): String = LocaleFormats.formatMoney(money, DateFormats.defaultLanguage())

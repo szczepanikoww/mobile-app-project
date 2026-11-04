@@ -196,4 +196,18 @@
     <string name="policy_no_show">Nieobecność bez odwołania: %1$s</string>
     <string name="policy_grace">Trener czeka %1$d min, zanim oznaczy nieobecność</string>
     <string name="policy_free_late">Bezpłatne późne odwołania: %1$d w miesiącu</string>
+    <string name="requested_time">Termin z prośby</string>
+    <string name="request_package">Pakiet %1$d/%2$d</string>
+    <string name="requested_just_now">Zgłoszono przed chwilą</string>
+    <string name="requested_minutes_ago">Zgłoszono %1$d min temu</string>
+    <string name="requested_hours_ago">Zgłoszono %1$d h temu</string>
+    <string name="requested_on">Zgłoszono %1$s</string>
+    <string name="slot_available">Dostępny slot w grafiku</string>
+    <string name="slot_taken">Termin zajęty. Zaproponuj inny termin albo odrzuć prośbę.</string>
+    <string name="late_change_policy">Zasady odwołań i zmiany terminu (wersja %1$d)</string>
+    <string name="late_change_fee">Późna zmiana: %1$s (%2$s)</string>
+    <string name="waive_fee">Odpuść opłatę</string>
+    <string name="waive_fee_hint">Klient nie zapłaci za tę zmianę.</string>
+    <string name="waive_reason">Powód (opcjonalnie)</string>
+    <string name="propose_other_time">Zaproponuj inny termin</string>
 </resources>

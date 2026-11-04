@@ -158,6 +158,8 @@ data class RequestReview(
     val slotAvailable: Boolean,
     val policy: com.trainingapp.contract.policy.CancellationPolicy?,
     val lateFee: com.trainingapp.contract.policy.FeeQuote?,
+    /** The server's time of this answer, for "Zgłoszono 20 min temu". */
+    val serverNow: Instant,
 )
 
 fun TrainerDashboard.client(id: String): Client = clients.first { it.id == id }

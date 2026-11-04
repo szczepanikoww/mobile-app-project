@@ -20,6 +20,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.trainingapp.android.TrainingApplication
+import org.koin.core.context.GlobalContext
 import com.trainingapp.app.App
 import com.trainingapp.app.WorkoutCreateActions
 import com.trainingapp.domain.media.MediaState
@@ -66,6 +67,7 @@ class MainActivity : ComponentActivity() {
             calendar = app.trainerRepository,
             chatStore = app.chatStore,
             chatMedia = app.chatMedia,
+            policies = GlobalContext.get().get(),
         )
     }
 
