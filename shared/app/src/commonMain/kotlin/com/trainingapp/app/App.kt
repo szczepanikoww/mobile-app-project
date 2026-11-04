@@ -4,6 +4,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -19,32 +20,37 @@ import com.trainingapp.app.resources.assign_title
 import com.trainingapp.app.resources.understood
 import com.trainingapp.designsystem.component.AppTextButton
 import com.trainingapp.designsystem.theme.AppTheme
-import com.trainingapp.feature.guest.ClientHomeDestination
+import com.trainingapp.feature.client.ClientShellArgs
+import com.trainingapp.feature.client.ClientShellRoute
+import com.trainingapp.feature.client.ui.ClientShellActions
 import com.trainingapp.feature.guest.AuthDestination
+import com.trainingapp.feature.guest.ClientHomeDestination
+import com.trainingapp.feature.guest.GuestHomeDestination
 import com.trainingapp.feature.guest.guestGraph
 import com.trainingapp.feature.guest.model.AuthRepository
 import com.trainingapp.feature.guest.model.AuthSession
+import com.trainingapp.feature.guest.model.GuestIntent
 import com.trainingapp.feature.guest.model.Role
-import com.trainingapp.feature.workoutbuilder.media.DemoVideoPlayer
 import com.trainingapp.feature.workoutbuilder.common.ExerciseBrowserDestination
 import com.trainingapp.feature.workoutbuilder.common.PlanEditorDestination
 import com.trainingapp.feature.workoutbuilder.common.PlanLibraryDestination
+import com.trainingapp.feature.workoutbuilder.media.DemoVideoPlayer
 import com.trainingapp.feature.workoutbuilder.workoutBuilderGraph
-import kotlinx.coroutines.launch
 import com.trainingapp.feature.workoutlogging.LiveWorkoutDestination
-import com.trainingapp.feature.workoutlogging.ProgressDestination
+import com.trainingapp.feature.workoutlogging.WorkoutSummaryDestination
+import com.trainingapp.feature.workoutlogging.progress.ProgressRoute
 import com.trainingapp.feature.workoutlogging.workoutLoggingGraph
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
+import pl.trainer.domain.ClientSession
 
 /** The trainer's top-level destinations (bottom navigation). Detail screens are pushed over it. */
 @Serializable
 data object TrainerHomeDestination
-
-/** Temporary entry to the client views until Person B's client shell exists. Remove it when that shell lands. */
-@Serializable
-data object ClientPreviewDestination
 
 /** The client's chat (A6), hosted by the Android app. */
 @Serializable
@@ -60,20 +66,28 @@ internal fun startDestinationFor(session: AuthSession?): Any = when {
     else -> ClientHomeDestination()
 }
 
+/** "Katarzyna Nowak" → "KN". */
+internal fun initialsOf(name: String): String =
+    name.split(' ', '-').filter { it.isNotBlank() }.take(2).joinToString("") { it.first().uppercase() }.ifEmpty { "?" }
+
 /**
  * The app entry point shared by Android and the desktop preview. It starts in the role shell of the signed-in
  * session ([initialSession] lets tests and previews start signed in), otherwise in the guest views. Client and
  * trainer shells use the same theme.
  *
- * [clientChat] renders the client conversation (Android only; the chat is not a shared module yet).
- * Incrementing [openLiveWorkoutRequest] opens the live workout, e.g. after tapping the rest notification.
+ * [clientChat] renders the client conversation (Android only; the chat is not a shared module yet) and
+ * [clientChatUnread] its unread count for the client shell's chat icon. Incrementing [openLiveWorkoutRequest] opens
+ * the live workout, e.g. after tapping the rest notification. [addToCalendar] is the Android calendar insert intent
+ * offered in the client's session details (G5, D6).
  */
 @Composable
 fun App(
     initialSession: AuthSession? = null,
     host: (@Composable (WorkoutNavigationActions) -> Unit)? = null,
     clientChat: (@Composable (onBack: () -> Unit) -> Unit)? = null,
+    clientChatUnread: Flow<Int> = flowOf(0),
     openLiveWorkoutRequest: Int = 0,
+    addToCalendar: ((ClientSession) -> Unit)? = null,
 ) {
     AppTheme {
         val navController = rememberNavController()
@@ -82,13 +96,19 @@ fun App(
         var showAssignInfo by rememberSaveable { mutableStateOf(false) }
         val startDestination = remember { startDestinationFor(initialSession ?: auth.session.value) }
 
-        // After sign-in or sign-out the whole back stack is replaced, so Back never returns to Auth or the guest views.
+        // After sign-in, sign-out or a role switch the whole back stack is replaced, so Back never returns to Auth,
+        // the guest views or the other role's shell.
         val replaceStack: (Any) -> Unit = { destination ->
             navController.navigate(destination) { popUpTo(navController.graph.id) { inclusive = true } }
         }
         val logOut: () -> Unit = {
             scope.launch { auth.logOut() }
             replaceStack(AuthDestination())
+        }
+        val switchRole: (Role) -> Unit = { role ->
+            scope.launch {
+                auth.switchRole(role)?.let { replaceStack(if (it.activeRole == Role.Trainer) TrainerHomeDestination else ClientHomeDestination()) }
+            }
         }
 
         LaunchedEffect(openLiveWorkoutRequest) {
@@ -104,7 +124,6 @@ fun App(
                     onOpenPlans = { navController.navigate(PlanLibraryDestination) },
                     onOpenExercises = { navController.navigate(ExerciseBrowserDestination()) },
                     onLogOut = logOut,
-                    onOpenClientPreview = { navController.navigate(ClientPreviewDestination) },
                 )
                 if (host != null) host(actions) else TrainerShell(actions)
             }
@@ -115,26 +134,48 @@ fun App(
             )
             guestGraph(
                 navController = navController,
-                // The pending intent reaches the role shell; the booking request screen will consume it (not built yet).
+                // A pending intent reaches the client shell, which opens the booking request sheet with it.
                 onSignedIn = { session, intent ->
                     replaceStack(if (session.activeRole == Role.Trainer) TrainerHomeDestination else ClientHomeDestination.of(intent))
                 },
                 onLogOut = logOut,
                 videoPlayer = { url, modifier -> DemoVideoPlayer(url, modifier) },
+                clientHome = { destination, session ->
+                    val unread by clientChatUnread.collectAsState(0)
+                    val name = session?.displayName.orEmpty()
+                    val intent = destination.pendingIntent as? GuestIntent.RequestSession
+                    ClientShellRoute(
+                        displayName = name,
+                        initials = initialsOf(name),
+                        args = ClientShellArgs(pendingIntent = intent != null, pendingTrainerId = intent?.trainerId),
+                        actions = ClientShellActions(
+                            onStartWorkout = { navController.navigate(LiveWorkoutDestination) { launchSingleTop = true } },
+                            onOpenChat = if (clientChat != null) {
+                                { navController.navigate(ClientChatDestination) }
+                            } else {
+                                null
+                            },
+                            onFindTrainer = { navController.navigate(GuestHomeDestination) },
+                            onSwitchToTrainer = if (session != null && Role.Trainer in session.roles) {
+                                { switchRole(Role.Trainer) }
+                            } else {
+                                null
+                            },
+                            onLogOut = logOut,
+                            onAddToCalendar = addToCalendar,
+                        ),
+                        // A3 as a tab: the shell owns the header and the bottom navigation.
+                        progressTab = {
+                            ProgressRoute(
+                                onOpenWorkout = { id -> navController.navigate(WorkoutSummaryDestination(id, readOnly = true)) },
+                                showHeader = false,
+                            )
+                        },
+                        chatUnread = unread,
+                    )
+                },
             )
             workoutLoggingGraph(navController)
-            composable<ClientPreviewDestination> {
-                ClientPreviewScreen(
-                    onBack = { navController.popBackStack() },
-                    onLiveWorkout = { navController.navigate(LiveWorkoutDestination) },
-                    onProgress = { navController.navigate(ProgressDestination) },
-                    onChat = if (clientChat != null) {
-                        { navController.navigate(ClientChatDestination) }
-                    } else {
-                        null
-                    },
-                )
-            }
             composable<ClientChatDestination> {
                 clientChat?.invoke { navController.popBackStack() }
             }

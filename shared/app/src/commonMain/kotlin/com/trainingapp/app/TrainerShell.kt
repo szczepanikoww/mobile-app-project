@@ -4,10 +4,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Assignment
 import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
 import androidx.compose.material.icons.outlined.FitnessCenter
-import androidx.compose.material.icons.outlined.PersonOutline
 import androidx.compose.runtime.Composable
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.trainingapp.app.resources.*
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.koinInject
+import pl.trainer.domain.TrainerRepository
+import pl.trainer.presentation.TrainerViewModel
 import pl.trainer.ui.ActionRow
 import pl.trainer.ui.TrainerApp
 
@@ -17,14 +20,16 @@ data class WorkoutNavigationActions(
     val onOpenPlans: () -> Unit,
     val onOpenExercises: () -> Unit,
     val onLogOut: () -> Unit = {},
-    /** Temporary: opens the client views until the client shell (Person B) exists. */
-    val onOpenClientPreview: () -> Unit = {},
 )
 
-/** Desktop uses the calendar/trainee shell; Android supplies main's host through App.host. */
+/**
+ * Desktop uses the calendar/trainee shell; Android supplies main's host through App.host. The calendar reads the
+ * shared demo store, so the client's requests appear here.
+ */
 @Composable
 fun TrainerShell(actions: WorkoutNavigationActions) {
-    TrainerApp(extraCreateActions = { dismiss -> WorkoutCreateActions(actions, dismiss) })
+    val repository: TrainerRepository = koinInject()
+    TrainerApp(model = viewModel { TrainerViewModel(repository) }, extraCreateActions = { dismiss -> WorkoutCreateActions(actions, dismiss) })
 }
 
 /** The same create sheet extends the session/availability actions on both platforms. */
@@ -38,9 +43,5 @@ fun WorkoutCreateActions(actions: WorkoutNavigationActions, dismiss: () -> Unit)
     }
     ActionRow(Icons.AutoMirrored.Outlined.LibraryBooks, stringResource(Res.string.add_exercises), stringResource(Res.string.add_exercises_hint)) {
         dismiss(); actions.onOpenExercises()
-    }
-    // Temporary debug entry to the client views; removed when the client shell lands.
-    ActionRow(Icons.Outlined.PersonOutline, stringResource(Res.string.client_preview_title), stringResource(Res.string.client_preview_menu_hint)) {
-        dismiss(); actions.onOpenClientPreview()
     }
 }

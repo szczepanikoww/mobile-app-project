@@ -168,10 +168,6 @@
     <string name="failure_offline">Nie wysłano. Sprawdź połączenie.</string>
     <string name="failure_unavailable">Usługa jest niedostępna. Spróbuj ponownie później.</string>
     <string name="failure_google">Logowanie Google nie jest jeszcze dostępne.</string>
-    <string name="client_home_title">Twoje konto</string>
-    <string name="client_home_heading">Cześć, %1$s</string>
-    <string name="client_home_body">Panel podopiecznego jest w przygotowaniu. Tutaj pojawią się sesje, plany i logowanie treningów.</string>
-    <string name="client_pending_request">Chcesz poprosić o termin? Wybierzesz go, gdy prośby o sesję będą dostępne.</string>
     <string name="log_out">Wyloguj się</string>
     <plurals name="results_count">
         <item quantity="one">%d wynik</item>

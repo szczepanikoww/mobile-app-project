@@ -27,6 +27,22 @@ import com.trainingapp.domain.plan.PlanRepository
 import com.trainingapp.feature.guest.data.DemoAccounts
 import com.trainingapp.feature.guest.guestModule
 import com.trainingapp.feature.guest.model.AuthRepository
+import com.trainingapp.feature.guest.model.AuthSession
+import com.trainingapp.feature.guest.model.GuestCatalogRepository
+import com.trainingapp.feature.guest.model.TrainerProfile
+import com.trainingapp.feature.client.clientModule
+import pl.trainer.data.AdvancingDemoClock
+import pl.trainer.data.CatalogTrainer
+import pl.trainer.data.ClientIdentity
+import pl.trainer.data.DemoClientScheduleRepository
+import pl.trainer.data.DemoPolicyRepository
+import pl.trainer.data.DemoSchedulingStore
+import pl.trainer.data.DemoTrainerRepository
+import pl.trainer.data.DemoWalletRepository
+import pl.trainer.domain.ClientScheduleRepository
+import pl.trainer.domain.PolicyRepository
+import pl.trainer.domain.TrainerRepository
+import pl.trainer.domain.WalletRepository
 import com.trainingapp.feature.guest.model.Role
 import com.trainingapp.data.workout.DemoWorkoutData
 import com.trainingapp.data.workout.LocalMeasurementRepository
@@ -75,8 +91,8 @@ private class SessionCurrentUser(private val auth: AuthRepository) : CurrentUser
 }
 
 /**
- * The client of the temporary client preview. The client shell and sign-in (Person B) replace it. Matches the demo
- * trainer chat fixtures (relationship "c1"), so a technique video lands in that conversation.
+ * The demo client (Katarzyna "Kasia" Nowak) when nobody is signed in as a client. Matches the demo trainer chat
+ * fixtures (relationship "c1"), so a technique video lands in that conversation.
  */
 object DemoClient : CurrentClient {
     override val clientId: String = "c1"
@@ -84,7 +100,29 @@ object DemoClient : CurrentClient {
     override val trainerRelationshipId: String = "c1"
 }
 
+/** The signed-in client from the session, mapped to the demo server's client id; the demo client otherwise. */
+private class SessionCurrentClient(private val auth: AuthRepository, private val store: DemoSchedulingStore) : CurrentClient {
+    private val session get() = auth.session.value?.takeIf { Role.Client in it.roles }
+    override val clientId: String get() = session?.let { store.clientIdOf(it.userId) ?: it.userId } ?: DemoClient.clientId
+    override val firstName: String
+        get() = session?.let { if (store.clientIdOf(it.userId) == DemoClient.clientId) DemoClient.firstName else it.displayName.substringBefore(' ') }
+            ?: DemoClient.firstName
+    override val trainerRelationshipId: String get() = clientId
+}
+
+/** A public trainer profile from the guest catalogue, as the demo server needs it for a booking request. */
+private fun TrainerProfile.toCatalogTrainer() = CatalogTrainer(
+    id = summary.id,
+    name = summary.name,
+    initials = summary.initials,
+    price = offers.firstOrNull { it.sessionCount == 1 }?.price ?: summary.startingPrice?.price,
+    places = gyms.map { it.gym.name },
+    freeCancellationHours = cancellationPolicy?.freeCancellationHours,
+)
+
 private val AppScope = named("appScope")
+
+private fun AuthSession.clientIdentity(): ClientIdentity? = takeIf { Role.Client in roles }?.let { ClientIdentity(it.userId, it.displayName) }
 
 /**
  * The backend does not exist yet (delivery slice 4), so the remotes are the fakes from `:shared:data`. They follow
@@ -125,8 +163,34 @@ fun appModule(platform: AppPlatform) = module {
         LocalMediaRepository(get(), get(), get(), get(), get(), get(), get(AppScope), platform.ioDispatcher)
     }
 
+    // One demo server for sessions, requests, policy versions and the wallet, shared by the trainer and client views
+    // (docs/features/client-shell-sessions-wallet.md, D10). Its clock starts at the fixture date and moves forward.
+    single { DemoSchedulingStore(AdvancingDemoClock()::now, get(AppScope)) }
+    single { DemoTrainerRepository(store = get()) }
+    single<TrainerRepository> { get<DemoTrainerRepository>() }
+    single<ClientScheduleRepository> {
+        val auth: AuthRepository = get()
+        val network: NetworkMonitor = get()
+        val catalog: GuestCatalogRepository = get()
+        DemoClientScheduleRepository(
+            store = get(),
+            identity = { auth.session.value?.clientIdentity() },
+            isOnline = { network.isOnline.value },
+            catalog = { id -> runCatching { catalog.trainer(id) }.getOrNull()?.toCatalogTrainer() },
+        )
+    }
+    single<WalletRepository> {
+        val auth: AuthRepository = get()
+        val network: NetworkMonitor = get()
+        DemoWalletRepository(get(), identity = { auth.session.value?.clientIdentity() }, isOnline = { network.isOnline.value })
+    }
+    single<PolicyRepository> {
+        val network: NetworkMonitor = get()
+        DemoPolicyRepository(get(), isOnline = { network.isOnline.value })
+    }
+
     // Client workout logging (docs/features/workout-logging-video.md). Local only: no sync in this phase.
-    single<CurrentClient> { DemoClient }
+    single<CurrentClient> { SessionCurrentClient(get(), get()) }
     single<WorkoutRepository> { LocalWorkoutRepository(get(), platform.ioDispatcher) }
     single<MeasurementRepository> { LocalMeasurementRepository(get(), platform.ioDispatcher) }
     // Integration point: the plan assignment flow replaces this demo source.
@@ -147,5 +211,5 @@ private fun seedDemoClient(koin: org.koin.core.Koin) {
 
 fun initKoin(platform: AppPlatform, platformDeclaration: KoinAppDeclaration = {}) = startKoin {
     platformDeclaration()
-    modules(appModule(platform), workoutBuilderModule, guestModule, workoutLoggingModule)
+    modules(appModule(platform), workoutBuilderModule, guestModule, workoutLoggingModule, clientModule)
 }.also { seedDemoClient(it.koin) }

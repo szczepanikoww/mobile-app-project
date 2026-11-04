@@ -18,13 +18,4 @@
     <string name="open_plans">Otwórz plany treningowe</string>
     <string name="assign_title">Przypisz podopiecznemu</string>
     <string name="understood">Rozumiem</string>
-    <string name="client_preview_title">Podgląd widoków klienta</string>
-    <string name="client_preview_menu_hint">Tymczasowo, do czasu powłoki klienta</string>
-    <string name="client_preview_intro">Tymczasowe wejście do widoków podopiecznego (Kasia). Zastąpi je powłoka klienta z własną nawigacją. Wszystkie dane są syntetyczne i zapisane tylko na tym urządzeniu.</string>
-    <string name="client_preview_workout">Trening na żywo</string>
-    <string name="client_preview_workout_hint">Dzisiejszy plan, serie, przerwa i nagranie techniki</string>
-    <string name="client_preview_progress">Postępy</string>
-    <string name="client_preview_progress_hint">Ćwiczenia, pomiary, historia i rekordy</string>
-    <string name="client_preview_chat">Czat z trenerem</string>
-    <string name="client_preview_chat_hint">Ta sama rozmowa, którą widzi trener</string>
 </resources>

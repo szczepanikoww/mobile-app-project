@@ -188,4 +188,12 @@
     <string name="cancelled_client">Odwołana przez klienta</string>
     <string name="expired">Wygasła</string>
     <string name="quote_expired_error">Wycena wygasła albo sesja się zmieniła. Sprawdź nową kwotę i potwierdź ponownie.</string>
+    <string name="policy_all_free">Odwołanie jest zawsze bezpłatne.</string>
+    <string name="policy_free_before">Ponad %1$d h przed sesją: bez opłaty</string>
+    <string name="policy_tier_range">%1$d–%2$d h przed sesją: %3$s</string>
+    <string name="policy_tier_last">Mniej niż %1$d h przed sesją: %2$s</string>
+    <string name="policy_amount_suffix"> (%1$s)</string>
+    <string name="policy_no_show">Nieobecność bez odwołania: %1$s</string>
+    <string name="policy_grace">Trener czeka %1$d min, zanim oznaczy nieobecność</string>
+    <string name="policy_free_late">Bezpłatne późne odwołania: %1$d w miesiącu</string>
 </resources>

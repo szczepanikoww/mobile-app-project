@@ -1,8 +1,10 @@
 package pl.trainerapp
 
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
+import android.provider.CalendarContract
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -23,6 +25,8 @@ import com.trainingapp.app.WorkoutCreateActions
 import com.trainingapp.domain.media.MediaState
 import com.trainingapp.feature.workoutlogging.rest.AndroidRestTimerNotifier
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import pl.trainer.domain.ClientSession
 import pl.trainer.presentation.Destination
 import pl.trainer.presentation.TrainerViewModel
 import pl.trainer.ui.TrainerApp
@@ -115,8 +119,32 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 },
+                // The chat icon in the client shell: unread messages of the demo client's conversation.
+                clientChatUnread = app.chatStore.version.map {
+                    app.chatStore.conversations(ChatRole.Client).firstOrNull { it.relationshipId == "c1" }?.unread ?: 0
+                },
                 openLiveWorkoutRequest = openWorkoutRequests,
+                addToCalendar = ::addToCalendar,
             )
+        }
+    }
+
+    /**
+     * "Dodaj do kalendarza" (G5, D6): the system calendar's insert screen, pre-filled. Only the time, the trainer and
+     * the place are shared; no private notes, health data or chat content.
+     */
+    private fun addToCalendar(session: ClientSession) {
+        val intent = Intent(Intent.ACTION_INSERT)
+            .setData(CalendarContract.Events.CONTENT_URI)
+            .putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, session.session.start.toEpochMilliseconds())
+            .putExtra(CalendarContract.EXTRA_EVENT_END_TIME, session.session.end.toEpochMilliseconds())
+            .putExtra(CalendarContract.Events.TITLE, getString(R.string.calendar_event_title, session.trainer.name))
+            .putExtra(CalendarContract.Events.EVENT_LOCATION, session.session.location)
+            .putExtra(CalendarContract.Events.EVENT_TIMEZONE, session.session.timeZone)
+        try {
+            startActivity(intent)
+        } catch (_: ActivityNotFoundException) {
+            // No calendar app: nothing to open. The session stays in the app's own calendar.
         }
     }
 

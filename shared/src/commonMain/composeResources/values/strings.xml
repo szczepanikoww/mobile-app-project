@@ -188,4 +188,12 @@
     <string name="cancelled_client">Cancelled by client</string>
     <string name="expired">Expired</string>
     <string name="quote_expired_error">The fee quote has expired or the session has changed. Check the new amount and confirm again.</string>
+    <string name="policy_all_free">Cancelling is always free.</string>
+    <string name="policy_free_before">More than %1$d h before the session: free</string>
+    <string name="policy_tier_range">%1$d–%2$d h before the session: %3$s</string>
+    <string name="policy_tier_last">Less than %1$d h before the session: %2$s</string>
+    <string name="policy_amount_suffix"> (%1$s)</string>
+    <string name="policy_no_show">No-show without cancelling: %1$s</string>
+    <string name="policy_grace">The trainer waits %1$d min before marking a no-show</string>
+    <string name="policy_free_late">Free late cancellations: %1$d per month</string>
 </resources>

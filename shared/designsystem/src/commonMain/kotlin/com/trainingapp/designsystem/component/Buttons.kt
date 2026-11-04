@@ -99,6 +99,37 @@ fun TonalButton(
     }
 }
 
+/**
+ * A destructive or fee-bearing confirmation, e.g. "Odwołaj sesję (60 zł)": dark error text on the error container
+ * (readable contrast), the same pill and height as [PrimaryButton]. While [loading], it ignores taps.
+ */
+@Composable
+fun DestructiveButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    loading: Boolean = false,
+    icon: ImageVector? = null,
+) {
+    val loadingLabel = stringResource(Res.string.ds_loading)
+    Button(
+        onClick = { if (!loading) onClick() },
+        modifier = modifier
+            .defaultMinSize(minHeight = Sizes.buttonHeight)
+            .semantics { if (loading) stateDescription = loadingLabel },
+        enabled = enabled,
+        shape = AppShapes.pill,
+        contentPadding = ButtonPadding,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = AppTheme.colors.errorContainer,
+            contentColor = AppTheme.colors.onErrorContainer,
+        ),
+    ) {
+        ButtonContent(text, icon, loading, progressColor = AppTheme.colors.onErrorContainer)
+    }
+}
+
 /** A secondary, outlined action. */
 @Composable
 fun SecondaryButton(

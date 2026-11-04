@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Aplikacja trenera</string>
+    <string name="calendar_event_title">Trening: %1$s</string>
 
     <!-- Powłoka -->
     <string name="nav_start">Start</string>

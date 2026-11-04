@@ -34,8 +34,11 @@ class TrainingApplication : Application() {
     /** The one demo conversation store for the trainer and client views. Kept for the process; resets on restart. */
     val chatStore = DemoChatStore()
 
-    /** The calendar's demo repository, shared by the calendar tabs and the check-in screen. */
-    val trainerRepository = DemoTrainerRepository()
+    /**
+     * The calendar's demo repository, shared by the calendar tabs and the check-in screen. It reads the one demo
+     * scheduling store from Koin, which the client views use too.
+     */
+    val trainerRepository: DemoTrainerRepository by lazy { GlobalContext.get().get() }
 
     /** Upload state of chat videos, from the shared media repository. */
     val chatMedia: ChatMediaSource by lazy { RepositoryChatMediaSource(GlobalContext.get().get<MediaRepository>()) }

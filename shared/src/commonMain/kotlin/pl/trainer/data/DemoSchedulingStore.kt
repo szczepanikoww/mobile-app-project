@@ -122,6 +122,9 @@ class DemoSchedulingStore(
 
     internal fun canonicalTrainerId(id: String) = trainerAliases[id] ?: id
 
+    /** The client id the server uses for [userId] in sessions and workout data, if the user is a known client. */
+    fun clientIdOf(userId: String): String? = clientIdsByUser[userId]
+
     internal fun trainerOf(session: Session): String = session.trainerId ?: DemoTrainerId
 
     internal fun trainerRef(id: String): TrainerRef = trainers[id]?.ref ?: TrainerRef(id, id, id.take(2).uppercase())

@@ -59,6 +59,12 @@ interface AuthRepository {
     suspend fun register(request: Registration): AuthResult
     suspend fun continueWithGoogle(): AuthResult
     suspend fun logOut()
+
+    /**
+     * Makes [role] the session's active role when the session holds it. Returns the updated session, or null when
+     * the role is not held (or switching is not supported).
+     */
+    suspend fun switchRole(role: Role): AuthSession? = null
 }
 
 /** Raised by the catalogue when the server cannot be reached; the screens keep the last loaded data. */

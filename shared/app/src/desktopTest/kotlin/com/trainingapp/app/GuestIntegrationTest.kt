@@ -33,7 +33,7 @@ import kotlin.test.Test
 
 /**
  * The guest flow end to end in Polish: Auth (start screen) → browse → trainer → gym → login-required sheet → register →
- * client placeholder. Screenshots go to build/reports/screenshots/ for comparison with the trainer previews.
+ * client shell (a new client without a trainer lands on Start with "Znajdź trenera"). Screenshots go to build/reports/screenshots/ for comparison with the trainer previews.
  */
 @OptIn(ExperimentalTestApi::class)
 class GuestIntegrationTest {
@@ -125,8 +125,10 @@ class GuestIntegrationTest {
         capture("guest-register-pl")
         clickOnUi(onNodeWithTag("auth-submit").performScrollTo())
 
-        waitForText("Cześć, Ala Testowa")
-        onNodeWithText("Chcesz poprosić o termin?", substring = true).assertExists()
+        waitForText("Hej, Ala")
+        // The gym intent has no trainer and the new client has none yet: no booking sheet, the empty state instead.
+        waitForText("Nie masz jeszcze trenera")
+        onNodeWithText("Znajdź trenera").assertExists()
         capture("guest-client-home-pl")
     }
 
