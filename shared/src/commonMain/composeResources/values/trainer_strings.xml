@@ -18,6 +18,7 @@
     <!-- Start trenera -->
     <string name="home_greeting_hey">Hej,</string>
     <string name="home_today_sessions">Dzisiejsze sesje</string>
+    <string name="home_swipe">Przesuń</string>
     <string name="home_needs_attention">Wymaga uwagi</string>
     <string name="home_this_week">Ten tydzień</string>
     <string name="home_details">Szczegóły</string>

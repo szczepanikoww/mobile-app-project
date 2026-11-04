@@ -50,6 +50,14 @@ import pl.trainerapp.core.designsystem.PrimaryButton
 import pl.trainerapp.core.designsystem.SkeletonBlock
 import pl.trainerapp.core.designsystem.Spacing
 import pl.trainerapp.core.designsystem.frosted
+import pl.trainerapp.core.designsystem.IconCircle
+import pl.trainerapp.core.designsystem.OutlinedTile
+import pl.trainerapp.core.designsystem.ScreenLoading
+import pl.trainer.ui.AppColors as SharedColors
+import pl.trainer.ui.Layout
+import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.ui.draw.clip
 import pl.trainerapp.core.format.formatListWhen
 import pl.trainerapp.core.format.formatPaymentWhen
 import pl.trainerapp.core.format.formatUpdatedAt
@@ -80,16 +88,13 @@ private fun NotificationType.label(): String = stringResource(
 )
 
 @Composable
-private fun TypeBubble(type: NotificationType, unread: Boolean, size: Int = 44) {
-    val colors = AppTheme.colors
-    Box(
-        modifier = Modifier
-            .size(size.dp)
-            .background(if (unread) colors.softBrand else colors.chipSurface, CircleShape),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(type.icon(), contentDescription = null, tint = if (unread) colors.brand else colors.textMuted, modifier = Modifier.size((size / 2).dp))
-    }
+private fun TypeBubble(type: NotificationType, unread: Boolean, size: Int = 40) {
+    IconCircle(
+        type.icon(),
+        container = if (unread) SharedColors.softAccent else MaterialTheme.colorScheme.surfaceVariant,
+        tint = if (unread) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        size = size,
+    )
 }
 
 // ---------------------------------------------------------------- List
@@ -125,7 +130,6 @@ fun TrainerNotificationListScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = AppTheme.colors
     val snapshot = state.snapshot
     Column(modifier = modifier.fillMaxSize()) {
         DetailHeader(
@@ -133,16 +137,12 @@ fun TrainerNotificationListScreen(
             onBack = onBack,
             actions = {
                 if (snapshot != null && snapshot.unreadCount > 0) {
-                    Text(
-                        stringResource(Res.string.notifications_mark_all),
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                        color = colors.brand,
-                        maxLines = 2,
-                        modifier = Modifier
-                            .heightIn(min = 48.dp)
-                            .clickable(role = Role.Button) { onAction(NotificationListAction.MarkAllRead) }
-                            .padding(horizontal = Spacing.sm, vertical = 14.dp),
-                    )
+                    TextButton(
+                        onClick = { onAction(NotificationListAction.MarkAllRead) },
+                        modifier = Modifier.heightIn(min = Layout.target),
+                    ) {
+                        Text(stringResource(Res.string.notifications_mark_all), maxLines = 2)
+                    }
                 }
             },
         )
@@ -153,13 +153,11 @@ fun TrainerNotificationListScreen(
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = Spacing.screenGutter, end = Spacing.screenGutter, top = Spacing.lg, bottom = Spacing.xxl),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                contentPadding = PaddingValues(Layout.gutter),
+                verticalArrangement = Arrangement.spacedBy(Layout.small),
             ) {
                 when {
-                    state.status == NotificationsLoadStatus.Loading -> item {
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) { repeat(5) { SkeletonBlock(height = 72.dp) } }
-                    }
+                    state.status == NotificationsLoadStatus.Loading -> item { ScreenLoading(stringResource(Res.string.screen_loading)) }
                     state.status == NotificationsLoadStatus.Error -> item {
                         ErrorState(
                             title = stringResource(Res.string.error_load_notifications),
@@ -176,6 +174,7 @@ fun TrainerNotificationListScreen(
                                 EmptyState(
                                     title = stringResource(Res.string.notifications_empty_title),
                                     body = stringResource(Res.string.notifications_empty_body),
+                                    icon = Icons.Outlined.Notifications,
                                 )
                             }
                         } else {
@@ -192,17 +191,17 @@ fun TrainerNotificationListScreen(
 
 @Composable
 private fun NotificationRow(notification: TrainerNotification, now: Instant, onClick: () -> Unit) {
-    val colors = AppTheme.colors
     val unread = !notification.read
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 72.dp)
-            .frosted(AppShapes.tile, alpha = 0.9f)
+            .clip(Layout.tile)
+            .frosted(Layout.tile)
             .clickable(role = Role.Button, onClick = onClick)
-            .padding(14.dp),
+            .padding(Layout.padding),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+        horizontalArrangement = Arrangement.spacedBy(Layout.medium),
     ) {
         TypeBubble(notification.type, unread)
         Column(modifier = Modifier.weight(1f)) {
@@ -215,22 +214,22 @@ private fun NotificationRow(notification: TrainerNotification, now: Instant, onC
             )
             Text(
                 notification.body,
-                style = MaterialTheme.typography.bodySmall,
-                color = colors.textMuted,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(Layout.tiny)) {
             Text(
                 formatListWhen(notification.at, notification.zone, now),
-                style = MaterialTheme.typography.labelSmall,
-                color = if (unread) colors.brand else colors.textMuted,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (unread) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 softWrap = false,
             )
             if (unread) {
-                Box(modifier = Modifier.size(10.dp).background(colors.brand, CircleShape))
+                Box(modifier = Modifier.size(10.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
             }
         }
     }
@@ -272,13 +271,7 @@ fun TrainerNotificationDetailScreen(
         DetailHeader(title = stringResource(Res.string.notification_title), onBack = onBack)
         val detail = state.detail
         when {
-            state.status == NotificationsLoadStatus.Loading -> Column(
-                modifier = Gutter.padding(top = Spacing.lg),
-                verticalArrangement = Arrangement.spacedBy(Spacing.md),
-            ) {
-                SkeletonBlock(height = 220.dp)
-                SkeletonBlock(height = 52.dp)
-            }
+            state.status == NotificationsLoadStatus.Loading -> ScreenLoading(stringResource(Res.string.screen_loading))
             state.status == NotificationsLoadStatus.Error -> ErrorState(
                 title = stringResource(Res.string.error_load_notification),
                 retryLabel = stringResource(Res.string.action_retry),
@@ -296,7 +289,6 @@ private fun DetailContent(
     now: Instant,
     onAction: (NotificationDetailAction) -> Unit,
 ) {
-    val colors = AppTheme.colors
     val actionLabel = when (val target = notification.target) {
         is NotificationTarget.Chat -> stringResource(Res.string.notification_action_chat, target.clientName)
         NotificationTarget.Finance -> stringResource(Res.string.notification_action_finance)
@@ -304,25 +296,22 @@ private fun DetailContent(
         NotificationTarget.None -> null
     }
     Column(
-        modifier = Gutter.padding(top = Spacing.lg, bottom = Spacing.xxl),
-        verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+        modifier = Modifier.padding(Layout.gutter),
+        verticalArrangement = Arrangement.spacedBy(Layout.padding),
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().frosted(AppShapes.frame, alpha = 0.95f).padding(Spacing.xxl),
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
+        OutlinedTile(Modifier.fillMaxWidth()) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Layout.medium)) {
                 TypeBubble(notification.type, unread = true, size = 48)
                 Column {
                     Text(
-                        notification.type.label().uppercase(),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = colors.brand,
+                        notification.type.label(),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
                     )
                     Text(
                         formatPaymentWhen(notification.at, notification.zone, now),
                         style = MaterialTheme.typography.bodySmall,
-                        color = colors.textMuted,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -334,7 +323,7 @@ private fun DetailContent(
             Text(
                 notification.detail,
                 style = MaterialTheme.typography.bodyLarge,
-                color = colors.textStrong,
+                color = MaterialTheme.colorScheme.onSurface,
             )
         }
         if (actionLabel != null) {

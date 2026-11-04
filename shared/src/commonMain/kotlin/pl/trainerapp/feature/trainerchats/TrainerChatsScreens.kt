@@ -22,7 +22,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.outlined.Send
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -56,6 +59,9 @@ import pl.trainerapp.core.designsystem.SkeletonBlock
 import pl.trainerapp.core.designsystem.Spacing
 import pl.trainerapp.core.designsystem.UnreadBadge
 import pl.trainerapp.core.designsystem.frosted
+import pl.trainerapp.core.designsystem.ScreenLoading
+import pl.trainer.ui.Layout
+import androidx.compose.material3.OutlinedTextField
 import pl.trainerapp.core.format.formatListWhen
 import pl.trainerapp.core.format.formatPaymentWhen
 import pl.trainerapp.core.format.formatTime
@@ -107,12 +113,12 @@ fun TrainerChatListScreen(
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = Spacing.screenGutter, end = Spacing.screenGutter, top = Spacing.lg, bottom = Spacing.xxl),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                contentPadding = PaddingValues(Layout.gutter),
+                verticalArrangement = Arrangement.spacedBy(Layout.small),
             ) {
                 val snapshot = state.snapshot
                 when {
-                    state.status == ChatLoadStatus.Loading -> item { ListSkeleton() }
+                    state.status == ChatLoadStatus.Loading -> item { ScreenLoading(stringResource(Res.string.screen_loading)) }
                     state.status == ChatLoadStatus.Error -> item {
                         ErrorState(
                             title = stringResource(Res.string.error_load_chats),
@@ -129,6 +135,7 @@ fun TrainerChatListScreen(
                                 EmptyState(
                                     title = stringResource(Res.string.chats_empty_title),
                                     body = stringResource(Res.string.chats_empty_body),
+                                    icon = Icons.Outlined.ChatBubbleOutline,
                                 )
                             }
                         } else {
@@ -144,25 +151,18 @@ fun TrainerChatListScreen(
 }
 
 @Composable
-private fun ListSkeleton() {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        repeat(5) { SkeletonBlock(height = 72.dp) }
-    }
-}
-
-@Composable
 private fun ConversationRow(conversation: Conversation, now: kotlin.time.Instant, onClick: () -> Unit) {
-    val colors = AppTheme.colors
     val unread = conversation.unread > 0
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 72.dp)
-            .frosted(AppShapes.tile, alpha = 0.9f)
+            .clip(Layout.tile)
+            .frosted(Layout.tile)
             .clickable(role = Role.Button, onClick = onClick)
-            .padding(14.dp),
+            .padding(Layout.padding),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+        horizontalArrangement = Arrangement.spacedBy(Layout.medium),
     ) {
         Avatar(conversation.clientName)
         Column(modifier = Modifier.weight(1f)) {
@@ -180,17 +180,17 @@ private fun ConversationRow(conversation: Conversation, now: kotlin.time.Instant
             }
             Text(
                 preview,
-                style = MaterialTheme.typography.bodySmall.copy(fontWeight = if (unread) FontWeight.SemiBold else FontWeight.Normal),
-                color = if (unread) MaterialTheme.colorScheme.onSurface else colors.textMuted,
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = if (unread) FontWeight.SemiBold else FontWeight.Normal),
+                color = if (unread) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(Layout.tiny)) {
             Text(
                 formatListWhen(conversation.lastAt, conversation.zone, now),
-                style = MaterialTheme.typography.labelSmall,
-                color = if (unread) colors.brand else colors.textMuted,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (unread) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 softWrap = false,
             )
@@ -227,17 +227,13 @@ fun TrainerChatScreen(
             title = state.clientName.ifEmpty { stringResource(Res.string.chats_title) },
             onBack = onBack,
             leading = if (state.clientName.isNotEmpty()) {
-                { Avatar(state.clientName, size = 36.dp) }
+                { Avatar(state.clientName, size = 40.dp) }
             } else {
                 null
             },
         )
         when (state.status) {
-            ChatLoadStatus.Loading -> Column(modifier = Gutter.padding(top = Spacing.lg), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
-                SkeletonBlock(height = 48.dp, modifier = Modifier.fillMaxWidth(0.6f))
-                SkeletonBlock(height = 48.dp, modifier = Modifier.fillMaxWidth(0.5f))
-                SkeletonBlock(height = 48.dp, modifier = Modifier.fillMaxWidth(0.7f))
-            }
+            ChatLoadStatus.Loading -> ScreenLoading(stringResource(Res.string.screen_loading))
             ChatLoadStatus.Error -> ErrorState(
                 title = stringResource(Res.string.error_load_chat),
                 retryLabel = stringResource(Res.string.action_retry),
@@ -266,6 +262,7 @@ private fun MessageList(state: ChatUiState) {
         EmptyState(
             title = stringResource(Res.string.chat_empty_title),
             body = stringResource(Res.string.chat_empty_body),
+            icon = Icons.Outlined.ChatBubbleOutline,
             modifier = Gutter,
         )
         return
@@ -274,8 +271,8 @@ private fun MessageList(state: ChatUiState) {
     LazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = Spacing.screenGutter, vertical = Spacing.lg),
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        contentPadding = PaddingValues(horizontal = Layout.gutter, vertical = Layout.padding),
+        verticalArrangement = Arrangement.spacedBy(Layout.small),
     ) {
         items(state.messages, key = { it.id }) { message ->
             Bubble(message, state, now)
@@ -285,7 +282,6 @@ private fun MessageList(state: ChatUiState) {
 
 @Composable
 private fun Bubble(message: ChatMessage, state: ChatUiState, now: kotlin.time.Instant?) {
-    val colors = AppTheme.colors
     val mine = message.fromTrainer
     val shape = RoundedCornerShape(
         topStart = 20.dp,
@@ -297,19 +293,19 @@ private fun Bubble(message: ChatMessage, state: ChatUiState, now: kotlin.time.In
         Column(
             modifier = Modifier
                 .widthIn(max = 280.dp)
-                .then(if (mine) Modifier.background(colors.brand, shape) else Modifier.frosted(shape, alpha = 0.95f))
-                .padding(horizontal = 14.dp, vertical = 10.dp),
+                .then(if (mine) Modifier.background(MaterialTheme.colorScheme.primary, shape) else Modifier.frosted(shape))
+                .padding(horizontal = Layout.padding, vertical = Layout.medium),
         ) {
             Text(
                 message.text,
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (mine) Color.White else MaterialTheme.colorScheme.onSurface,
+                color = if (mine) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
             )
             Text(
                 if (now != null) formatPaymentWhen(message.at, state.zone, now) else formatTime(message.at, state.zone),
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-                color = if (mine) Color.White.copy(alpha = 0.8f) else colors.textMuted,
-                modifier = Modifier.padding(top = Spacing.xs),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (mine) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = Layout.tiny),
             )
         }
     }
@@ -317,67 +313,38 @@ private fun Bubble(message: ChatMessage, state: ChatUiState, now: kotlin.time.In
 
 @Composable
 private fun Composer(state: ChatUiState, onAction: (ChatAction) -> Unit) {
-    val colors = AppTheme.colors
     val canSend = state.draft.isNotBlank() && !state.isSending
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color.White.copy(alpha = 0.95f))
-            .border(1.dp, colors.border)
-            .padding(horizontal = Spacing.screenGutter, vertical = Spacing.sm),
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-    ) {
-        if (state.sendFailed) {
-            Text(
-                stringResource(Res.string.chat_send_failed),
-                style = MaterialTheme.typography.bodySmall,
-                color = colors.dangerText,
-            )
-        }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            BasicTextField(
-                value = state.draft,
-                onValueChange = { onAction(ChatAction.DraftChanged(it)) },
-                textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
-                cursorBrush = SolidColor(colors.brand),
-                maxLines = 4,
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                modifier = Modifier.weight(1f),
-                decorationBox = { inner ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 48.dp)
-                            .clip(AppShapes.pill)
-                            .background(colors.chipSurface)
-                            .padding(horizontal = Spacing.lg, vertical = 12.dp),
-                        contentAlignment = Alignment.CenterStart,
-                    ) {
-                        if (state.draft.isEmpty()) {
-                            Text(
-                                stringResource(Res.string.chat_placeholder),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = colors.textMuted,
-                            )
-                        }
-                        inner()
-                    }
-                },
-            )
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(if (canSend) colors.brand else colors.border)
-                    .clickable(enabled = canSend, role = Role.Button) { onAction(ChatAction.Send) },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.Send,
-                    contentDescription = stringResource(Res.string.chat_send),
-                    tint = if (canSend) Color.White else colors.textMuted,
-                    modifier = Modifier.size(22.dp),
+    Surface(color = MaterialTheme.colorScheme.surface) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Layout.gutter, vertical = Layout.small),
+            verticalArrangement = Arrangement.spacedBy(Layout.small),
+        ) {
+            if (state.sendFailed) {
+                Text(
+                    stringResource(Res.string.chat_send_failed),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
                 )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Layout.small)) {
+                OutlinedTextField(
+                    value = state.draft,
+                    onValueChange = { onAction(ChatAction.DraftChanged(it)) },
+                    placeholder = { Text(stringResource(Res.string.chat_placeholder)) },
+                    maxLines = 4,
+                    shape = Layout.card,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                    modifier = Modifier.weight(1f),
+                )
+                FilledIconButton(
+                    onClick = { onAction(ChatAction.Send) },
+                    enabled = canSend,
+                    modifier = Modifier.size(Layout.target),
+                ) {
+                    Icon(Icons.AutoMirrored.Outlined.Send, contentDescription = stringResource(Res.string.chat_send))
+                }
             }
         }
     }

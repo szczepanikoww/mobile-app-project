@@ -52,8 +52,6 @@ import pl.trainer.resources.*
 import pl.trainerapp.core.designsystem.AppShapes
 import pl.trainerapp.core.designsystem.AppTheme
 import pl.trainerapp.core.designsystem.Avatar
-import pl.trainerapp.core.designsystem.Corner
-import pl.trainerapp.core.designsystem.CornerArc
 import pl.trainerapp.core.designsystem.DetailHeader
 import pl.trainerapp.core.designsystem.ErrorState
 import pl.trainerapp.core.designsystem.InlineBanner
@@ -64,6 +62,13 @@ import pl.trainerapp.core.designsystem.SectionHeader
 import pl.trainerapp.core.designsystem.SkeletonBlock
 import pl.trainerapp.core.designsystem.Spacing
 import pl.trainerapp.core.designsystem.frosted
+import pl.trainerapp.core.designsystem.IconCircle
+import pl.trainerapp.core.designsystem.OutlinedTile
+import pl.trainerapp.core.designsystem.ScreenLoading
+import pl.trainer.ui.AppColors as SharedColors
+import pl.trainer.ui.Layout
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import pl.trainerapp.core.format.formatPln
 import pl.trainerapp.core.format.formatUpdatedAt
 import pl.trainerapp.feature.trainerprofile.model.AvailabilityDay
@@ -116,17 +121,11 @@ fun TrainerProfileScreen(
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(top = Spacing.lg, bottom = Spacing.xxl),
-                verticalArrangement = Arrangement.spacedBy(Spacing.xxl),
+                contentPadding = PaddingValues(vertical = Layout.padding),
+                verticalArrangement = Arrangement.spacedBy(Layout.section),
             ) {
                 when (state.status) {
-                    ProfileLoadStatus.Loading -> item {
-                        Column(modifier = Gutter, verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
-                            SkeletonBlock(height = 44.dp)
-                            SkeletonBlock(height = 140.dp)
-                            SkeletonBlock(height = 220.dp)
-                        }
-                    }
+                    ProfileLoadStatus.Loading -> item { ScreenLoading(stringResource(Res.string.screen_loading)) }
                     ProfileLoadStatus.Error -> item {
                         ErrorState(
                             title = stringResource(Res.string.error_load_profile),
@@ -186,8 +185,8 @@ private fun LazyListScope.content(
 @Composable
 private fun CardColumn(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     Column(
-        modifier = Gutter.then(modifier).fillMaxWidth().frosted(AppShapes.frame, alpha = 0.95f).padding(Spacing.xxl),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        modifier = Gutter.then(modifier).fillMaxWidth().frosted(Layout.tile).padding(Layout.padding),
+        verticalArrangement = Arrangement.spacedBy(Layout.small),
     ) { content() }
 }
 
@@ -198,29 +197,18 @@ private fun SectionTitle(text: String) {
 
 @Composable
 private fun SwitchRow(title: String, subtitle: String?, checked: Boolean, onChange: (Boolean) -> Unit) {
-    val colors = AppTheme.colors
     Row(
         modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+        horizontalArrangement = Arrangement.spacedBy(Layout.medium),
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
             if (subtitle != null) {
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = colors.textMuted)
+                Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        Switch(
-            checked = checked,
-            onCheckedChange = onChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = colors.brand,
-                uncheckedThumbColor = Color.White,
-                uncheckedTrackColor = colors.border,
-                uncheckedBorderColor = colors.border,
-            ),
-        )
+        Switch(checked = checked, onCheckedChange = onChange)
     }
 }
 
@@ -231,7 +219,7 @@ private fun InfoRow(label: String, value: String, valueColor: Color = MaterialTh
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = AppTheme.colors.textMuted, modifier = Modifier.weight(1f))
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
         Text(value, style = MaterialTheme.typography.labelLarge, color = valueColor)
     }
 }
@@ -240,37 +228,31 @@ private fun InfoRow(label: String, value: String, valueColor: Color = MaterialTh
 private fun ActionRow(label: String, color: Color, onClick: () -> Unit) {
     Text(
         label,
-        style = MaterialTheme.typography.labelLarge,
+        style = MaterialTheme.typography.bodyLarge,
         color = color,
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 48.dp)
+            .heightIn(min = Layout.target)
             .clickable(role = Role.Button, onClick = onClick)
-            .padding(vertical = 14.dp),
+            .padding(vertical = Layout.medium),
     )
 }
 
 @Composable
-private fun Divider() = HorizontalDivider(color = AppTheme.colors.border)
+private fun Divider() = HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
 // ---------------------------------------------------------------- Profile tab
 
 @Composable
 private fun IdentityCard(profile: TrainerProfile) {
-    val colors = AppTheme.colors
-    Box(modifier = Gutter.fillMaxWidth().frosted(AppShapes.frame, alpha = 0.95f).clip(AppShapes.frame)) {
-        CornerArc(Corner.TopEnd, 72.dp)
-        Row(
-            modifier = Modifier.padding(Spacing.xxl),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
-        ) {
+    CardColumn {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Layout.padding)) {
             Avatar(profile.name, size = 64.dp)
-            Column {
-                Text(profile.name, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
-                Text(profile.email, style = MaterialTheme.typography.bodySmall, color = colors.textMuted)
+            Column(verticalArrangement = Arrangement.spacedBy(Layout.tiny)) {
+                Text(profile.name, style = MaterialTheme.typography.titleLarge)
+                Text(profile.email, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (profile.location.isNotBlank()) {
-                    Text(profile.location, style = MaterialTheme.typography.bodySmall, color = colors.textMuted)
+                    Text(profile.location, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -284,7 +266,6 @@ private fun ProfileForm(
     draft: ProfileDraft,
     onAction: (TrainerProfileAction) -> Unit,
 ) {
-    val colors = AppTheme.colors
     val specializations = state.profile?.specializations.orEmpty()
     CardColumn {
         Text(stringResource(Res.string.profile_manage), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
@@ -307,27 +288,24 @@ private fun ProfileForm(
             capitalization = KeyboardCapitalization.Sentences,
         )
         if (specializations.isNotEmpty()) {
-            Text(stringResource(Res.string.profile_field_specializations), style = MaterialTheme.typography.labelMedium, color = colors.textMuted)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            Text(stringResource(Res.string.profile_field_specializations), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(Layout.small), verticalArrangement = Arrangement.spacedBy(Layout.small)) {
                 specializations.forEach { tag ->
-                    Text(
-                        tag,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = colors.brand,
-                        modifier = Modifier
-                            .clip(AppShapes.pill)
-                            .background(colors.softBrand)
-                            .border(1.dp, colors.brandBorder, AppShapes.pill)
-                            .padding(horizontal = Spacing.md, vertical = 6.dp),
-                    )
+                    Surface(color = SharedColors.softAccent, contentColor = SharedColors.onSoftAccent, shape = Layout.pill) {
+                        Text(
+                            tag,
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.padding(horizontal = Layout.medium, vertical = Layout.tiny),
+                        )
+                    }
                 }
             }
         }
         if (state.saveFailed) {
-            Text(stringResource(Res.string.profile_save_failed), style = MaterialTheme.typography.bodySmall, color = colors.dangerText)
+            Text(stringResource(Res.string.profile_save_failed), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
         }
         if (state.justSaved) {
-            Text(stringResource(Res.string.profile_saved), style = MaterialTheme.typography.bodySmall, color = colors.success)
+            Text(stringResource(Res.string.profile_saved), style = MaterialTheme.typography.bodyMedium, color = SharedColors.success)
         }
         PrimaryButton(
             text = stringResource(if (state.isSaving) Res.string.profile_saving else Res.string.profile_save),
@@ -350,37 +328,18 @@ private fun FormField(
     suffix: String? = null,
     error: Boolean = false,
 ) {
-    val colors = AppTheme.colors
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(label, style = MaterialTheme.typography.labelMedium, color = colors.textMuted)
-        BasicTextField(
-            value = value,
-            onValueChange = onChange,
-            singleLine = singleLine,
-            minLines = if (singleLine) 1 else 4,
-            textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
-            cursorBrush = SolidColor(colors.brand),
-            keyboardOptions = KeyboardOptions(keyboardType = keyboardType, capitalization = capitalization),
-            modifier = Modifier.fillMaxWidth(),
-            decorationBox = { inner ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 52.dp)
-                        .clip(AppShapes.card)
-                        .background(colors.chipSurface)
-                        .border(1.dp, if (error) colors.danger else Color.Transparent, AppShapes.card)
-                        .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(modifier = Modifier.weight(1f)) { inner() }
-                    if (suffix != null) {
-                        Text(suffix, style = MaterialTheme.typography.bodyMedium, color = colors.textMuted)
-                    }
-                }
-            },
-        )
-    }
+    OutlinedTextField(
+        value = value,
+        onValueChange = onChange,
+        label = { Text(label) },
+        singleLine = singleLine,
+        minLines = if (singleLine) 1 else 4,
+        isError = error,
+        suffix = suffix?.let { { Text(it) } },
+        shape = Layout.card,
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType, capitalization = capitalization),
+        modifier = modifier.fillMaxWidth(),
+    )
 }
 
 // ---------------------------------------------------------------- Settings tab
@@ -406,22 +365,20 @@ private fun NotificationSettings(settings: TrainerSettings, onAction: (TrainerPr
 
 @Composable
 private fun PolicyCard() {
-    val colors = AppTheme.colors
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
         SectionTitle(stringResource(Res.string.settings_policy))
         CardColumn {
-            InfoRow(stringResource(Res.string.settings_policy_free), stringResource(Res.string.settings_policy_free_value), colors.success)
+            InfoRow(stringResource(Res.string.settings_policy_free), stringResource(Res.string.settings_policy_free_value), SharedColors.success)
             Divider()
-            InfoRow(stringResource(Res.string.settings_policy_half), stringResource(Res.string.settings_policy_half_value), colors.warning)
+            InfoRow(stringResource(Res.string.settings_policy_half), stringResource(Res.string.settings_policy_half_value), SharedColors.warningText)
             Divider()
-            InfoRow(stringResource(Res.string.settings_policy_full), stringResource(Res.string.settings_policy_full_value), colors.dangerText)
+            InfoRow(stringResource(Res.string.settings_policy_full), stringResource(Res.string.settings_policy_full_value), SharedColors.errorText)
         }
     }
 }
 
 @Composable
 private fun AccountCard(onUnavailable: () -> Unit) {
-    val colors = AppTheme.colors
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
         SectionTitle(stringResource(Res.string.settings_account))
         CardColumn {
@@ -431,7 +388,7 @@ private fun AccountCard(onUnavailable: () -> Unit) {
             Divider()
             ActionRow(stringResource(Res.string.settings_terms), MaterialTheme.colorScheme.onSurface, onUnavailable)
             Divider()
-            ActionRow(stringResource(Res.string.settings_logout), colors.dangerText, onUnavailable)
+            ActionRow(stringResource(Res.string.settings_logout), SharedColors.errorText, onUnavailable)
         }
     }
 }
@@ -440,10 +397,9 @@ private fun AccountCard(onUnavailable: () -> Unit) {
 
 @Composable
 private fun AvailabilityCard(days: List<AvailabilityDay>, onAction: (TrainerProfileAction) -> Unit) {
-    val colors = AppTheme.colors
     CardColumn {
         Text(stringResource(Res.string.availability_title), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-        Text(stringResource(Res.string.availability_hint), style = MaterialTheme.typography.bodySmall, color = colors.textMuted)
+        Text(stringResource(Res.string.availability_hint), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         days.forEachIndexed { index, day ->
             if (index > 0) Divider()
             SwitchRow(
@@ -460,25 +416,19 @@ private fun AvailabilityCard(days: List<AvailabilityDay>, onAction: (TrainerProf
 
 @Composable
 private fun PayoutsCard(payout: PayoutAccount, onUnavailable: () -> Unit) {
-    val colors = AppTheme.colors
     CardColumn {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
-            Box(
-                modifier = Modifier.size(44.dp).background(colors.softBrand, CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Outlined.CreditCard, contentDescription = null, tint = colors.brand, modifier = Modifier.size(22.dp))
-            }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Layout.medium)) {
+            IconCircle(Icons.Outlined.CreditCard, SharedColors.softAccent, MaterialTheme.colorScheme.primary)
             Column(modifier = Modifier.weight(1f)) {
-                Text(payout.accountLabel, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                Text(payout.accountLabel, style = MaterialTheme.typography.titleMedium)
                 Text(
                     stringResource(if (payout.connected) Res.string.payments_connected else Res.string.payments_not_connected),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (payout.connected) colors.success else colors.dangerText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (payout.connected) SharedColors.success else SharedColors.errorText,
                 )
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(Layout.small)) {
             AmountTile(Icons.Outlined.AccountBalanceWallet, formatPln(payout.balance, alwaysDecimals = true), stringResource(Res.string.payments_balance), Modifier.weight(1f))
             AmountTile(Icons.Outlined.PriceCheck, formatPln(payout.lastPayout), stringResource(Res.string.payments_last_payout), Modifier.weight(1f))
         }
@@ -489,15 +439,9 @@ private fun PayoutsCard(payout: PayoutAccount, onUnavailable: () -> Unit) {
 
 @Composable
 private fun AmountTile(icon: ImageVector, value: String, label: String, modifier: Modifier = Modifier) {
-    val colors = AppTheme.colors
-    Column(modifier = modifier.clip(AppShapes.tile).background(colors.chipSurface).padding(14.dp)) {
-        Box(
-            modifier = Modifier.size(32.dp).background(colors.softBrand, CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(icon, contentDescription = null, tint = colors.brand, modifier = Modifier.size(18.dp))
-        }
-        Text(value, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, modifier = Modifier.padding(top = Spacing.md))
-        Text(label, style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium), color = colors.textMuted, modifier = Modifier.padding(top = Spacing.xs))
+    OutlinedTile(modifier) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+        Text(value, style = MaterialTheme.typography.titleMedium, maxLines = 1)
+        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

@@ -1,6 +1,7 @@
 package pl.trainerapp.feature.trainerhome
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.EventNote
@@ -80,6 +82,11 @@ import pl.trainerapp.feature.trainerhome.model.TrainerHomeSummary
 import pl.trainerapp.feature.trainerhome.model.WeekStats
 import kotlin.time.Instant
 
+private val Gutter = Modifier.padding(horizontal = Layout.gutter)
+
+/** Cards in the today carousel are narrower than the screen so the next card peeks in. */
+private val SessionCardWidth = 296.dp
+
 /** Navigation- and DI-aware entry point. Everything below it only renders state and emits actions. */
 @Composable
 fun TrainerHomeRoute(
@@ -117,18 +124,19 @@ fun TrainerHomeScreen(
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = Layout.gutter, vertical = Layout.padding),
+                // Horizontal gutters are applied per item so the session carousel can scroll edge to edge.
+                contentPadding = PaddingValues(vertical = Layout.padding),
                 verticalArrangement = Arrangement.spacedBy(Layout.medium),
             ) {
                 when {
-                    state.status == LoadStatus.Loading -> item { ScreenLoading(stringResource(Res.string.screen_loading)) }
+                    state.status == LoadStatus.Loading -> item { ScreenLoading(stringResource(Res.string.screen_loading), Gutter) }
                     state.status == LoadStatus.Error -> item {
-                        ScreenError(
+                        Box(Gutter) { ScreenError(
                             title = stringResource(Res.string.error_load_home),
                             body = stringResource(Res.string.screen_error_body),
                             retryLabel = stringResource(Res.string.action_retry),
                             onRetry = { onAction(TrainerHomeAction.Refresh) },
-                        )
+                        ) }
                     }
                     state.summary != null -> content(state, state.summary, onAction)
                 }
@@ -144,40 +152,60 @@ private fun LazyListScope.content(
 ) {
     val updated = state.lastUpdated
     if (state.isOffline && updated != null) {
-        item { InfoBanner(stringResource(Res.string.offline_banner, formatUpdatedAt(updated)), Icons.Outlined.CloudOff) }
+        item { InfoBanner(stringResource(Res.string.offline_banner, formatUpdatedAt(updated)), Icons.Outlined.CloudOff, modifier = Gutter) }
     }
 
     if (summary.isNewTrainer) {
         item {
-            EmptyContent(
-                Icons.Outlined.EventAvailable,
-                stringResource(Res.string.empty_new_title),
-                stringResource(Res.string.empty_new_body),
-                stringResource(Res.string.empty_new_action),
-            ) { onAction(TrainerHomeAction.EmptyStateAction) }
+            Box(Gutter) {
+                EmptyContent(
+                    Icons.Outlined.EventAvailable,
+                    stringResource(Res.string.empty_new_title),
+                    stringResource(Res.string.empty_new_body),
+                    stringResource(Res.string.empty_new_action),
+                ) { onAction(TrainerHomeAction.EmptyStateAction) }
+            }
         }
         return
     }
 
-    item { ScreenSectionTitle(stringResource(Res.string.home_today_sessions)) }
     val sessions = summary.carouselSessions
+    item {
+        ScreenSectionTitle(stringResource(Res.string.home_today_sessions), Gutter) {
+            if (sessions.size > 1) {
+                Text(
+                    stringResource(Res.string.home_swipe),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
     if (sessions.isEmpty()) {
-        item { EmptyDay(summary, onAction) }
+        item { Box(Gutter) { EmptyDay(summary, onAction) } }
     } else {
-        items(sessions, key = { "session-${it.id}" }) { session ->
-            SessionCard(session, summary.generatedAt, state.isOffline, onAction)
+        item(key = "sessions") {
+            // Swipe sideways through today's sessions; the next session comes first.
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = Layout.gutter),
+                horizontalArrangement = Arrangement.spacedBy(Layout.medium),
+            ) {
+                items(sessions, key = { it.id }) { session ->
+                    SessionCard(session, summary.generatedAt, state.isOffline, onAction, Modifier.width(SessionCardWidth))
+                }
+            }
         }
     }
 
     if (summary.attention.isNotEmpty()) {
-        item { ScreenSectionTitle(stringResource(Res.string.home_needs_attention), Modifier.padding(top = Layout.small)) }
+        item { ScreenSectionTitle(stringResource(Res.string.home_needs_attention), Gutter.padding(top = Layout.small)) }
         items(summary.attention, key = { "attention-${it.id}" }) { item ->
-            AttentionRow(item) { onAction(TrainerHomeAction.OpenAttention(item)) }
+            Box(Gutter) { AttentionRow(item) { onAction(TrainerHomeAction.OpenAttention(item)) } }
         }
     }
 
     summary.week?.let { week ->
-        item { WeekSection(week, onAction) }
+        item { Box(Gutter) { WeekSection(week, onAction) } }
     }
 }
 
@@ -248,10 +276,11 @@ private fun SessionCard(
     now: Instant,
     offline: Boolean,
     onAction: (TrainerHomeAction) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val requested = session.status == SessionStatus.Requested
     val canCheckIn = session.checkInOpen && !offline
-    OutlinedTile(Modifier.fillMaxWidth(), onClick = { onAction(TrainerHomeAction.OpenSession(session)) }) {
+    OutlinedTile(modifier, onClick = { onAction(TrainerHomeAction.OpenSession(session)) }) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             SessionStatusLabel(session.status)
             Spacer(Modifier.weight(1f))
