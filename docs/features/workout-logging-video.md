@@ -1,6 +1,6 @@
 # Feature plan: workout logging, progress, check-in, technique video and chat (Person A)
 
-Status: v0.2, decisions D1–D7 agreed, Q8 open · 2026-11-04 · branch `workout-logging-video` · roles: **client** and **trainer**
+Status: v0.3, implemented (views on demo data and local storage; see §10), decisions D1–D7 agreed, Q8 open · 2026-11-04 · branch `workout-logging-video` · roles: **client** and **trainer**
 
 Person A builds six views. In this phase they are **views only**: they run on demo data and local storage, with no backend, sync or payment integration. Every backend touchpoint stays behind a repository interface so it can be connected later.
 
@@ -270,3 +270,34 @@ Still open:
 - **Chat:** a client message appears in the trainer's thread with an unread count, and the other way round; a failed send keeps the draft; an attachment is not playable until READY.
 - **Check-in:** "Nieobecny" disabled before the grace period; a double tap on "Obecny" completes once; a stale revision gives a conflict.
 - **Progress:** measurement validation (positive numbers, labelled units); chart data uses working sets only.
+
+---
+
+## 10. Implementation status (2026-11-04)
+
+All six views exist on demo data and local storage. Nothing is sent to a server.
+
+| View | Code | Reached from |
+|---|---|---|
+| A1 Trening na żywo | `shared/feature/workout-logging/.../logger` | Create menu → "Podgląd widoków klienta" (temporary) → "Trening na żywo"; tapping the rest notification |
+| A2 Podsumowanie | `.../summary` | A1 "Zakończ"; A3 history and best-set rows (read-only) |
+| A3 Postępy | `.../progress` | Temporary client preview. `ProgressRoute` without `onBack` is the tab content for Person B's shell |
+| A4 Check-in sesji | `shared/src/.../pl/trainer/ui/CheckInScreen.kt`, `presentation/CheckInViewModel.kt` | Trainer home "Check-in" (`TrainerRoute.CheckIn`) |
+| A5 Przegląd wideo techniki | `androidApp/.../feature/chat/TechniqueVideoReview.kt` | Trainer home "Wymaga uwagi"; tapping a READY video in the trainer chat |
+| A6 Czat – klient | `androidApp/.../feature/chat` (`ClientChatRoute`, shared `ChatScreen`) | Temporary client preview → "Czat z trenerem" (Android only) |
+
+Domain and storage: `shared/domain/.../workout` (`WorkoutLog`, `WorkoutLogReducer`, `RestTimer`, `RestAlarmPlanner`, `PreviousPerformance`, `PersonalRecords`, `WorkoutSummary`, `ProgressRules`, `MeasurementValidator`), `shared/data/.../Workout.sq` with migration `1.sqm`, `LocalWorkoutRepository`, `LocalMeasurementRepository`, `DemoWorkoutData` (today's plan fixture and a synthetic history seed).
+
+Shared changes made (§5): chat model and package rename; `MediaKind.TECHNIQUE_VIDEO`, `MediaLimits.maxDurationMs/maxSizeBytes(kind)`, `MediaAsset.ownerUserId`, `MediaRepository.import(…, ownerUserId)`; the manifest permissions, receiver and `launchMode="singleTop"`; `LineChart`; `TrainerRepository.checkIn` and `markNoShow` plus `Session.planTitle/payment`; `AppShell` routes; `AppPlatform.restTimerNotifier/techniqueVideoOutbox` (defaults keep desktop and tests unchanged); `LocaleFormats.formatInteger/formatShortDate`.
+
+Deviations and decisions taken while implementing:
+
+- The `media_asset.owner_trainer_id` column keeps its name and stores the owner user id. Renaming a column needs SQLite 3.25, newer than API 26 ships.
+- The calendar's demo server clock is fixed at the fixture date, 28 Oct 2026 09:20, so the home's 09:00 session shows both actions and the 14:00 session only "Obecny".
+- A1 "Zakończ" stops the clock and opens A2; the workout is finished only by A2 "Zapisz trening". Back from A2 resumes it.
+- The exercise info icon opens a read-only sheet in A1 (photo, muscles, equipment, instructions) rather than the trainer's exercise detail, which has editing actions.
+- "Pusty trening" (D6) is not built: the model supports it (`WorkoutLogReducer.startEmpty/addExercise`), but there is no exercise picker for clients yet. With no plan, A1 shows an empty state with "Odśwież".
+- A rest timer is re-scheduled when A1 is opened after a reboot, not at app start.
+- The client views are Polish only, like the workout-builder module.
+
+Not verified: no build ran with the Android Gradle plugin in the implementation environment (Google Maven was unreachable), so the Compose/Android modules (`workout-logging`, `shared`, `shared:app`, `androidApp`) were **not compiled**, and their UI and ViewModel tests were not run. The pure Kotlin modules were built and tested: `:contract`, `:shared:domain` and `:shared:data` (`-Ptrainer.ui=false`), plus the calendar repository's check-in rules and the chat store compiled on the JVM. Device checks (notification with the app killed, denied permission, video capture, TalkBack, large fonts) remain open, and there are no screenshots yet.

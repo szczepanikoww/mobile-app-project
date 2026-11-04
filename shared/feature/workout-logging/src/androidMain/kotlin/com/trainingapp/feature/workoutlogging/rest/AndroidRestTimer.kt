@@ -157,16 +157,17 @@ actual fun rememberNotificationPermission(): NotificationPermission {
     val context = LocalContext.current
     fun isGranted() = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
         ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-    var granted by remember { mutableStateOf(isGranted()) }
+    var grantedNow by remember { mutableStateOf(isGranted()) }
     var callback by remember { mutableStateOf<((Boolean) -> Unit)?>(null) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { result ->
-        granted = result
+        grantedNow = result
         callback?.invoke(result)
         callback = null
     }
-    return remember(launcher, granted) {
+    val currentlyGranted = grantedNow
+    return remember(launcher, currentlyGranted) {
         object : NotificationPermission {
-            override val granted: Boolean = granted
+            override val granted: Boolean = currentlyGranted
 
             override fun request(onResult: (Boolean) -> Unit) {
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || isGranted()) {

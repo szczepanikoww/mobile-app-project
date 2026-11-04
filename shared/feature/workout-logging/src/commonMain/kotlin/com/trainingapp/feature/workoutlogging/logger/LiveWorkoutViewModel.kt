@@ -80,6 +80,7 @@ data class LiveWorkoutUiState(
     /** Text being typed, kept as typed ("82,") until it can be read. */
     val drafts: Map<FieldKey, String> = emptyMap(),
     val invalid: Set<FieldKey> = emptySet(),
+    /** Media on this device by id: technique videos of sets and exercise demo videos. */
     val media: Map<String, MediaAsset> = emptyMap(),
     /** A write to the device is in progress. */
     val saving: Boolean = false,
@@ -143,9 +144,8 @@ class LiveWorkoutViewModel(
             }
         }
         viewModelScope.launch {
-            media.observeAll().collect { assets ->
-                _state.update { s -> s.copy(media = assets.filterValues { it.kind == MediaKind.TECHNIQUE_VIDEO }) }
-            }
+            // Technique videos linked to sets and the trainer's exercise demo videos.
+            media.observeAll().collect { assets -> _state.update { s -> s.copy(media = assets) } }
         }
         load()
     }

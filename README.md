@@ -24,7 +24,7 @@ The debug APK is written to `androidApp/build/outputs/apk/debug/androidApp-debug
 ## Validate
 
 ```sh
-./gradlew :shared:desktopTest :shared:app:desktopTest :contract:jvmTest :shared:domain:jvmTest :shared:data:jvmTest :desktopApp:classes
+./gradlew :shared:desktopTest :shared:app:desktopTest :shared:feature:workout-logging:desktopTest :contract:jvmTest :shared:domain:jvmTest :shared:data:jvmTest :desktopApp:classes
 ./gradlew :androidApp:testDebugUnitTest :androidApp:assembleDebug :androidApp:lintDebug
 ```
 
@@ -38,6 +38,7 @@ Desktop tests render the shared Compose UI without requiring an unlocked desktop
 - Loading, empty, recoverable error, offline and permission-denied previews.
 - Plan library/editor, exercise library and technique/demo-video attachment, using the existing local repositories.
 - Shared theme, shell, components, resources, state and repository boundaries.
+- Client workout logging, summary and progress (A1–A3), trainer session check-in (A4), technique-video review (A5) and the client chat (A6): see the [feature plan](docs/features/workout-logging-video.md#10-implementation-status-2026-11-04). Until the client shell exists, the client views open from the create menu → "Podgląd widoków klienta".
 
 **All people and sessions are synthetic. Calendar/trainee changes are in memory and reset on restart; plans/exercises use the workout feature’s local SQLite store.** The app does not send invitations, book sessions, settle payments or store private notes on a server. Use `:desktopApp:runPreview` to switch sample states in a separate window. “Today” refers to the fixed fixture date, 28 October 2026.
 
@@ -59,6 +60,7 @@ PR merge order: merge calendar/trainee PR #1 before workout PR #2. Workout-plan 
 | `:shared:data` | SQLDelight database (drafts, cached plan versions, own exercises), repositories, fake remotes. | JVM |
 | `:shared:designsystem` | Workout component API; colours, Material theme, spacing, shapes and navigation delegate to `:shared`. | Android, desktop |
 | `:shared:feature:workout-builder` | Plan library, plan editor, exercise library/picker, exercise detail, exercise form ([plan](docs/features/plan-creator.md)). | Android, desktop |
+| `:shared:feature:workout-logging` | Client live workout, workout summary, progress, rest-timer notification ([plan](docs/features/workout-logging-video.md)). | Android, desktop |
 | `:shared:app` | App shell: theme, trainer navigation, navigation host, Koin wiring, bundled exercise seed. | Android, desktop |
 | `:androidApp` | The Android application. | Android |
 | `:desktopApp` | A phone-sized desktop preview for development. Android remains the product target. | Desktop JVM |
