@@ -6,14 +6,14 @@ Implements [docs/plans/guest-views.md](../plans/guest-views.md) on branch `guest
 
 | View | File | Route |
 |---|---|---|
-| Welcome (Powitanie) | `welcome/WelcomeScreen.kt` | `GuestWelcomeDestination` (first launch only) |
+| Welcome (Powitanie) | `welcome/WelcomeScreen.kt` | `GuestWelcomeDestination`. Built, but not reachable: the app now opens on Auth (see below). |
 | Guest shell: Start / Trenerzy / Siłownie tabs + "Zaloguj się" | `GuestShell.kt` | `GuestHomeDestination` |
 | Start, "Znajdź swojego trenera" | `home/GuestHomeScreen.kt` | tab |
 | Trainers, with 5 filter sheets, sort, list/grid | `trainers/TrainersScreen.kt`, `trainers/TrainerFilterSheets.kt` | tab |
 | Gyms list (new, D5) | `gyms/GymsScreen.kt` | tab |
 | Trainer profile | `trainerprofile/TrainerProfileScreen.kt` | `TrainerProfileDestination(trainerId)` |
 | Gym detail | `gymdetail/GymDetailScreen.kt` | `GymDetailDestination(gymId)` |
-| Log in / register | `auth/AuthScreen.kt` | `AuthDestination(register, intent…)` |
+| Log in / register | `auth/AuthScreen.kt` | `AuthDestination(register, intent…)`: **the start screen when signed out** |
 | Login-required sheet | `component/GuestComponents.kt` (`LoginRequiredSheet`) | sheet, not a route |
 | Client placeholder (D12) | `auth/ClientHomePlaceholder.kt` | `ClientHomeDestination(intent…)` |
 
@@ -28,7 +28,7 @@ Every screen is `Route` (Koin + navigation, in `GuestNavigation.kt`) plus `Scree
 | `PasswordField` (show/hide toggle with state description, password keyboard) | `designsystem/.../Inputs.kt` | New API |
 | `SearchField(onSearch = …)` for the keyboard search action | `designsystem/.../Inputs.kt` | Optional parameter |
 | `Money(minor, currency)`, `LocaleFormats.formatMoney`, `LocaleFormats.formatDecimal` | `shared/domain/.../format/` | New API; `androidApp`'s `formatPln` can migrate later |
-| **App start depends on the session:** Welcome (first launch), then the guest shell, or the role shell when signed in. `App(initialSession: AuthSession? = null, host = …)`. | `shared/app/.../App.kt` | **Behaviour change**: the app no longer opens on the trainer home. `TrainerIntegrationTest` passes `DemoAccounts.trainer`. |
+| **App start depends on the session:** "Zaloguj się / Załóż konto" when signed out (no back arrow there), or the role shell when signed in. Logging out returns to it. `App(initialSession: AuthSession? = null, host = …)`. | `shared/app/.../App.kt` | **Behaviour change**: the app no longer opens on the trainer home. `TrainerIntegrationTest` passes `DemoAccounts.trainer`. |
 | `WorkoutNavigationActions.onLogOut` (default `{}`) | `shared/app/.../TrainerShell.kt` | Unchanged for callers |
 | `CurrentUser` reads the signed-in trainer from the session; falls back to the demo trainer id `demo-trainer` | `shared/app/.../AppModule.kt` | Same id as before |
 | "Wyloguj się" on Android is wired: `TrainerProfileRoute(onLogOut)`, `TrainerShell(onLogOut)`, `MainActivity` | `androidApp/...` | New optional parameters |
@@ -59,7 +59,7 @@ The plan's defaults were applied. They are **not agreed team decisions** until c
 | D8 | Initials avatars for people and an icon tile for gyms; no photos. |
 | D9 | The video player is passed in by the app (`videoPlayer` slot → `DemoVideoPlayer`). Demo media has no URL, so tiles show "Wideo niedostępne" or "Przetwarzanie". |
 | D10 | The Google button is shown; the demo answers "Logowanie Google nie jest jeszcze dostępne". |
-| D11 | Welcome shows once per install (`SharedPreferences` / `java.util.prefs`). |
+| D11 | **Changed on request:** the app opens on Auth instead of Welcome. Welcome and its once-per-install flag remain in the code but are not shown; the team decides whether to bring it back, e.g. before Auth on first launch. |
 | D12 | Trainer → existing trainer shell; client → placeholder with Wyloguj się. |
 | D13 | The terms sheet has placeholder text; the consent version (`demo-2026-11`) is sent with registration. |
 | D14 | Trainer registration → trainer shell with demo data. |

@@ -32,7 +32,7 @@ import javax.imageio.ImageIO
 import kotlin.test.Test
 
 /**
- * The guest flow end to end in Polish: Welcome → browse → trainer → gym → login-required sheet → register →
+ * The guest flow end to end in Polish: Auth (start screen) → browse → trainer → gym → login-required sheet → register →
  * client placeholder. Screenshots go to build/reports/screenshots/ for comparison with the trainer previews.
  */
 @OptIn(ExperimentalTestApi::class)
@@ -82,10 +82,12 @@ class GuestIntegrationTest {
         }
 
     @Test
-    fun welcomeBrowseTrainerGymSheetRegisterClient() = runGuest(390, 844, 1f) {
-        waitForText("Znajdź trenera i trenuj z planem")
-        capture("guest-welcome-pl")
-        clickOnUi(onNodeWithText("Przeglądaj bez logowania"))
+    fun authFirstThenBrowseTrainerGymSheetRegisterClient() = runGuest(390, 844, 1f) {
+        waitForText("Logowanie i rejestracja")
+        // The start screen has no back arrow: there is nothing behind it.
+        onAllNodesWithContentDescription("Wstecz").assertCountEquals(0)
+        capture("guest-auth-start-pl")
+        clickOnUi(onNodeWithText("Przeglądaj bez logowania").performScrollTo())
 
         waitForText("Michał Kowalczyk")
         onNodeWithText("Znajdź swojego trenera").assertExists()
@@ -130,9 +132,8 @@ class GuestIntegrationTest {
 
     @Test
     fun registerValidationKeepsInputAndShowsErrors() = runGuest(390, 844, 1f) {
-        waitForText("Znajdź trenera i trenuj z planem")
-        clickOnUi(onAllNodesWithText("Załóż konto")[0])
         waitForText("Logowanie i rejestracja")
+        clickOnUi(onAllNodesWithText("Załóż konto")[0])
         onAllNodes(hasSetTextAction())[1].performTextReplacement("ala@")
         clickOnUi(onNodeWithTag("auth-submit").performScrollTo())
         waitForText("Podaj poprawny adres e-mail")
@@ -143,9 +144,8 @@ class GuestIntegrationTest {
 
     @Test
     fun offlineRegistrationIsNotSent() = runGuest(390, 844, 1f, online = false) {
-        waitForText("Znajdź trenera i trenuj z planem")
-        clickOnUi(onAllNodesWithText("Załóż konto")[0])
         waitForText("Logowanie i rejestracja")
+        clickOnUi(onAllNodesWithText("Załóż konto")[0])
         onAllNodes(hasSetTextAction())[0].performTextReplacement("Ala Testowa")
         onAllNodes(hasSetTextAction())[1].performTextReplacement("ala@example.com")
         onAllNodes(hasSetTextAction())[2].performTextReplacement("haslo-testowe")
@@ -158,7 +158,7 @@ class GuestIntegrationTest {
 
     @Test
     fun smallScreenLargeText() = runGuest(320, 720, 2f) {
-        waitForText("Przeglądaj bez logowania")
+        waitForText("Logowanie i rejestracja")
         clickOnUi(onNodeWithText("Przeglądaj bez logowania").performScrollTo())
         waitForText("Michał Kowalczyk")
         capture("guest-start-font200-pl")

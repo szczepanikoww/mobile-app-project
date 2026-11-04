@@ -32,7 +32,7 @@ Desktop tests render the shared Compose UI without requiring an unlocked desktop
 
 ## Guest views and demo accounts
 
-The app opens on the guest **Welcome** screen on first launch (once per install), then on the guest shell: Start, Trenerzy, Siłownie and Zaloguj się ([plan](docs/plans/guest-views.md), [handoff](docs/features/guest-views.md)). Signing in replaces the back stack with the role shell.
+Signed out, the app opens on **Zaloguj się / Załóż konto**. "Przeglądaj bez logowania" leads to the guest shell: Start, Trenerzy, Siłownie and Zaloguj się ([plan](docs/plans/guest-views.md), [handoff](docs/features/guest-views.md)). Signing in replaces the back stack with the role shell.
 
 Sign-in is an in-memory demo until an identity provider is chosen. Reserved accounts (any password; registration needs at least 8 characters):
 
@@ -41,7 +41,7 @@ Sign-in is an in-memory demo until an identity provider is chosen. Reserved acco
 | `trener@example.com` | The existing trainer shell with the demo trainer's data |
 | `klient@example.com` | The client placeholder (no client shell exists yet) |
 
-Registering a new e-mail signs in with the chosen starting role. Nothing is stored on a server and no password is kept. To see Welcome again on desktop, delete the `com/trainingapp/guest` node from Java user preferences; on Android, clear the app's data. Tests pass a demo session to `App(initialSession = …)` to start directly in a role shell.
+Registering a new e-mail signs in with the chosen starting role. Nothing is stored on a server and no password is kept. Tests pass a demo session to `App(initialSession = …)` to start directly in a role shell.
 
 ## Current scope
 

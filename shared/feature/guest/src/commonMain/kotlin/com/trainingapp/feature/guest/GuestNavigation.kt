@@ -31,7 +31,7 @@ import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
-/** First launch only (D11). */
+/** Not the start screen any more (the app opens on Auth); kept for a possible onboarding entry. */
 @Serializable
 data object GuestWelcomeDestination
 
@@ -168,7 +168,9 @@ fun NavGraphBuilder.guestGraph(
     }
     composable<AuthDestination> { entry ->
         val destination = entry.toRoute<AuthDestination>()
-        AuthRoute(destination, onBack = { navController.popBackStack() }, onBrowse = browse, onSignedIn = onSignedIn)
+        // Auth is the app's first screen for signed-out users; there it has no back arrow.
+        val onBack: (() -> Unit)? = if (navController.previousBackStackEntry != null) ({ navController.popBackStack() }) else null
+        AuthRoute(destination, onBack = onBack, onBrowse = browse, onSignedIn = onSignedIn)
     }
     composable<ClientHomeDestination> { entry ->
         val destination = entry.toRoute<ClientHomeDestination>()
@@ -181,7 +183,7 @@ fun NavGraphBuilder.guestGraph(
 @Composable
 private fun AuthRoute(
     destination: AuthDestination,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     onBrowse: () -> Unit,
     onSignedIn: (AuthSession, GuestIntent?) -> Unit,
 ) {

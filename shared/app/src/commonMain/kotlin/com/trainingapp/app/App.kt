@@ -19,13 +19,11 @@ import com.trainingapp.app.resources.understood
 import com.trainingapp.designsystem.component.AppTextButton
 import com.trainingapp.designsystem.theme.AppTheme
 import com.trainingapp.feature.guest.ClientHomeDestination
-import com.trainingapp.feature.guest.GuestHomeDestination
-import com.trainingapp.feature.guest.GuestWelcomeDestination
+import com.trainingapp.feature.guest.AuthDestination
 import com.trainingapp.feature.guest.guestGraph
 import com.trainingapp.feature.guest.model.AuthRepository
 import com.trainingapp.feature.guest.model.AuthSession
 import com.trainingapp.feature.guest.model.Role
-import com.trainingapp.feature.guest.platform.WelcomePreferences
 import com.trainingapp.feature.workoutbuilder.media.DemoVideoPlayer
 import com.trainingapp.feature.workoutbuilder.common.ExerciseBrowserDestination
 import com.trainingapp.feature.workoutbuilder.common.PlanEditorDestination
@@ -40,9 +38,12 @@ import org.koin.compose.koinInject
 @Serializable
 data object TrainerHomeDestination
 
-/** Where the app opens: the role shell for a signed-in session, otherwise Welcome (first launch) or the guest shell. */
-internal fun startDestinationFor(session: AuthSession?, welcomeSeen: Boolean): Any = when {
-    session == null -> if (welcomeSeen) GuestHomeDestination else GuestWelcomeDestination
+/**
+ * Where the app opens: the role shell for a signed-in session, otherwise "Zaloguj się / Załóż konto". Guests reach
+ * the public catalogue from there with "Przeglądaj bez logowania".
+ */
+internal fun startDestinationFor(session: AuthSession?): Any = when {
+    session == null -> AuthDestination()
     session.activeRole == Role.Trainer -> TrainerHomeDestination
     else -> ClientHomeDestination()
 }
@@ -60,10 +61,9 @@ fun App(
     AppTheme {
         val navController = rememberNavController()
         val auth: AuthRepository = koinInject()
-        val welcome: WelcomePreferences = koinInject()
         val scope = rememberCoroutineScope()
         var showAssignInfo by rememberSaveable { mutableStateOf(false) }
-        val startDestination = remember { startDestinationFor(initialSession ?: auth.session.value, welcome.welcomeSeen()) }
+        val startDestination = remember { startDestinationFor(initialSession ?: auth.session.value) }
 
         // After sign-in or sign-out the whole back stack is replaced, so Back never returns to Auth or the guest views.
         val replaceStack: (Any) -> Unit = { destination ->
@@ -71,8 +71,7 @@ fun App(
         }
         val logOut: () -> Unit = {
             scope.launch { auth.logOut() }
-            welcome.markWelcomeSeen()
-            replaceStack(GuestHomeDestination)
+            replaceStack(AuthDestination())
         }
 
         NavHost(navController = navController, startDestination = startDestination) {

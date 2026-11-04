@@ -53,6 +53,7 @@ import com.trainingapp.designsystem.component.PasswordField
 import com.trainingapp.designsystem.component.PrimaryButton
 import com.trainingapp.designsystem.component.SegmentedTabs
 import com.trainingapp.designsystem.component.TonalButton
+import com.trainingapp.designsystem.component.TopLevelHeader
 import com.trainingapp.designsystem.theme.AppTheme
 import com.trainingapp.designsystem.theme.Sizes
 import com.trainingapp.designsystem.theme.Spacing
@@ -62,7 +63,8 @@ import com.trainingapp.feature.guest.resources.*
 import org.jetbrains.compose.resources.stringResource
 
 data class AuthActions(
-    val onBack: () -> Unit,
+    /** Null when Auth is the first screen of the app: then there is nothing to go back to. */
+    val onBack: (() -> Unit)?,
     val onModeChange: (AuthMode) -> Unit,
     val onNameChange: (String, String) -> Unit,
     val onEmailChange: (String, String) -> Unit,
@@ -100,7 +102,14 @@ fun AuthScreen(state: AuthUiState, actions: AuthActions, termsVersion: String = 
 
     Scaffold(
         containerColor = AppTheme.colors.background,
-        topBar = { DetailHeader(stringResource(Res.string.auth_title), onBack = actions.onBack, backEnabled = !state.busy) },
+        topBar = {
+            val back = actions.onBack
+            if (back != null) {
+                DetailHeader(stringResource(Res.string.auth_title), onBack = back, backEnabled = !state.busy)
+            } else {
+                TopLevelHeader(stringResource(Res.string.auth_title))
+            }
+        },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding).imePadding(), contentAlignment = Alignment.TopCenter) {
             Column(
