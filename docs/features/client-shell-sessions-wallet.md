@@ -273,3 +273,48 @@ No open questions remain for Person B.
 - **Wallet:** paying moves `W toku` → `Opłacone` only after the demo confirmation; a double tap pays once; cash charges have no pay button.
 - **Shell:** the role switch appears only with both roles and replaces the stack; a pending `GuestIntent` opens the booking sheet and never sends a request by itself.
 - **Request details:** the waiver removes the fee from the resulting charge; a slot conflict disables "Akceptuj".
+
+---
+
+## 10. Implementation status (2026-11-05)
+
+All slices (§7) are implemented on `client-shell-sessions-wallet`. The branch **merges `origin/guest` (C) and `origin/workout-logging-video` (A)**, because the client shell replaces their placeholders and both branches change the same entry files (`App.kt`, `AppModule.kt`, `TrainerShell.kt`, `MainActivity.kt`, `LocaleFormats`). The merge commit keeps both sides; if C's or A's PR lands in `main` first, merging this branch afterwards brings only B's commits.
+
+### What exists
+
+| Part | Where |
+|---|---|
+| `Money`, `CancellationPolicy`, `PolicyRules`, presets (D7), `PolicyValidator` (errors, aggressive-settings warnings), `FeeCalculator` | `contract/.../money`, `contract/.../policy`; `shared/domain/.../format/Money.kt` is now a type alias |
+| `SessionStatus.CancelledByClient` / `Expired`; `Session.policyVersionId`, `price`, `trainerId`, `requestedAt`; `RescheduleProposal.requestedAt` | `shared/src/.../pl/trainer/domain/Models.kt` |
+| Client scheduling, wallet and policy models and repository interfaces | `shared/src/.../pl/trainer/domain/ClientScheduling.kt` |
+| `DemoSchedulingStore` (D10) behind `DemoTrainerRepository`, `DemoClientScheduleRepository`, `DemoWalletRepository`, `DemoPolicyRepository` | `shared/src/.../pl/trainer/data` |
+| B0–B3 | `shared/feature/client` (`ClientShell`, `ClientHomeContent`, `ClientCalendarContent`, `ClientSessionDetailContent`, `ScheduleSheets`, `WalletContent`; view models in `presentation`) |
+| B4 | `shared/src/.../pl/trainer/ui/RequestDetailScreen.kt`, `Route.RequestDetail` |
+| B5 | `androidApp/.../trainerprofile/CancellationPolicyScreen.kt`, `TrainerRoute.CancellationPolicy`; `CancellationPolicyViewModel` in `shared/src/.../pl/trainer/presentation` |
+| Shared policy text (B2 booking, B4, B5 preview) | `pl.trainer.ui.CancellationPolicySummary` |
+
+### Decisions taken while implementing
+
+- **Client domain in `:shared`, not `shared/domain`.** `ClientSession` reuses `Session` and `SessionStatus`, which live in `:shared`; a copy in `shared/domain` would duplicate the status enum (CLAUDE.md §8). `:shared` now depends on `:shared:domain` (and so on `:contract`).
+- **Demo server clock.** Tests use the fixed fixture time (28 Oct 2026, 09:20 Warsaw). The app uses `AdvancingDemoClock`, which starts there and moves with real time, so quotes really expire after 5 minutes. A booking request whose start passes unanswered becomes `Expired`.
+- **Demo accounts.** `klient@example.com` is Katarzyna Nowak (relationship `c1`). The new `trener-klient@example.com` holds both roles and shows "Przełącz na trenera". A newly registered client has no trainer and lands on the "Znajdź trenera" empty state. The guest profile `tr-michal` is the demo trainer; other public trainers are registered in the store on the first booking request, with their public free-cancellation hours.
+- **Charges.** A late cancellation, an accepted late reschedule (unless waived) and a no-show create a charge by payment kind: online → payable in the app; cash → paid to the trainer; package → settled at once as a share of an entry. Package counters are not changed (no rollover logic, G13). A new charge does not set the trainer's "overdue" flag.
+- **Withdrawing a booking request** marks it `CancelledByClient` without a fee; withdrawing a reschedule request drops the proposal.
+- **"Zaproponuj inny termin" (B4)** is offered for reschedule requests only: the existing editor proposes a time for a confirmed session, and a booking request is not confirmed yet.
+- **Shared component changes:** `DestructiveButton`; `AppBottomNavigation` / `SharedBottomBar` take a `createIcon` (the client's centre action uses the workout icon); `ProgressRoute(showHeader = false)` for A3 as a tab; `guestGraph(clientHome = …)`; `AuthRepository.switchRole` (default no-op); `PublicCancellationPolicy.freeCancellationHours`.
+
+### Validation
+
+There is no Android SDK, Google Maven or Compose runtime in the environment this was built in, so **nothing with Compose or Android was compiled or run here**. What was run (JVM, Kotlin 2.2.21):
+
+- `:contract:jvmTest` (incl. `FeeCalculatorTest`, `PolicyValidatorTest`) and `:shared:domain:jvmTest`: pass.
+- The non-UI sources of `:shared` (`pl.trainer.domain`, `data`, `presentation`) and the client view models, with their tests (`SchedulingStoreTest` 24, `TrainerBehaviorTest` 20, `CancellationPolicyViewModelTest` 4, `CheckIn*` 10, `ClientViewModelsTest` 9), compiled in a JVM harness with a stand-in for `androidx.lifecycle.ViewModel`: all pass.
+
+To run with the real toolchain (README "Validate"): `:shared:desktopTest`, `:shared:feature:client:desktopTest`, `:shared:app:desktopTest` (new `ClientIntegrationTest` renders Start, calendar, details, the cancellation quote and the wallet, and writes screenshots; `GuestIntegrationTest` now ends in the client shell), `:androidApp:assembleDebug :androidApp:lintDebug`. Screenshots for `docs/previews` should be taken from that run.
+
+### Remaining gaps
+
+- The Android trainer home (`DemoTrainerHomeRepository`) still has its own fixtures, so its "Do potwierdzenia" items do not open B4; requests reach B4 from the calendar and the client profile.
+- The client chat (A6) is wired to the demo relationship `c1`; other clients see the chat icon only when the Android host provides the slot.
+- The guest views opened from "Znajdź trenera" still show their "Zaloguj się" header to a signed-in client; "Poproś o termin" there goes straight to the client's booking sheet.
+- No payment provider, invoices (D2), package purchase (D1), notifications (D4) or calendar feed (D6 covers only the Android insert intent).

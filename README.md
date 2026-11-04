@@ -24,7 +24,7 @@ The debug APK is written to `androidApp/build/outputs/apk/debug/androidApp-debug
 ## Validate
 
 ```sh
-./gradlew :shared:feature:guest:desktopTest :shared:desktopTest :shared:app:desktopTest :shared:feature:workout-logging:desktopTest :contract:jvmTest :shared:domain:jvmTest :shared:data:jvmTest :desktopApp:classes
+./gradlew :shared:feature:guest:desktopTest :shared:desktopTest :shared:app:desktopTest :shared:feature:workout-logging:desktopTest :shared:feature:client:desktopTest :contract:jvmTest :shared:domain:jvmTest :shared:data:jvmTest :desktopApp:classes
 ./gradlew :androidApp:testDebugUnitTest :androidApp:assembleDebug :androidApp:lintDebug
 ```
 
@@ -39,7 +39,8 @@ Sign-in is an in-memory demo until an identity provider is chosen. Reserved acco
 | E-mail | Opens |
 |---|---|
 | `trener@example.com` | The existing trainer shell with the demo trainer's data |
-| `klient@example.com` | The client placeholder (no client shell exists yet) |
+| `klient@example.com` | The client shell as Katarzyna Nowak (synthetic), the demo trainer's client |
+| `trener-klient@example.com` | The client shell with both roles: the avatar menu offers "Przełącz na trenera" |
 
 Registering a new e-mail signs in with the chosen starting role. Nothing is stored on a server and no password is kept. Tests pass a demo session to `App(initialSession = …)` to start directly in a role shell.
 
@@ -51,7 +52,8 @@ Registering a new e-mail signs in with the chosen starting role. Nothing is stor
 - Loading, empty, recoverable error, offline and permission-denied previews.
 - Plan library/editor, exercise library and technique/demo-video attachment, using the existing local repositories.
 - Shared theme, shell, components, resources, state and repository boundaries.
-- Client workout logging, summary and progress (A1–A3), trainer session check-in (A4), technique-video review (A5) and the client chat (A6): see the [feature plan](docs/features/workout-logging-video.md#10-implementation-status-2026-11-04). Until the client shell exists, the client views open from the create menu → "Podgląd widoków klienta".
+- Client workout logging, summary and progress (A1–A3), trainer session check-in (A4), technique-video review (A5) and the client chat (A6): see the [feature plan](docs/features/workout-logging-video.md#10-implementation-status-2026-11-04).
+- Client shell, start, calendar with booking/reschedule requests and cancellation quotes, wallet (B0–B3), trainer request details with fee waiver (B4) and the versioned cancellation policy editor (B5): see the [feature plan](docs/features/client-shell-sessions-wallet.md#10-implementation-status-2026-11-05). One demo scheduling store serves the trainer and client views.
 
 **All people and sessions are synthetic. Calendar/trainee changes are in memory and reset on restart; plans/exercises use the workout feature’s local SQLite store.** The app does not send invitations, book sessions, settle payments or store private notes on a server. Use `:desktopApp:runPreview` to switch sample states in a separate window. “Today” refers to the fixed fixture date, 28 October 2026.
 
@@ -68,12 +70,13 @@ PR merge order: merge calendar/trainee PR #1 before workout PR #2. Workout-plan 
 | Module | Contents | Targets |
 |---|---|---|
 | `:shared` | Canonical trainer theme/navigation and calendar/trainee feature. | Android, desktop |
-| `:contract` | DTOs and rules shared with the server: exercise and plan DTOs, enums, `PlanValidator`, `ExerciseValidator`, `SearchText`. | JVM (Android uses it too) |
+| `:contract` | DTOs and rules shared with the server: exercise and plan DTOs, enums, `PlanValidator`, `ExerciseValidator`, `SearchText`, `Money`, cancellation policy rules and `FeeCalculator`. | JVM (Android uses it too) |
 | `:shared:domain` | Models, plan-draft reducers, set-input parsing, search, use cases, locale formats. | JVM |
 | `:shared:data` | SQLDelight database (drafts, cached plan versions, own exercises), repositories, fake remotes. | JVM |
 | `:shared:designsystem` | Workout component API; colours, Material theme, spacing, shapes and navigation delegate to `:shared`. | Android, desktop |
 | `:shared:feature:workout-builder` | Plan library, plan editor, exercise library/picker, exercise detail, exercise form ([plan](docs/features/plan-creator.md)). | Android, desktop |
 | `:shared:feature:guest` | Guest views: welcome, start, trainers, trainer profile, gyms, gym detail, log in / register, login-required sheet; demo catalogue and demo sign-in. | Android, desktop |
+| `:shared:feature:client` | Client shell, start, calendar with requests and cancellation, wallet ([plan](docs/features/client-shell-sessions-wallet.md)). | Android, desktop |
 | `:shared:feature:workout-logging` | Client live workout, workout summary, progress, rest-timer notification ([plan](docs/features/workout-logging-video.md)). | Android, desktop |
 | `:shared:app` | App shell: theme, session-based start, trainer navigation, navigation host, Koin wiring, bundled exercise seed. | Android, desktop |
 | `:androidApp` | The Android application. | Android |
