@@ -173,8 +173,18 @@ object WorkoutLogReducer {
 
     fun setNote(log: WorkoutLog, note: String): WorkoutLog = log.copy(note = note.take(NOTE_MAX_LENGTH))
 
+    /**
+     * "Zakończ" in the live workout: stops the clock and the rest, but keeps the workout unfinished until the client
+     * saves it in the summary. Going back from the summary calls [resume].
+     */
+    fun end(log: WorkoutLog, nowEpochMs: Long): WorkoutLog =
+        if (log.isFinished) log else log.copy(finishedAtEpochMs = log.finishedAtEpochMs ?: nowEpochMs, rest = null)
+
+    fun resume(log: WorkoutLog): WorkoutLog = if (log.isFinished) log else log.copy(finishedAtEpochMs = null)
+
+    /** "Zapisz trening". Keeps the end time set by [end], if any. */
     fun finish(log: WorkoutLog, nowEpochMs: Long): WorkoutLog =
-        if (log.isFinished) log else log.copy(state = WorkoutState.FINISHED, finishedAtEpochMs = nowEpochMs, rest = null)
+        if (log.isFinished) log else log.copy(state = WorkoutState.FINISHED, finishedAtEpochMs = log.finishedAtEpochMs ?: nowEpochMs, rest = null)
 
     const val NOTE_MAX_LENGTH = 500
     private const val MAX_REPS = 999

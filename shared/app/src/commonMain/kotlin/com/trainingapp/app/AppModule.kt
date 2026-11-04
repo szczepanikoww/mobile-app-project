@@ -24,7 +24,18 @@ import com.trainingapp.domain.exercise.ExerciseUsage
 import com.trainingapp.domain.media.LocalFiles
 import com.trainingapp.domain.media.MediaRepository
 import com.trainingapp.domain.plan.PlanRepository
+import com.trainingapp.data.workout.DemoWorkoutData
+import com.trainingapp.data.workout.LocalMeasurementRepository
+import com.trainingapp.data.workout.LocalWorkoutRepository
+import com.trainingapp.domain.workout.CurrentClient
+import com.trainingapp.domain.workout.MeasurementRepository
+import com.trainingapp.domain.workout.TechniqueVideoOutbox
+import com.trainingapp.domain.workout.TodayWorkoutSource
+import com.trainingapp.domain.workout.WorkoutRepository
 import com.trainingapp.feature.workoutbuilder.workoutBuilderModule
+import com.trainingapp.feature.workoutlogging.rest.RestTimerNotifier
+import com.trainingapp.feature.workoutlogging.workoutLoggingModule
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,11 +51,27 @@ interface AppPlatform {
     val networkMonitor: NetworkMonitor
     val ioDispatcher: CoroutineDispatcher
     val localFiles: LocalFiles
+
+    /** The rest-end system notification; platforms without notifications keep the default. */
+    val restTimerNotifier: RestTimerNotifier get() = RestTimerNotifier.None
+
+    /** Where technique videos are sent; the Android app posts them into the trainer conversation. */
+    val techniqueVideoOutbox: TechniqueVideoOutbox get() = TechniqueVideoOutbox.None
 }
 
 /** Sign-in is not implemented yet; every session acts as this synthetic trainer. */
 object DemoTrainer : CurrentUser {
     override val trainerId: String = "demo-trainer"
+}
+
+/**
+ * The client of the temporary client preview. The client shell and sign-in (Person B) replace it. Matches the demo
+ * trainer chat fixtures (relationship "c1"), so a technique video lands in that conversation.
+ */
+object DemoClient : CurrentClient {
+    override val clientId: String = "c1"
+    override val firstName: String = "Kasia"
+    override val trainerRelationshipId: String = "c1"
 }
 
 private val AppScope = named("appScope")
@@ -87,9 +114,28 @@ fun appModule(platform: AppPlatform) = module {
     single<MediaRepository> {
         LocalMediaRepository(get(), get(), get(), get(), get(), get(), get(AppScope), platform.ioDispatcher)
     }
+
+    // Client workout logging (docs/features/workout-logging-video.md). Local only: no sync in this phase.
+    single<CurrentClient> { DemoClient }
+    single<WorkoutRepository> { LocalWorkoutRepository(get(), platform.ioDispatcher) }
+    single<MeasurementRepository> { LocalMeasurementRepository(get(), platform.ioDispatcher) }
+    // Integration point: the plan assignment flow replaces this demo source.
+    single<TodayWorkoutSource> { DemoWorkoutData.todaySource }
+    single<RestTimerNotifier> { platform.restTimerNotifier }
+    single<TechniqueVideoOutbox> { platform.techniqueVideoOutbox }
+}
+
+/** Synthetic history so the progress view is not empty in the demo. Runs once per device. */
+private fun seedDemoClient(koin: org.koin.core.Koin) {
+    val client = koin.get<CurrentClient>()
+    koin.get<CoroutineScope>(AppScope).launch {
+        runCatching {
+            DemoWorkoutData.seedIfEmpty(client.clientId, koin.get(), koin.get(), koin.get(), koin.get<TimeSource>().nowEpochMs())
+        }
+    }
 }
 
 fun initKoin(platform: AppPlatform, platformDeclaration: KoinAppDeclaration = {}) = startKoin {
     platformDeclaration()
-    modules(appModule(platform), workoutBuilderModule)
-}
+    modules(appModule(platform), workoutBuilderModule, workoutLoggingModule)
+}.also { seedDemoClient(it.koin) }

@@ -3,6 +3,7 @@ package com.trainingapp.app
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -20,6 +21,9 @@ import com.trainingapp.feature.workoutbuilder.common.ExerciseBrowserDestination
 import com.trainingapp.feature.workoutbuilder.common.PlanEditorDestination
 import com.trainingapp.feature.workoutbuilder.common.PlanLibraryDestination
 import com.trainingapp.feature.workoutbuilder.workoutBuilderGraph
+import com.trainingapp.feature.workoutlogging.LiveWorkoutDestination
+import com.trainingapp.feature.workoutlogging.ProgressDestination
+import com.trainingapp.feature.workoutlogging.workoutLoggingGraph
 import kotlinx.serialization.Serializable
 import org.jetbrains.compose.resources.stringResource
 
@@ -27,15 +31,36 @@ import org.jetbrains.compose.resources.stringResource
 @Serializable
 data object TrainerHomeDestination
 
+/** Temporary entry to the client views until Person B's client shell exists. Remove it when that shell lands. */
+@Serializable
+data object ClientPreviewDestination
+
+/** The client's chat (A6), hosted by the Android app. */
+@Serializable
+data object ClientChatDestination
+
 /**
  * The app entry point shared by Android and the desktop preview. Only the trainer role exists so far; client and
  * guest shells will switch on the active role here, with the same theme.
+ *
+ * [clientChat] renders the client conversation (Android only; the chat is not a shared module yet).
+ * Incrementing [openLiveWorkoutRequest] opens the live workout, e.g. after tapping the rest notification.
  */
 @Composable
-fun App(host: (@Composable (WorkoutNavigationActions) -> Unit)? = null) {
+fun App(
+    host: (@Composable (WorkoutNavigationActions) -> Unit)? = null,
+    clientChat: (@Composable (onBack: () -> Unit) -> Unit)? = null,
+    openLiveWorkoutRequest: Int = 0,
+) {
     AppTheme {
         val navController = rememberNavController()
         var showAssignInfo by rememberSaveable { mutableStateOf(false) }
+
+        LaunchedEffect(openLiveWorkoutRequest) {
+            if (openLiveWorkoutRequest > 0) {
+                navController.navigate(LiveWorkoutDestination) { launchSingleTop = true }
+            }
+        }
 
         NavHost(navController = navController, startDestination = TrainerHomeDestination) {
             composable<TrainerHomeDestination> {
@@ -43,6 +68,7 @@ fun App(host: (@Composable (WorkoutNavigationActions) -> Unit)? = null) {
                     onNewPlan = { navController.navigate(PlanEditorDestination()) },
                     onOpenPlans = { navController.navigate(PlanLibraryDestination) },
                     onOpenExercises = { navController.navigate(ExerciseBrowserDestination()) },
+                    onOpenClientPreview = { navController.navigate(ClientPreviewDestination) },
                 )
                 if (host != null) host(actions) else TrainerShell(actions)
             }
@@ -51,6 +77,22 @@ fun App(host: (@Composable (WorkoutNavigationActions) -> Unit)? = null) {
                 // Integration point: the assignment flow belongs to the relationship-scoped assignment API, which is not connected yet.
                 onAssignToClient = { _, _ -> showAssignInfo = true },
             )
+            workoutLoggingGraph(navController)
+            composable<ClientPreviewDestination> {
+                ClientPreviewScreen(
+                    onBack = { navController.popBackStack() },
+                    onLiveWorkout = { navController.navigate(LiveWorkoutDestination) },
+                    onProgress = { navController.navigate(ProgressDestination) },
+                    onChat = if (clientChat != null) {
+                        { navController.navigate(ClientChatDestination) }
+                    } else {
+                        null
+                    },
+                )
+            }
+            composable<ClientChatDestination> {
+                clientChat?.invoke { navController.popBackStack() }
+            }
         }
 
         if (showAssignInfo) {

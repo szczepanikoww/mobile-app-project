@@ -117,13 +117,13 @@ data class WorkoutSummary(
 }
 
 /** One point of the progress chart: the best working set of an exercise in one finished workout (D1). */
-data class ProgressPoint(val workoutId: String, val atEpochMs: Long, val set: SetLog, val performance: SetPerformance)
+data class ProgressPoint(val exerciseId: String, val workoutId: String, val atEpochMs: Long, val set: SetLog, val performance: SetPerformance)
 
 object ProgressRules {
     /** Oldest first. No estimated 1RM: the chart shows what was actually lifted. */
     fun bestSetPerWorkout(exerciseId: String, history: List<WorkoutLog>): List<ProgressPoint> =
         history.filter { it.isFinished }
-            .mapNotNull { log -> log.bestSet(exerciseId)?.let { (set, perf) -> ProgressPoint(log.id, log.finishedAtEpochMs ?: log.startedAtEpochMs, set, perf) } }
+            .mapNotNull { log -> log.bestSet(exerciseId)?.let { (set, perf) -> ProgressPoint(exerciseId, log.id, log.finishedAtEpochMs ?: log.startedAtEpochMs, set, perf) } }
             .sortedBy { it.atEpochMs }
 
     /** Exercises the client has completed working sets of, most recent first. */

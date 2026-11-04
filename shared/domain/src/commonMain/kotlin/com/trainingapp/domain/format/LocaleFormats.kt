@@ -9,4 +9,10 @@ expect object LocaleFormats {
 
     /** Short time, e.g. "14:05" / "2:05 PM". */
     fun formatTime(epochMs: Long, languageTag: String): String
+
+    /** Grouped whole number, e.g. "6 240" / "6,240". */
+    fun formatInteger(value: Long, languageTag: String): String
+
+    /** Short date without the year, e.g. "28 paź" / "Oct 28". */
+    fun formatShortDate(epochMs: Long, languageTag: String): String
 }

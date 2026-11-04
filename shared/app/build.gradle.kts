@@ -28,6 +28,7 @@ kotlin {
             implementation(libs.compose.components.resources)
             implementation(projects.shared.data)
             implementation(projects.shared.feature.workoutBuilder)
+            api(projects.shared.feature.workoutLogging)
             implementation(libs.androidx.navigation.compose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(libs.kotlinx.serialization.json)
