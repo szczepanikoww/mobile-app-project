@@ -12,10 +12,12 @@
     <string name="action_create">Nowy trening lub klient</string>
     <string name="not_available_yet">Ten ekran nie jest jeszcze dostępny</string>
 
+    <string name="screen_loading">Wczytywanie…</string>
+    <string name="screen_error_body">Sprawdź połączenie i spróbuj ponownie.</string>
+
     <!-- Start trenera -->
     <string name="home_greeting_hey">Hej,</string>
     <string name="home_today_sessions">Dzisiejsze sesje</string>
-    <string name="home_swipe">Przesuń</string>
     <string name="home_needs_attention">Wymaga uwagi</string>
     <string name="home_this_week">Ten tydzień</string>
     <string name="home_details">Szczegóły</string>
@@ -23,7 +25,6 @@
 
     <string name="status_confirmed">Potwierdzona</string>
     <string name="status_requested">Do potwierdzenia</string>
-    <string name="status_pending_chip">Oczekuje</string>
     <string name="status_cancelled">Odwołana</string>
     <string name="status_completed">Zakończona</string>
 
@@ -32,8 +33,6 @@
     <string name="day_other_time">%1$s, %2$s</string>
     <string name="starts_in_minutes">Za %1$d min</string>
     <string name="starts_in_hours">Za %1$dh %2$dm</string>
-    <string name="session_place_plan">%1$s · Plan: %2$s</string>
-    <string name="session_plan_place">%1$s · %2$s</string>
 
     <string name="action_check_in">Check-in</string>
     <string name="action_confirm">Potwierdź</string>
@@ -45,7 +44,6 @@
     <string name="attention_video_label">Wideo techniki</string>
     <string name="attention_payment_label">Status rozliczenia</string>
     <string name="attention_overdue">Zaległa płatność</string>
-    <string name="attention_new">Nowe</string>
     <plurals name="attention_unread_short">
         <item quantity="one">%1$d wiadomość</item>
         <item quantity="few">%1$d wiadomości</item>
@@ -66,8 +64,6 @@
     <string name="empty_new_body">Ustaw dostępność, aby klienci mogli prosić o treningi.</string>
     <string name="empty_new_action">Dodaj dostępność</string>
     <!-- Finanse trenera -->
-    <string name="finance_overline">Podsumowanie zysków</string>
-    <string name="finance_title">Panel Finansowy</string>
     <string name="finance_period_week">Tydzień</string>
     <string name="finance_period_month">Miesiąc</string>
     <string name="finance_period_year">Rok</string>

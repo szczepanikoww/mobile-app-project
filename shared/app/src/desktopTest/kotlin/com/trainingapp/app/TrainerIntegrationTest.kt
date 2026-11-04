@@ -56,7 +56,7 @@ class TrainerIntegrationTest {
             // The shared shell opens on the trainer home screen; finance is a tab of the same shell.
             waitUntil(timeoutMillis = 10_000) { onAllNodes(hasText("Dzisiejsze sesje")).fetchSemanticsNodes().isNotEmpty() }
             clickOnUi(onNodeWithText("Finanse"))
-            waitUntil(timeoutMillis = 10_000) { onAllNodes(hasText("Panel Finansowy")).fetchSemanticsNodes().isNotEmpty() }
+            waitUntil(timeoutMillis = 10_000) { onAllNodes(hasText("Tydzień")).fetchSemanticsNodes().isNotEmpty() }
             clickOnUi(onNodeWithText("Podopieczni"))
             waitUntil(timeoutMillis = 10_000) { onAllNodes(hasText("Katarzyna Nowak")).fetchSemanticsNodes().isNotEmpty() }
             onNodeWithText("Twoi podopieczni").assertExists()

@@ -1,87 +1,77 @@
 package pl.trainerapp.feature.trainerhome
 
-import org.jetbrains.compose.resources.DrawableResource
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.outlined.ChatBubble
+import androidx.compose.material.icons.automirrored.outlined.EventNote
+import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.CloudOff
+import androidx.compose.material.icons.outlined.DoneAll
+import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.outlined.EventAvailable
 import androidx.compose.material.icons.outlined.EventBusy
 import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.HowToReg
+import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Pending
 import androidx.compose.material.icons.outlined.PersonAdd
+import androidx.compose.material.icons.outlined.PlayCircleOutline
 import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
-import org.jetbrains.compose.resources.painterResource
-import org.jetbrains.compose.resources.pluralStringResource
-import org.jetbrains.compose.resources.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 import pl.trainer.resources.*
-import pl.trainerapp.core.designsystem.AppColors
-import pl.trainerapp.core.designsystem.AppShapes
-import pl.trainerapp.core.designsystem.AppTheme
-import pl.trainerapp.core.designsystem.Corner
-import pl.trainerapp.core.designsystem.CornerArc
-import pl.trainerapp.core.designsystem.EmptyState
-import pl.trainerapp.core.designsystem.ErrorState
-import pl.trainerapp.core.designsystem.GlassPanel
-import pl.trainerapp.core.designsystem.InlineBanner
-import pl.trainerapp.core.designsystem.SectionHeader
-import pl.trainerapp.core.designsystem.SkeletonBlock
-import pl.trainerapp.core.designsystem.Spacing
-import pl.trainerapp.core.designsystem.frosted
+import pl.trainer.ui.AppColors
+import pl.trainer.ui.EmptyContent
+import pl.trainer.ui.InfoBanner
+import pl.trainer.ui.Layout
+import pl.trainer.ui.MetaLine
+import pl.trainerapp.core.designsystem.IconCircle
+import pl.trainerapp.core.designsystem.OutlinedTile
+import pl.trainerapp.core.designsystem.ScreenError
+import pl.trainerapp.core.designsystem.ScreenLoading
+import pl.trainerapp.core.designsystem.ScreenSectionTitle
+import pl.trainerapp.core.designsystem.ScreenTopBar
 import pl.trainerapp.core.format.formatSessionRange
 import pl.trainerapp.core.format.formatStartsIn
-import pl.trainerapp.core.format.formatTime
 import pl.trainerapp.core.format.formatUpdatedAt
 import pl.trainerapp.feature.trainerhome.model.AttentionItem
 import pl.trainerapp.feature.trainerhome.model.SessionStatus
@@ -89,32 +79,6 @@ import pl.trainerapp.feature.trainerhome.model.SessionSummary
 import pl.trainerapp.feature.trainerhome.model.TrainerHomeSummary
 import pl.trainerapp.feature.trainerhome.model.WeekStats
 import kotlin.time.Instant
-
-private val SessionCardWidth = 290.dp
-private val AttentionCardWidth = 190.dp
-private val AttentionCardHeight = 250.dp
-private val CarouselGap = Spacing.md
-private val SectionInnerGap = Spacing.sm
-
-private val Gutter = Modifier.padding(horizontal = Spacing.screenGutter)
-private val CarouselPadding = PaddingValues(horizontal = Spacing.screenGutter)
-
-// Demo imagery: the design's stock photos, assigned by position until clients have real avatars.
-private val SessionPhotos = listOf(
-    Res.drawable.photo_next_session,
-    Res.drawable.photo_today_1,
-    Res.drawable.photo_today_2,
-    Res.drawable.photo_today_3,
-)
-
-/** Decorative corner arc per card position: corner and diameter. */
-private val SessionArcs = listOf(Corner.TopEnd to 80.dp, Corner.BottomStart to 64.dp, Corner.TopEnd to 64.dp, Corner.TopStart to 64.dp)
-
-/** "Magdalena Kowalczyk-Wiśniewska" → "Magdalena K." */
-private fun shortName(name: String): String {
-    val parts = name.trim().split(" ").filter { it.isNotBlank() }
-    return if (parts.size < 2) name else "${parts.first()} ${parts.last().first().uppercaseChar()}."
-}
 
 /** Navigation- and DI-aware entry point. Everything below it only renders state and emits actions. */
 @Composable
@@ -144,27 +108,30 @@ fun TrainerHomeScreen(
     onAction: (TrainerHomeAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    PullToRefreshBox(
-        isRefreshing = state.isRefreshing,
-        onRefresh = { onAction(TrainerHomeAction.Refresh) },
-        modifier = modifier.fillMaxSize(),
-    ) {
-        LazyColumn(
+    Column(modifier.fillMaxSize()) {
+        HomeTopBar(state.summary, onAction)
+        PullToRefreshBox(
+            isRefreshing = state.isRefreshing,
+            onRefresh = { onAction(TrainerHomeAction.Refresh) },
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = Spacing.xs, bottom = Spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sectionGap),
         ) {
-            when {
-                state.status == LoadStatus.Loading -> item { LoadingContent() }
-                state.status == LoadStatus.Error -> item {
-                    ErrorState(
-                        title = stringResource(Res.string.error_load_home),
-                        retryLabel = stringResource(Res.string.action_retry),
-                        onRetry = { onAction(TrainerHomeAction.Refresh) },
-                        modifier = Gutter,
-                    )
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = Layout.gutter, vertical = Layout.padding),
+                verticalArrangement = Arrangement.spacedBy(Layout.medium),
+            ) {
+                when {
+                    state.status == LoadStatus.Loading -> item { ScreenLoading(stringResource(Res.string.screen_loading)) }
+                    state.status == LoadStatus.Error -> item {
+                        ScreenError(
+                            title = stringResource(Res.string.error_load_home),
+                            body = stringResource(Res.string.screen_error_body),
+                            retryLabel = stringResource(Res.string.action_retry),
+                            onRetry = { onAction(TrainerHomeAction.Refresh) },
+                        )
+                    }
+                    state.summary != null -> content(state, state.summary, onAction)
                 }
-                state.summary != null -> content(state, state.summary, onAction)
             }
         }
     }
@@ -176,35 +143,37 @@ private fun LazyListScope.content(
     onAction: (TrainerHomeAction) -> Unit,
 ) {
     val updated = state.lastUpdated
-
-    item { HomeHeader(summary, onAction) }
-
     if (state.isOffline && updated != null) {
-        item { InlineBanner(stringResource(Res.string.offline_banner, formatUpdatedAt(updated)), modifier = Gutter) }
+        item { InfoBanner(stringResource(Res.string.offline_banner, formatUpdatedAt(updated)), Icons.Outlined.CloudOff) }
     }
 
     if (summary.isNewTrainer) {
         item {
-            EmptyState(
-                title = stringResource(Res.string.empty_new_title),
-                body = stringResource(Res.string.empty_new_body),
-                actionLabel = stringResource(Res.string.empty_new_action),
-                onAction = { onAction(TrainerHomeAction.EmptyStateAction) },
-                modifier = Gutter,
-            )
+            EmptyContent(
+                Icons.Outlined.EventAvailable,
+                stringResource(Res.string.empty_new_title),
+                stringResource(Res.string.empty_new_body),
+                stringResource(Res.string.empty_new_action),
+            ) { onAction(TrainerHomeAction.EmptyStateAction) }
         }
         return
     }
 
+    item { ScreenSectionTitle(stringResource(Res.string.home_today_sessions)) }
     val sessions = summary.carouselSessions
-    if (sessions.isNotEmpty()) {
-        item { SessionsSection(sessions, summary.generatedAt, state.isOffline, onAction) }
-    } else {
+    if (sessions.isEmpty()) {
         item { EmptyDay(summary, onAction) }
+    } else {
+        items(sessions, key = { "session-${it.id}" }) { session ->
+            SessionCard(session, summary.generatedAt, state.isOffline, onAction)
+        }
     }
 
     if (summary.attention.isNotEmpty()) {
-        item { AttentionSection(summary.attention, onAction) }
+        item { ScreenSectionTitle(stringResource(Res.string.home_needs_attention), Modifier.padding(top = Layout.small)) }
+        items(summary.attention, key = { "attention-${it.id}" }) { item ->
+            AttentionRow(item) { onAction(TrainerHomeAction.OpenAttention(item)) }
+        }
     }
 
     summary.week?.let { week ->
@@ -213,21 +182,55 @@ private fun LazyListScope.content(
 }
 
 @Composable
-private fun LoadingContent() {
-    Column(modifier = Gutter, verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
-        SkeletonBlock(height = 28.dp, modifier = Modifier.fillMaxWidth(0.5f))
-        SkeletonBlock(height = 180.dp)
-        SkeletonBlock(height = 64.dp)
-        SkeletonBlock(height = 64.dp)
+private fun HomeTopBar(summary: TrainerHomeSummary?, onAction: (TrainerHomeAction) -> Unit) {
+    ScreenTopBar(
+        actions = {
+            val unread = summary?.unreadChats ?: 0
+            IconButton(onClick = { onAction(TrainerHomeAction.OpenChats) }) {
+                BadgedBox(badge = { if (unread > 0) Badge { Text(unread.toString()) } }) {
+                    Icon(
+                        Icons.Outlined.ChatBubbleOutline,
+                        contentDescription = if (unread > 0) {
+                            stringResource(Res.string.cd_unread_chats, unread)
+                        } else {
+                            stringResource(Res.string.action_chat)
+                        },
+                    )
+                }
+            }
+            IconButton(onClick = { onAction(TrainerHomeAction.OpenNotifications) }) {
+                BadgedBox(badge = { if (summary?.hasNotifications == true) Badge() }) {
+                    Icon(Icons.Outlined.Notifications, contentDescription = stringResource(Res.string.action_notifications))
+                }
+            }
+            IconButton(onClick = { onAction(TrainerHomeAction.OpenProfile) }) {
+                Icon(Icons.Outlined.AccountCircle, contentDescription = stringResource(Res.string.action_profile))
+            }
+        },
+    ) {
+        Column {
+            Text(
+                stringResource(Res.string.home_greeting_hey),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                summary?.trainerName ?: stringResource(Res.string.shell_nav_start),
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 
 @Composable
 private fun EmptyDay(summary: TrainerHomeSummary, onAction: (TrainerHomeAction) -> Unit) {
     val upcoming = summary.upcomingAfterToday
-    EmptyState(
-        title = stringResource(Res.string.empty_day_title),
-        body = if (upcoming != null) {
+    EmptyContent(
+        Icons.Outlined.CalendarToday,
+        stringResource(Res.string.empty_day_title),
+        if (upcoming != null) {
             stringResource(
                 Res.string.empty_day_next,
                 formatSessionRange(upcoming.start, upcoming.end, upcoming.zone, summary.generatedAt),
@@ -235,475 +238,170 @@ private fun EmptyDay(summary: TrainerHomeSummary, onAction: (TrainerHomeAction) 
         } else {
             stringResource(Res.string.empty_day_body)
         },
-        actionLabel = stringResource(Res.string.home_see_calendar),
-        onAction = { onAction(TrainerHomeAction.OpenCalendar) },
-        modifier = Gutter,
-    )
-}
-
-@Composable
-private fun HomeHeader(summary: TrainerHomeSummary, onAction: (TrainerHomeAction) -> Unit) {
-    val colors = AppTheme.colors
-    val profileDescription = stringResource(Res.string.action_profile)
-    Row(
-        modifier = Modifier.fillMaxWidth().then(Gutter),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-
-                    .background(colors.softBrand, CircleShape)
-                    .border(1.dp, colors.brandBorder, CircleShape)
-                    .clip(CircleShape)
-                    .clickable(role = Role.Button) { onAction(TrainerHomeAction.OpenProfile) }
-                    .semantics { contentDescription = profileDescription },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Filled.Person, contentDescription = null, tint = colors.brand, modifier = Modifier.size(28.dp))
-            }
-            Column {
-                Text(
-                    stringResource(Res.string.home_greeting_hey),
-                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
-                    color = colors.textMuted,
-                )
-                summary.trainerName?.let {
-                    Text(it, style = MaterialTheme.typography.titleLarge.copy(lineHeight = 20.sp), color = colors.brand)
-                }
-            }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-            val unread = summary.unreadChats
-            HeaderButton(
-                icon = Icons.Outlined.ChatBubble,
-                description = if (unread > 0) {
-                    stringResource(Res.string.cd_unread_chats, unread)
-                } else {
-                    stringResource(Res.string.action_chat)
-                },
-                onClick = { onAction(TrainerHomeAction.OpenChats) },
-            ) {
-                if (unread > 0) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(top = Spacing.xs, end = Spacing.xs)
-                            .size(20.dp)
-
-                            .background(colors.brand, CircleShape),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(unread.toString(), style = MaterialTheme.typography.labelSmall, color = Color.White)
-                    }
-                }
-            }
-            HeaderButton(
-                icon = Icons.Outlined.Notifications,
-                description = stringResource(Res.string.action_notifications),
-                onClick = { onAction(TrainerHomeAction.OpenNotifications) },
-            ) {
-                if (summary.hasNotifications) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(top = Spacing.sm, end = 10.dp)
-                            .size(10.dp)
-                            .background(colors.danger, CircleShape),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun HeaderButton(
-    icon: ImageVector,
-    description: String,
-    onClick: () -> Unit,
-    badge: @Composable BoxScope.() -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .size(48.dp)
-            .frosted(CircleShape, alpha = 0.75f)
-            .clip(CircleShape)
-            .clickable(role = Role.Button, onClick = onClick)
-            .semantics { contentDescription = description },
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(icon, contentDescription = null, tint = AppTheme.colors.textStrong, modifier = Modifier.size(22.dp))
-        badge()
-    }
-}
-
-@Composable
-private fun SessionsSection(
-    sessions: List<SessionSummary>,
-    now: Instant,
-    offline: Boolean,
-    onAction: (TrainerHomeAction) -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(SectionInnerGap)) {
-        SectionHeader(
-            title = stringResource(Res.string.home_today_sessions),
-            badge = sessions.size.toString(),
-            modifier = Gutter,
-            action = {
-                Text(
-                    stringResource(Res.string.home_swipe),
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
-                    color = AppTheme.colors.textMuted,
-                )
-            },
-        )
-        LazyRow(contentPadding = CarouselPadding, horizontalArrangement = Arrangement.spacedBy(CarouselGap)) {
-            itemsIndexed(sessions, key = { _, session -> session.id }) { index, session ->
-                SessionCard(session, index, now, offline, onAction)
-            }
-        }
-    }
+        stringResource(Res.string.home_see_calendar),
+    ) { onAction(TrainerHomeAction.OpenCalendar) }
 }
 
 @Composable
 private fun SessionCard(
     session: SessionSummary,
-    index: Int,
     now: Instant,
     offline: Boolean,
     onAction: (TrainerHomeAction) -> Unit,
 ) {
-    val colors = AppTheme.colors
-    val featured = index == 0
-    val range = formatSessionRange(session.start, session.end, session.zone, now)
     val requested = session.status == SessionStatus.Requested
-    val chipText = when {
-        requested -> stringResource(Res.string.status_pending_chip)
-        else -> formatStartsIn(session.start, now) ?: formatTime(session.start, session.zone)
-    }
-    val place = when {
-        session.planTitle == null -> session.location
-        featured -> stringResource(Res.string.session_place_plan, session.location, session.planTitle)
-        else -> stringResource(Res.string.session_plan_place, session.planTitle, session.location)
-    }
-    val (arcCorner, arcSize) = SessionArcs[index % SessionArcs.size]
     val canCheckIn = session.checkInOpen && !offline
-
-    // Translucent frame around a white callout, as in the design's wide framed card.
-    Column(
-        modifier = Modifier
-            .width(SessionCardWidth)
-
-            .background(MaterialTheme.colorScheme.surface, AppShapes.frame)
-            .border(1.dp, colors.border, AppShapes.frame)
-            .padding(6.dp),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(AppShapes.media)
-                .background(Color.White)
-                .clickable { onAction(TrainerHomeAction.OpenSession(session)) },
+    OutlinedTile(Modifier.fillMaxWidth(), onClick = { onAction(TrainerHomeAction.OpenSession(session)) }) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            SessionStatusLabel(session.status)
+            Spacer(Modifier.weight(1f))
+            if (!requested) {
+                formatStartsIn(session.start, now)?.let {
+                    Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                }
+            }
+        }
+        Text(session.client.name, style = MaterialTheme.typography.titleMedium)
+        MetaLine(Icons.Outlined.Schedule, formatSessionRange(session.start, session.end, session.zone, now))
+        MetaLine(Icons.Outlined.LocationOn, session.location)
+        session.planTitle?.let { MetaLine(Icons.AutoMirrored.Outlined.EventNote, it) }
+        Row(
+            Modifier.fillMaxWidth().padding(top = Layout.tiny),
+            horizontalArrangement = Arrangement.spacedBy(Layout.small),
         ) {
-            Box(modifier = Modifier.fillMaxWidth().height(144.dp).background(colors.chipSurface)) {
-                Image(
-                    painterResource(SessionPhotos[index % SessionPhotos.size]),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                )
-                CornerArc(arcCorner, arcSize)
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(10.dp)
-                        .frosted(AppShapes.pill, alpha = 0.95f)
-                        .padding(horizontal = 10.dp, vertical = Spacing.xs),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    val chipColor = if (requested) colors.warning else colors.brand
-                    Icon(
-                        if (requested) Icons.Outlined.Pending else Icons.Outlined.Schedule,
-                        contentDescription = null,
-                        tint = chipColor,
-                        modifier = Modifier.size(16.dp),
-                    )
-                    Text(
-                        chipText,
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                        color = if (requested) colors.warning else MaterialTheme.colorScheme.onSurface,
-                    )
-                }
+            if (requested) {
+                Button(
+                    onClick = { onAction(TrainerHomeAction.OpenSession(session)) },
+                    shape = Layout.pill,
+                    modifier = Modifier.weight(1f).heightIn(min = Layout.target),
+                ) { ButtonContent(Icons.Outlined.Check, stringResource(Res.string.action_confirm)) }
+            } else {
+                Button(
+                    onClick = { onAction(TrainerHomeAction.CheckIn(session)) },
+                    enabled = canCheckIn,
+                    shape = Layout.pill,
+                    modifier = Modifier.weight(1f).heightIn(min = Layout.target),
+                ) { ButtonContent(Icons.Outlined.HowToReg, stringResource(Res.string.action_check_in)) }
             }
-            Column(
-                modifier = Modifier.padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        range,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = colors.textMuted,
-                        modifier = Modifier.weight(1f),
-                    )
-                    SessionStatusBadge(session.status, colors)
-                }
-                Column {
-                    Text(
-                        if (featured) session.client.name else shortName(session.client.name),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Text(
-                        place,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colors.textMuted,
-                        modifier = Modifier.padding(top = 2.dp),
-                    )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                ) {
-                    if (requested) {
-                        CardButton(
-                            text = stringResource(Res.string.action_confirm),
-                            icon = Icons.Outlined.Check,
-                            primary = true,
-                            onClick = { onAction(TrainerHomeAction.OpenSession(session)) },
-                            modifier = Modifier.weight(1f),
-                        )
-                    } else {
-                        CardButton(
-                            text = stringResource(Res.string.action_check_in),
-                            icon = Icons.Outlined.HowToReg,
-                            primary = true,
-                            enabled = canCheckIn,
-                            onClick = { onAction(TrainerHomeAction.CheckIn(session)) },
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                    CardButton(
-                        text = stringResource(Res.string.action_message),
-                        icon = Icons.Outlined.ChatBubbleOutline,
-                        primary = false,
-                        onClick = { onAction(TrainerHomeAction.Message(session)) },
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                if (offline && session.checkInOpen && !requested) {
-                    Text(
-                        stringResource(Res.string.check_in_needs_connection),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colors.textMuted,
-                    )
-                }
-            }
+            OutlinedButton(
+                onClick = { onAction(TrainerHomeAction.Message(session)) },
+                shape = Layout.pill,
+                modifier = Modifier.weight(1f).heightIn(min = Layout.target),
+            ) { ButtonContent(Icons.Outlined.ChatBubbleOutline, stringResource(Res.string.action_message)) }
+        }
+        if (offline && session.checkInOpen && !requested) {
+            Text(
+                stringResource(Res.string.check_in_needs_connection),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
 
 @Composable
-private fun CardButton(
-    text: String,
-    icon: ImageVector,
-    primary: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-) {
-    val colors = AppTheme.colors
-    val content = if (primary) Color.White else colors.textStrong
-    val base = modifier
-        .heightIn(min = 52.dp)
-        .alpha(if (enabled) 1f else 0.4f)
+private fun ButtonContent(icon: ImageVector, text: String) {
+    Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+    Spacer(Modifier.width(Layout.small))
+    Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+}
 
-        .background(if (primary) colors.brand else colors.chipSurface, AppShapes.pill)
-        .then(if (primary) Modifier else Modifier.border(1.dp, colors.border, AppShapes.pill))
-        .clip(AppShapes.pill)
-        .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
-    Row(
-        modifier = base,
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center,
-    ) {
-        Icon(icon, contentDescription = null, tint = if (primary) content else colors.textMuted, modifier = Modifier.size(18.dp))
-        Text(
-            text,
-            style = MaterialTheme.typography.labelMedium.copy(fontWeight = if (primary) FontWeight.Bold else FontWeight.SemiBold),
-            color = content,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(start = Spacing.xs),
+/** Status pill with icon and label, matching the calendar's status labels. */
+@Composable
+private fun SessionStatusLabel(status: SessionStatus) {
+    val (label, colors) = when (status) {
+        SessionStatus.Confirmed -> Res.string.status_confirmed to Triple(AppColors.successSurface, AppColors.success, Icons.Outlined.EventAvailable)
+        SessionStatus.Completed -> Res.string.status_completed to Triple(AppColors.completedSurface, AppColors.completedText, Icons.Outlined.DoneAll)
+        SessionStatus.Requested -> Res.string.status_requested to Triple(AppColors.warningSurface, AppColors.warningText, Icons.Outlined.Schedule)
+        SessionStatus.Cancelled -> Res.string.status_cancelled to Triple(AppColors.errorSurface, AppColors.errorText, Icons.Outlined.EventBusy)
+    }
+    val (background, content, icon) = colors
+    Surface(color = background, contentColor = content, shape = Layout.pill) {
+        Row(
+            Modifier.padding(horizontal = Layout.small, vertical = Layout.tiny),
+            horizontalArrangement = Arrangement.spacedBy(Layout.tiny),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(14.dp))
+            Text(stringResource(label), style = MaterialTheme.typography.labelMedium)
+        }
+    }
+}
+
+@Composable
+private fun AttentionRow(item: AttentionItem, onClick: () -> Unit) {
+    val brand = MaterialTheme.colorScheme.primary
+    when (item) {
+        is AttentionItem.TechniqueVideo -> AttentionTile(
+            icon = Icons.Outlined.PlayCircleOutline,
+            container = AppColors.softAccent,
+            tint = brand,
+            label = stringResource(Res.string.attention_video_label),
+            title = item.exercise,
+            subtitle = item.client.name,
+            onClick = onClick,
+        )
+        is AttentionItem.UnreadMessages -> AttentionTile(
+            icon = Icons.Outlined.ChatBubbleOutline,
+            container = AppColors.softAccent,
+            tint = brand,
+            label = pluralStringResource(Res.plurals.attention_unread_short, item.count, item.count),
+            title = item.client.name,
+            subtitle = item.topic,
+            onClick = onClick,
+        )
+        is AttentionItem.OverduePayment -> AttentionTile(
+            icon = Icons.Outlined.ErrorOutline,
+            container = AppColors.errorSurface,
+            tint = AppColors.errorText,
+            label = stringResource(Res.string.attention_payment_label),
+            title = stringResource(Res.string.attention_overdue),
+            subtitle = item.client.name,
+            onClick = onClick,
         )
     }
 }
 
-/** Text-only status pill. */
 @Composable
-private fun SessionStatusBadge(status: SessionStatus, colors: AppColors) {
-    val (label, container, content, border) = when (status) {
-        SessionStatus.Confirmed -> BadgeStyle(stringResource(Res.string.status_confirmed), colors.successContainer, colors.success, colors.successBorder)
-        SessionStatus.Completed -> BadgeStyle(stringResource(Res.string.status_completed), colors.completedContainer, colors.completed, colors.border)
-        SessionStatus.Requested -> BadgeStyle(stringResource(Res.string.status_requested), colors.warningContainer, colors.warning, colors.warningBorder)
-        SessionStatus.Cancelled -> BadgeStyle(stringResource(Res.string.status_cancelled), colors.chipSurface, colors.textMuted, colors.border)
-    }
-    Text(
-        label.uppercase(),
-        style = MaterialTheme.typography.labelSmall,
-        color = content,
-        modifier = Modifier
-            .clip(AppShapes.pill)
-            .background(container)
-            .border(1.dp, border, AppShapes.pill)
-            .padding(horizontal = Spacing.sm, vertical = 2.dp),
-    )
-}
-
-private data class BadgeStyle(val label: String, val container: Color, val content: Color, val border: Color)
-
-/** Attention card shell: 190×250, clipped to the media radius, with the photo filling it. */
-@Composable
-private fun PhotoCard(
-    photo: DrawableResource,
+private fun AttentionTile(
+    icon: ImageVector,
+    container: Color,
+    tint: Color,
+    label: String,
+    title: String,
+    subtitle: String?,
     onClick: () -> Unit,
-    content: @Composable BoxScope.() -> Unit,
 ) {
-    Box(
-        modifier = Modifier
-            .size(AttentionCardWidth, AttentionCardHeight)
-
-            .clip(AppShapes.media)
-            .border(1.dp, AppTheme.colors.border, AppShapes.media)
-            .clickable(onClick = onClick),
-    ) {
-        Image(painterResource(photo), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-        content()
-    }
-}
-
-@Composable
-private fun AttentionSection(items: List<AttentionItem>, onAction: (TrainerHomeAction) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(SectionInnerGap)) {
-        SectionHeader(stringResource(Res.string.home_needs_attention), modifier = Gutter)
-        LazyRow(contentPadding = CarouselPadding, horizontalArrangement = Arrangement.spacedBy(CarouselGap)) {
-            itemsIndexed(items, key = { _, item -> item.id }) { _, item ->
-                AttentionCard(item) { onAction(TrainerHomeAction.OpenAttention(item)) }
-            }
-        }
-    }
-}
-
-@Composable
-private fun AttentionCard(item: AttentionItem, onClick: () -> Unit) {
-    val colors = AppTheme.colors
-    when (item) {
-        is AttentionItem.TechniqueVideo -> PhotoCard(Res.drawable.photo_attention_video, onClick) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Box(
-                    modifier = Modifier.size(48.dp).frosted(CircleShape, alpha = 0.85f),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = colors.brand, modifier = Modifier.size(28.dp))
+    OutlinedTile(Modifier.fillMaxWidth(), onClick = onClick) {
+        Row(horizontalArrangement = Arrangement.spacedBy(Layout.medium), verticalAlignment = Alignment.CenterVertically) {
+            IconCircle(icon, container, tint)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Layout.tiny)) {
+                Text(label, style = MaterialTheme.typography.labelMedium, color = tint)
+                Text(title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                subtitle?.let {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
-            CornerArc(Corner.TopEnd, 64.dp)
-            GlassPanel {
-                PanelLabel(stringResource(Res.string.attention_video_label).uppercase(), colors.brand)
-                PanelHeading(item.exercise)
-                PanelSubtitle(shortName(item.client.name))
-            }
-        }
-        is AttentionItem.UnreadMessages -> PhotoCard(Res.drawable.photo_attention_message, onClick) {
-            Row(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(10.dp)
-                    .frosted(AppShapes.pill, alpha = 0.82f)
-                    .padding(horizontal = 10.dp, vertical = Spacing.xs),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-            ) {
-                Icon(Icons.Outlined.ChatBubbleOutline, contentDescription = null, tint = colors.brand, modifier = Modifier.size(14.dp))
-                Text(stringResource(Res.string.attention_new), style = MaterialTheme.typography.labelSmall, color = colors.warning)
-            }
-            GlassPanel {
-                PanelLabel(pluralStringResource(Res.plurals.attention_unread_short, item.count, item.count), colors.brand)
-                PanelHeading(shortName(item.client.name))
-                item.topic?.let { PanelSubtitle(it) }
-            }
-        }
-        is AttentionItem.OverduePayment -> PhotoCard(Res.drawable.photo_attention_payment, onClick) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(Spacing.md)
-                    .size(20.dp)
-                    .background(colors.danger.copy(alpha = 0.3f), CircleShape)
-                    .padding(4.dp)
-                    .background(colors.danger, CircleShape)
-                    .clearAndSetSemantics { },
-            )
-            GlassPanel {
-                PanelLabel(stringResource(Res.string.attention_payment_label), colors.dangerText)
-                PanelHeading(stringResource(Res.string.attention_overdue))
-                PanelSubtitle(shortName(item.client.name))
-            }
+            Icon(Icons.Outlined.ChevronRight, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
-}
-
-@Composable
-private fun PanelLabel(text: String, color: Color) {
-    Text(text, style = MaterialTheme.typography.labelSmall, color = color)
-}
-
-@Composable
-private fun PanelHeading(text: String) {
-    Text(
-        text,
-        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-        color = MaterialTheme.colorScheme.onSurface,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-    )
-}
-
-@Composable
-private fun PanelSubtitle(text: String) {
-    Text(
-        text,
-        style = MaterialTheme.typography.bodySmall,
-        color = AppTheme.colors.textMuted,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-    )
 }
 
 @Composable
 private fun WeekSection(week: WeekStats, onAction: (TrainerHomeAction) -> Unit) {
-    val colors = AppTheme.colors
-    Column(modifier = Gutter, verticalArrangement = Arrangement.spacedBy(SectionInnerGap)) {
-        SectionHeader(
-            title = stringResource(Res.string.home_this_week),
-            action = {
-                Text(
-                    stringResource(Res.string.home_details),
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                    color = colors.brand,
-                    modifier = Modifier.clickable { onAction(TrainerHomeAction.OpenCalendar) },
-                )
-            },
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+    Column(Modifier.padding(top = Layout.small), verticalArrangement = Arrangement.spacedBy(Layout.small)) {
+        ScreenSectionTitle(stringResource(Res.string.home_this_week)) {
+            TextButton(onClick = { onAction(TrainerHomeAction.OpenCalendar) }, modifier = Modifier.heightIn(min = Layout.target)) {
+                Text(stringResource(Res.string.home_details))
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(Layout.small)) {
             StatTile(
                 Icons.Outlined.FitnessCenter,
                 "${week.sessionsDone}/${week.sessionsPlanned}",
@@ -724,31 +422,19 @@ private fun WeekSection(week: WeekStats, onAction: (TrainerHomeAction) -> Unit) 
 
 @Composable
 private fun StatTile(icon: ImageVector, value: String, label: String, modifier: Modifier = Modifier, muted: Boolean = false) {
-    val colors = AppTheme.colors
-    Column(
-        modifier = modifier
-            .frosted(AppShapes.tile, alpha = 0.9f)
-            .padding(14.dp),
-    ) {
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .background(if (muted) colors.chipSurface else colors.softBrand, CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(icon, contentDescription = null, tint = if (muted) colors.textMuted else colors.brand, modifier = Modifier.size(18.dp))
-        }
-        Text(
-            value,
-            style = MaterialTheme.typography.titleLarge.copy(lineHeight = 20.sp),
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(top = Spacing.sm),
+    OutlinedTile(modifier) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = if (muted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(20.dp),
         )
+        Text(value, style = MaterialTheme.typography.titleLarge, maxLines = 1)
         Text(
             label,
-            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-            color = colors.textMuted,
-            modifier = Modifier.padding(top = Spacing.xs),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 2,
         )
     }
 }

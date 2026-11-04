@@ -2,6 +2,9 @@ package pl.trainerapp.shell
 
 import org.jetbrains.compose.resources.StringResource
 import pl.trainer.ui.PlatformBackHandler
+import pl.trainerapp.core.designsystem.ScreenTopBar
+import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.ui.semantics.heading
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -221,52 +224,17 @@ fun TrainerShell(
 
 @Composable
 private fun TrainerTopBar(title: String, onNotifications: () -> Unit, onProfile: () -> Unit) {
-    val scheme = MaterialTheme.colorScheme
-    val colors = AppTheme.colors
-    val profileDescription = stringResource(Res.string.action_profile)
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color.White.copy(alpha = 0.92f))
-            .statusBarsPadding()
-            .height(TopBarHeight)
-            .padding(horizontal = Spacing.screenGutter),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
+    ScreenTopBar(
+        actions = {
+            IconButton(onClick = onNotifications) {
+                Icon(Icons.Outlined.Notifications, contentDescription = stringResource(Res.string.action_notifications))
+            }
+            IconButton(onClick = onProfile) {
+                Icon(Icons.Outlined.AccountCircle, contentDescription = stringResource(Res.string.action_profile))
+            }
+        },
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .background(colors.softBrand, CircleShape)
-                    .border(1.dp, colors.brandBorder, CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Outlined.FitnessCenter, contentDescription = null, tint = colors.brand, modifier = Modifier.size(20.dp))
-            }
-            Text(title, style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
-        }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            IconButton(onClick = onNotifications, modifier = Modifier.size(44.dp)) {
-                Icon(
-                    Icons.Outlined.Notifications,
-                    contentDescription = stringResource(Res.string.action_notifications),
-                    tint = colors.textMuted,
-                    modifier = Modifier.size(22.dp),
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .background(colors.brand, CircleShape)
-                    .clip(CircleShape)
-                    .clickable(role = Role.Button, onClick = onProfile)
-                    .semantics { contentDescription = profileDescription },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Filled.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-            }
-        }
+        Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
     }
 }
 
