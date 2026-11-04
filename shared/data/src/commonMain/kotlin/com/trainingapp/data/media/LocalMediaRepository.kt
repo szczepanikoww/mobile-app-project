@@ -54,10 +54,10 @@ class LocalMediaRepository(
     override fun observeAll(): Flow<Map<String, MediaAsset>> =
         queries.selectAllMedia().asFlow().mapToList(io).map { rows -> rows.map { it.toAsset() }.associateBy { it.id } }
 
-    override suspend fun import(video: PickedVideo, kind: MediaKind): MediaAsset {
+    override suspend fun import(video: PickedVideo, kind: MediaKind, ownerUserId: String?): MediaAsset {
         val asset = MediaAsset(
             id = ids.newId(),
-            ownerTrainerId = currentUser.trainerId,
+            ownerUserId = ownerUserId ?: currentUser.trainerId,
             kind = kind,
             localPath = video.localPath,
             thumbnailPath = video.thumbnailPath,
@@ -71,7 +71,8 @@ class LocalMediaRepository(
         withContext(io) {
             queries.insertMedia(
                 id = asset.id,
-                owner_trainer_id = asset.ownerTrainerId,
+                // The column keeps its original name: renaming needs SQLite 3.25, newer than API 26 ships.
+                owner_trainer_id = asset.ownerUserId,
                 kind = kind.name,
                 local_path = video.localPath,
                 thumbnail_path = video.thumbnailPath,
@@ -145,7 +146,7 @@ class LocalMediaRepository(
 
     private fun Media_asset.toAsset() = MediaAsset(
         id = id,
-        ownerTrainerId = owner_trainer_id,
+        ownerUserId = owner_trainer_id,
         kind = MediaKind.valueOf(kind),
         localPath = local_path,
         thumbnailPath = thumbnail_path,
