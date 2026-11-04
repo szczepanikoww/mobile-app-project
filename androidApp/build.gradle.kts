@@ -24,6 +24,8 @@ kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarg
 dependencies {
     implementation(project(":shared:app"))
     implementation(project(":shared:data"))
+    // Technique video playback and upload states reuse the workout feature's video card.
+    implementation(project(":shared:feature:workout-builder"))
     implementation(libs.koin.android)
     implementation(libs.sqldelight.androidDriver)
     implementation(libs.kotlinx.coroutines.android)

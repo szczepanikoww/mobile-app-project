@@ -12,6 +12,17 @@ import com.trainingapp.app.initKoin
 import com.trainingapp.data.db.TrainingDatabase
 import com.trainingapp.domain.common.NetworkMonitor
 import com.trainingapp.domain.media.LocalFiles
+import com.trainingapp.domain.media.MediaRepository
+import com.trainingapp.domain.workout.TechniqueVideoOutbox
+import com.trainingapp.feature.workoutlogging.rest.AndroidRestTimerNotifier
+import com.trainingapp.feature.workoutlogging.rest.RestTimerNotifier
+import org.koin.core.context.GlobalContext
+import pl.trainer.data.DemoTrainerRepository
+import pl.trainerapp.feature.chat.ChatMediaSource
+import pl.trainerapp.feature.chat.data.DemoChatStore
+import pl.trainerapp.feature.chat.data.RepositoryChatMediaSource
+import pl.trainerapp.feature.chat.model.ChatRole
+import pl.trainerapp.feature.chat.model.MediaRef
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,17 +31,45 @@ import org.koin.android.ext.koin.androidContext
 import java.io.File
 
 class TrainingApplication : Application() {
+    /** The one demo conversation store for the trainer and client views. Kept for the process; resets on restart. */
+    val chatStore = DemoChatStore()
+
+    /** The calendar's demo repository, shared by the calendar tabs and the check-in screen. */
+    val trainerRepository = DemoTrainerRepository()
+
+    /** Upload state of chat videos, from the shared media repository. */
+    val chatMedia: ChatMediaSource by lazy { RepositoryChatMediaSource(GlobalContext.get().get<MediaRepository>()) }
+
     override fun onCreate() {
         super.onCreate()
-        initKoin(AndroidPlatform(this)) { androidContext(this@TrainingApplication) }
+        initKoin(AndroidPlatform(this, chatStore)) { androidContext(this@TrainingApplication) }
     }
 }
 
-private class AndroidPlatform(private val context: Context) : AppPlatform {
+private class AndroidPlatform(private val context: Context, private val chatStore: DemoChatStore) : AppPlatform {
     override fun createDriver(): SqlDriver = AndroidSqliteDriver(TrainingDatabase.Schema, context, "training.db")
     override val networkMonitor: NetworkMonitor = AndroidNetworkMonitor(context)
     override val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
     override val localFiles: LocalFiles = LocalFiles { File(it).delete() }
+    override val restTimerNotifier: RestTimerNotifier = AndroidRestTimerNotifier(context)
+
+    /** A technique video from the live workout becomes a message in the client's conversation with the trainer. */
+    override val techniqueVideoOutbox: TechniqueVideoOutbox = TechniqueVideoOutbox { relationshipId, mediaId, video ->
+        chatStore.send(
+            relationshipId,
+            ChatRole.Client,
+            text = "",
+            attachment = MediaRef(
+                mediaId = mediaId,
+                exerciseName = video.exerciseName,
+                setNumber = video.setNumber,
+                setCount = video.setCount,
+                weightGrams = video.weightGrams,
+                reps = video.reps,
+            ),
+        )
+        true
+    }
 }
 
 /** Online when the default network has validated internet access. */

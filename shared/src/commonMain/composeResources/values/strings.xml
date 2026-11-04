@@ -165,4 +165,24 @@
     <string name="no_archived_clients">No archived trainees</string>
     <string name="no_archived_clients_body">Former coaching relationships will appear here.</string>
     <string name="your_clients_reflow">Your trainees</string>
+    <string name="check_in_title">Session check-in</string>
+    <string name="check_in_plan">Plan: %1$s</string>
+    <string name="check_in_payment_package_count">Package: %1$d of %2$d</string>
+    <string name="check_in_payment_package">Paid from a package</string>
+    <string name="check_in_payment_online">Paid online</string>
+    <string name="check_in_payment_cash">Cash</string>
+    <string name="check_in_attendance">Attendance</string>
+    <string name="check_in_present">Confirm attendance</string>
+    <string name="check_in_no_show">No-show</string>
+    <string name="check_in_grace">“No-show” becomes available at %1$s, %2$d min after the start, as set in your cancellation policy.</string>
+    <string name="check_in_not_started">The session has not started yet. “No-show” becomes available at %1$s (%2$d min after the start).</string>
+    <string name="check_in_fee_note">Any fee for a no-show follows your cancellation policy and is calculated by the server.</string>
+    <string name="check_in_no_show_title">Mark as no-show?</string>
+    <string name="check_in_no_show_body">The session will be recorded as a no-show. Any fee follows your cancellation policy and is calculated by the server; no amount is shown here.</string>
+    <string name="check_in_no_show_confirm">Mark no-show</string>
+    <string name="check_in_done_present">Attendance confirmed. The session is completed.</string>
+    <string name="check_in_done_no_show">Recorded as a no-show.</string>
+    <string name="check_in_unavailable">Check-in is only available for confirmed sessions.</string>
+    <string name="check_in_not_sent">Not sent. Check your connection and try again; nothing has been recorded.</string>
+    <string name="check_in_conflict">This session changed in the meantime. Refresh to see the current state.</string>
 </resources>

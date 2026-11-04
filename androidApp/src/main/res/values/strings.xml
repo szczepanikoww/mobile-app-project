@@ -116,7 +116,7 @@
     <string name="chats_you_prefix">Ty: %1$s</string>
     <string name="error_load_chat">Nie udało się wczytać rozmowy</string>
     <string name="chat_empty_title">Zacznij rozmowę</string>
-    <string name="chat_empty_body">Napisz pierwszą wiadomość do klienta.</string>
+    <string name="chat_empty_body">Napisz pierwszą wiadomość.</string>
     <string name="chat_placeholder">Napisz wiadomość</string>
     <string name="chat_send">Wyślij</string>
     <string name="chat_send_failed">Nie udało się wysłać wiadomości. Spróbuj ponownie.</string>
@@ -190,4 +190,37 @@
     <string name="payments_last_payout">Ostatnia wypłata</string>
     <string name="payments_manage">Zarządzaj kontem Stripe</string>
     <string name="payments_history">Historia wypłat</string>
+    <!-- Technique videos in the chat (A5/A6) -->
+    <string name="chat_video_preview">Wideo techniki: %1$s</string>
+    <string name="chat_reply_to_video">Odpowiedź na wideo techniki</string>
+    <string name="chat_delivery_sent">Wysłano</string>
+    <string name="chat_delivery_not_sent">Nie wysłano</string>
+    <string name="chat_video_open">Otwórz wideo</string>
+    <string name="chat_video_title">Wideo techniki</string>
+    <string name="chat_video_unavailable">Wideo niedostępne na tym urządzeniu</string>
+    <string name="chat_video_queued">Czeka na połączenie · zapisano na telefonie</string>
+    <string name="chat_video_uploading">Wysyłanie · %1$d%%</string>
+    <string name="chat_video_processing">Przetwarzanie…</string>
+    <string name="chat_video_ready">Gotowe do obejrzenia</string>
+    <string name="chat_video_failed">Nie udało się wysłać wideo</string>
+    <string name="chat_video_retry">Ponów</string>
+    <string name="chat_video_set">Seria %1$d/%2$d</string>
+    <string name="chat_video_weight_reps">%1$s kg × %2$d</string>
+    <string name="chat_video_weight">%1$s kg</string>
+    <string name="chat_video_size">%1$d MB</string>
+    <string name="video_review_title">Przegląd wideo techniki</string>
+    <string name="video_player_title">Wideo techniki</string>
+    <string name="video_not_found">Nie znaleziono tego wideo w rozmowie.</string>
+    <string name="video_demo_unavailable">To przykładowe wideo nie ma pliku do odtworzenia w wersji demonstracyjnej.</string>
+    <string name="video_client_message">Wiadomość podopiecznego</string>
+    <string name="video_your_message">Twoja wiadomość</string>
+    <string name="video_reply_label">Odpowiedź</string>
+    <string name="video_reply_send">Wyślij odpowiedź</string>
+    <string name="video_reply_sent">Odpowiedź wysłana do rozmowy.</string>
+    <string name="video_mark_reviewed">Oznacz jako przejrzane</string>
+    <string name="video_reviewed">Przejrzane</string>
+    <string name="video_reviewed_snackbar">Wideo oznaczone jako przejrzane</string>
+    <!-- Check-in (A4) -->
+    <string name="check_in_recorded_present">Obecność potwierdzona</string>
+    <string name="check_in_recorded_no_show">Zapisano nieobecność</string>
 </resources>

@@ -15,4 +15,9 @@ expect object LocaleFormats {
 
     /** A decimal number with at most [maxFractionDigits] digits, e.g. "4,9" / "4.9". */
     fun formatDecimal(value: Double, languageTag: String, maxFractionDigits: Int = 1): String
+    /** Grouped whole number, e.g. "6 240" / "6,240". */
+    fun formatInteger(value: Long, languageTag: String): String
+
+    /** Short date without the year, e.g. "28 paź" / "Oct 28". */
+    fun formatShortDate(epochMs: Long, languageTag: String): String
 }

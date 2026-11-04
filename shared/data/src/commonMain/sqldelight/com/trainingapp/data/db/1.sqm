@@ -1,0 +1,52 @@
+-- Version 1 → 2: workout logging tables. Fresh installs get them from Workout.sq.
+CREATE TABLE workout_log (
+    id TEXT NOT NULL PRIMARY KEY,
+    client_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    session_id TEXT,
+    plan_version_id TEXT,
+    plan_day_id TEXT,
+    started_at INTEGER NOT NULL,
+    finished_at INTEGER,
+    note TEXT NOT NULL,
+    state TEXT NOT NULL,
+    sync_state TEXT NOT NULL,
+    current_exercise INTEGER NOT NULL,
+    rest_ends_at INTEGER,
+    rest_after_set_id TEXT,
+    rest_total_seconds INTEGER,
+    place TEXT,
+    -- LoggedExercise entries without their sets (JSON); sets are rows of set_log.
+    exercises_json TEXT NOT NULL
+);
+
+CREATE INDEX workout_log_client ON workout_log(client_id, state);
+
+-- One row per set. The id is generated on the device, so saving again updates the same row.
+CREATE TABLE set_log (
+    id TEXT NOT NULL PRIMARY KEY,
+    workout_log_id TEXT NOT NULL,
+    exercise_entry_id TEXT NOT NULL,
+    exercise_id TEXT NOT NULL,
+    set_order INTEGER NOT NULL,
+    type TEXT NOT NULL,
+    planned_json TEXT,
+    weight_grams INTEGER,
+    reps INTEGER,
+    rpe REAL,
+    duration_seconds INTEGER,
+    distance_meters INTEGER,
+    completed_at INTEGER,
+    technique_media_id TEXT
+);
+
+CREATE INDEX set_log_workout ON set_log(workout_log_id);
+
+-- Private health data of the client. Never logged or sent to analytics.
+CREATE TABLE body_measurement (
+    id TEXT NOT NULL PRIMARY KEY,
+    client_id TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    value_thousandths INTEGER NOT NULL,
+    measured_at INTEGER NOT NULL
+);
