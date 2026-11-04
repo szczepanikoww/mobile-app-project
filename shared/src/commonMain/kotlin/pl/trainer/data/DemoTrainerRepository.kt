@@ -7,10 +7,15 @@ import kotlin.time.Instant
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
+import kotlin.time.Duration.Companion.minutes
 import pl.trainer.domain.*
 
 /** Synthetic, in-memory demonstration only. No bookings or private records are sent anywhere. */
-class DemoTrainerRepository(private val latencyMillis: Long = 350) : TrainerRepository {
+class DemoTrainerRepository(
+    private val latencyMillis: Long = 350,
+    /** Stands in for the server clock: fixed at the fixture date (28 Oct 2026, 09:20 in Warsaw). */
+    private val serverNow: () -> Instant = { DemoServerNow },
+) : TrainerRepository {
     var scenario = DemoScenario.Normal
     private val mutex = Mutex()
     private var nextId = 10
@@ -99,6 +104,29 @@ class DemoTrainerRepository(private val latencyMillis: Long = 350) : TrainerRepo
         replace(session.copy(status = SessionStatus.Completed, proposal = null, revision = revision + 1))
     }
 
+    override suspend fun checkIn(sessionId: String): CheckInInfo {
+        delay(latencyMillis)
+        when (scenario) {
+            DemoScenario.Error -> throw TrainerException(Failure.Load)
+            DemoScenario.Denied -> throw TrainerException(Failure.Denied)
+            else -> Unit
+        }
+        val session = data.sessions.find { it.id == sessionId } ?: throw TrainerException(Failure.Conflict)
+        val client = data.clients.find { it.id == session.clientId } ?: throw TrainerException(Failure.Denied)
+        val now = serverNow()
+        val availableAt = session.start + DemoNoShowGraceMinutes.minutes
+        return CheckInInfo(session, client, started = now >= session.start, noShowAvailableAt = availableAt,
+            noShowAllowed = now >= availableAt, graceMinutes = DemoNoShowGraceMinutes)
+    }
+
+    override suspend fun markNoShow(id: String, revision: Int) = change {
+        val session = current(id, revision)
+        if (!session.isActive()) throw TrainerException(Failure.Conflict)
+        if (serverNow() < session.start + DemoNoShowGraceMinutes.minutes) throw TrainerException(Failure.Conflict)
+        // No fee is calculated here: the server applies the trainer's policy version and reports the result.
+        replace(session.copy(status = SessionStatus.NoShow, proposal = null, revision = revision + 1))
+    }
+
     override suspend fun createSession(clientId: String, start: Instant, end: Instant, location: String) = change {
         if (data.clients.none { it.id == clientId && it.active } || location.isBlank()) throw TrainerException(Failure.InvalidInput)
         checkSlot(start, end)
@@ -141,6 +169,12 @@ class DemoTrainerRepository(private val latencyMillis: Long = 350) : TrainerRepo
 private fun at(day: Int, hour: Int, minute: Int = 0) =
     LocalDateTime(2026, 10, day, hour, minute).toInstant(TimeZone.of("Europe/Warsaw"))
 
+/** The grace period of the demo trainer's policy version (D2). Real values come with each session's policy version. */
+const val DemoNoShowGraceMinutes = 15
+
+/** The demo server clock: the fixture date at 09:20 in Warsaw. Never the device clock. */
+val DemoServerNow: Instant = at(28, 9, 20)
+
 fun demoDashboard() = TrainerDashboard(
     clients = listOf(
         Client("c1", "Katarzyna Nowak", "KN"),
@@ -151,9 +185,11 @@ fun demoDashboard() = TrainerDashboard(
         Client("c6", "Piotr Lewandowski", "PL", active = false),
     ),
     sessions = listOf(
-        Session("s1", "c1", at(28, 9), at(28, 10), location = "Studio Centrum", status = SessionStatus.Confirmed),
+        Session("s1", "c1", at(28, 9), at(28, 10), location = "Studio Centrum", status = SessionStatus.Confirmed,
+            planTitle = "Push A", payment = SessionPayment(PaymentKind.Package, packageUsed = 6, packageTotal = 8)),
         Session("s2", "c3", at(28, 10, 30), at(28, 11, 30), location = "Studio Centrum", status = SessionStatus.Requested),
-        Session("s3", "c4", at(28, 14), at(28, 15), location = "Studio Centrum", status = SessionStatus.Confirmed),
+        Session("s3", "c4", at(28, 14), at(28, 15), location = "Studio Centrum", status = SessionStatus.Confirmed,
+            payment = SessionPayment(PaymentKind.Cash)),
         Session("s4", "c2", at(28, 16), at(28, 17), location = "Studio Centrum", status = SessionStatus.Confirmed,
             proposal = RescheduleProposal(at(29, 11), at(29, 12))),
         Session("s5", "c5", at(29, 9), at(29, 10), location = "Studio Centrum", status = SessionStatus.Confirmed),

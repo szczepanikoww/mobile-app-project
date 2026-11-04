@@ -49,7 +49,34 @@ data class Session(
     val status: SessionStatus,
     val revision: Int = 1,
     val proposal: RescheduleProposal? = null,
+    /** The assigned plan for this session, if any. Display only. */
+    val planTitle: String? = null,
+    /** How the session is paid, as the server reports it. Read-only here; choosing a method belongs to finance (D3). */
+    val payment: SessionPayment? = null,
 )
+
+enum class PaymentKind { Package, Online, Cash }
+
+/** [packageUsed] of [packageTotal] when paid from a package ("Pakiet: 6 z 8"). */
+data class SessionPayment(val kind: PaymentKind, val packageUsed: Int? = null, val packageTotal: Int? = null)
+
+/**
+ * What the server says about attendance for one session: computed with the server's clock and the grace period of
+ * the trainer's cancellation-policy version that applies to the session (D2), never with the device clock.
+ */
+data class CheckInInfo(
+    val session: Session,
+    val client: Client,
+    /** The session has started, by server time. Before that only "Obecny" is possible. */
+    val started: Boolean,
+    /** When "Nieobecny" unlocks: the start plus the policy's grace period. */
+    val noShowAvailableAt: Instant,
+    val noShowAllowed: Boolean,
+    val graceMinutes: Int,
+) {
+    /** Attendance can be recorded only for a confirmed session. */
+    val canCheckIn: Boolean get() = session.status == SessionStatus.Confirmed
+}
 
 data class AvailabilityBlock(val id: String, val start: Instant, val end: Instant)
 
@@ -72,6 +99,10 @@ interface TrainerRepository {
     suspend fun proposeTime(id: String, revision: Int, proposal: RescheduleProposal): TrainerDashboard
     suspend fun cancelSession(id: String, revision: Int): TrainerDashboard
     suspend fun completeSession(id: String, revision: Int): TrainerDashboard
+    /** Attendance status for the check-in screen. Throws [TrainerException] with [Failure.Conflict] for an unknown session. */
+    suspend fun checkIn(sessionId: String): CheckInInfo
+    /** Records a no-show. Refused ([Failure.Conflict]) before the grace period has passed or on a stale revision. Any fee is the server's decision. */
+    suspend fun markNoShow(id: String, revision: Int): TrainerDashboard
     suspend fun createSession(clientId: String, start: Instant, end: Instant, location: String): TrainerDashboard
     suspend fun addBlock(start: Instant, end: Instant): TrainerDashboard
     suspend fun removeBlock(id: String): TrainerDashboard
