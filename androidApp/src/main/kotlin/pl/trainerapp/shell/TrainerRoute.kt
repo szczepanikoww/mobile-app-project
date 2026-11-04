@@ -1,6 +1,9 @@
 package pl.trainerapp.shell
 
-import pl.trainerapp.feature.trainerchats.TrainerChatsRepository
+import pl.trainer.domain.TrainerRepository
+import pl.trainerapp.feature.chat.ChatMediaSource
+import pl.trainerapp.feature.chat.TrainerChatsRepository
+import pl.trainerapp.feature.chat.data.DemoChatStore
 import pl.trainerapp.feature.trainerfinance.TrainerFinanceRepository
 import pl.trainerapp.feature.trainerhome.TrainerHomeRepository
 import pl.trainerapp.feature.trainernotifications.TrainerNotificationsRepository
@@ -13,6 +16,11 @@ class TrainerRepositories(
     val chats: TrainerChatsRepository,
     val notifications: TrainerNotificationsRepository,
     val profile: TrainerProfileRepository,
+    /** The calendar's sessions; check-in writes through it (A4). */
+    val calendar: TrainerRepository,
+    /** The shared conversation store behind both chats and the technique-video review (A5). */
+    val chatStore: DemoChatStore,
+    val chatMedia: ChatMediaSource,
 )
 
 /**
@@ -42,6 +50,14 @@ sealed interface TrainerRoute {
         override val key = "profile"
     }
 
+    data class CheckIn(val sessionId: String) : TrainerRoute {
+        override val key = "check-in:$sessionId"
+    }
+
+    data class TechniqueVideo(val mediaId: String) : TrainerRoute {
+        override val key = "video:$mediaId"
+    }
+
     companion object {
         fun fromKey(key: String): TrainerRoute? = when {
             key == "chats" -> Chats
@@ -49,6 +65,8 @@ sealed interface TrainerRoute {
             key == "notifications" -> Notifications
             key.startsWith("notification:") -> Notification(key.removePrefix("notification:"))
             key == "profile" -> Profile
+            key.startsWith("check-in:") -> CheckIn(key.removePrefix("check-in:"))
+            key.startsWith("video:") -> TechniqueVideo(key.removePrefix("video:"))
             else -> null
         }
     }
