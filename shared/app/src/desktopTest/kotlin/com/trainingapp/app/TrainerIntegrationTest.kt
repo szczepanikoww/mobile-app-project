@@ -54,10 +54,14 @@ class TrainerIntegrationTest {
         })
         try {
             setContent { CompositionLocalProvider(LocalViewModelStoreOwner provides owner, LocalLifecycleOwner provides owner, LocalDensity provides Density(1f, fontScale.value)) { App(initialSession = DemoAccounts.trainer) } }
-            waitUntil(timeoutMillis = 10_000) { onAllNodes(hasText("Katarzyna Nowak")).fetchSemanticsNodes().isNotEmpty() }
+            // The shared shell opens on the trainer home screen; finance is a tab of the same shell.
+            waitUntil(timeoutMillis = 10_000) { onAllNodes(hasText("Dzisiejsze sesje")).fetchSemanticsNodes().isNotEmpty() }
+            clickOnUi(onNodeWithText("Finanse"))
+            waitUntil(timeoutMillis = 10_000) { onAllNodes(hasText("Tydzień")).fetchSemanticsNodes().isNotEmpty() }
             clickOnUi(onNodeWithText("Podopieczni"))
+            waitUntil(timeoutMillis = 10_000) { onAllNodes(hasText("Katarzyna Nowak")).fetchSemanticsNodes().isNotEmpty() }
             onNodeWithText("Twoi podopieczni").assertExists()
-            clickOnUi(onNodeWithContentDescription("Dodaj"))
+            clickOnUi(onNodeWithContentDescription("Nowy trening lub klient"))
             onNodeWithText("Dodaj sesję").assertExists()
             onNodeWithText("Dostępność").assertExists()
             clickOnUi(onNodeWithText("Nowy plan treningowy").performScrollTo())
@@ -70,7 +74,7 @@ class TrainerIntegrationTest {
             runOnIdle { fontScale.value = 1f }
             clickOnUi(onNodeWithContentDescription("Wstecz"))
             waitUntil(timeoutMillis = 10_000) { onAllNodes(hasText("Twoi podopieczni")).fetchSemanticsNodes().isNotEmpty() }
-            clickOnUi(onNodeWithContentDescription("Dodaj"))
+            clickOnUi(onNodeWithContentDescription("Nowy trening lub klient"))
             clickOnUi(onNodeWithText("Plany treningowe").performScrollTo())
             waitUntil(timeoutMillis = 10_000) { onAllNodes(hasText("Plan siłowy")).fetchSemanticsNodes().isNotEmpty() }
             capture("integrated-plan-library-pl")

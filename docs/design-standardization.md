@@ -1,6 +1,6 @@
 # Shared visual baseline and branch integration
 
-The trainer calendar/trainee design is the shared baseline. `:shared` owns `pl.trainer.ui.TrainerTheme`, `Layout`, `AppColors` and `SharedBottomBar`. Main’s `pl.trainerapp.core.designsystem` API remains a compatibility facade for its home, finance, chat, notifications and profile screens. Feature themes must consume this foundation instead of defining a separate Material palette, type scale or navigation bar.
+The trainer calendar/trainee design is the shared baseline. `:shared` owns `pl.trainer.ui.TrainerTheme`, `Layout`, `AppColors` and `SharedBottomBar`. Main’s `pl.trainerapp.core.designsystem` API remains a compatibility facade for its home, finance, chat, notifications and profile screens. Those screens and the trainer shell (`pl.trainerapp.shell`) now live in `:shared` commonMain, and `:shared:app`’s `TrainerShell` composes them with the calendar/clients feature, so Android (`MainActivity`) and `:desktopApp:run` render the same shell. Feature themes must consume this foundation instead of defining a separate Material palette, type scale or navigation bar.
 
 - Strong brand `#A04100` for filled actions/readable brand text; `#FF6B00` for accents.
 - Shared readable status pairs, including distinct green confirmed and slate completed sessions.
