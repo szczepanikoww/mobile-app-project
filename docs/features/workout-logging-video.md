@@ -279,12 +279,12 @@ All six views exist on demo data and local storage. Nothing is sent to a server.
 
 | View | Code | Reached from |
 |---|---|---|
-| A1 Trening na żywo | `shared/feature/workout-logging/.../logger` | Create menu → "Podgląd widoków klienta" (temporary) → "Trening na żywo"; tapping the rest notification |
+| A1 Trening na żywo | `shared/feature/workout-logging/.../logger` | Client shell centre action (B0); tapping the rest notification |
 | A2 Podsumowanie | `.../summary` | A1 "Zakończ"; A3 history and best-set rows (read-only) |
-| A3 Postępy | `.../progress` | Temporary client preview. `ProgressRoute` without `onBack` is the tab content for Person B's shell |
+| A3 Postępy | `.../progress` | Client shell "Postępy" tab (`ProgressRoute(showHeader = false)`) |
 | A4 Check-in sesji | `shared/src/.../pl/trainer/ui/CheckInScreen.kt`, `presentation/CheckInViewModel.kt` | Trainer home "Check-in" (`TrainerRoute.CheckIn`) |
-| A5 Przegląd wideo techniki | `androidApp/.../feature/chat/TechniqueVideoReview.kt` | Trainer home "Wymaga uwagi"; tapping a READY video in the trainer chat |
-| A6 Czat – klient | `androidApp/.../feature/chat` (`ClientChatRoute`, shared `ChatScreen`) | Temporary client preview → "Czat z trenerem" (Android only) |
+| A5 Przegląd wideo techniki | `shared/src/commonMain/.../pl/trainerapp/feature/chat/TechniqueVideoReview.kt` | Trainer home "Wymaga uwagi"; tapping a READY video in the trainer chat |
+| A6 Czat – klient | `shared/src/commonMain/.../pl/trainerapp/feature/chat` (`ClientChatRoute`, shared `ChatScreen`); host `shared/app/.../ClientChat.kt` | Client shell chat icon (Android and desktop) |
 
 Domain and storage: `shared/domain/.../workout` (`WorkoutLog`, `WorkoutLogReducer`, `RestTimer`, `RestAlarmPlanner`, `PreviousPerformance`, `PersonalRecords`, `WorkoutSummary`, `ProgressRules`, `MeasurementValidator`), `shared/data/.../Workout.sq` with migration `1.sqm`, `LocalWorkoutRepository`, `LocalMeasurementRepository`, `DemoWorkoutData` (today's plan fixture and a synthetic history seed).
 
@@ -298,6 +298,14 @@ Deviations and decisions taken while implementing:
 - The exercise info icon opens a read-only sheet in A1 (photo, muscles, equipment, instructions) rather than the trainer's exercise detail, which has editing actions.
 - "Pusty trening" (D6) is not built: the model supports it (`WorkoutLogReducer.startEmpty/addExercise`), but there is no exercise picker for clients yet. With no plan, A1 shows an empty state with "Odśwież".
 - A rest timer is re-scheduled when A1 is opened after a reboot, not at app start.
+
+### Merged into `main` (2026-11-05)
+
+`main` had meanwhile moved the trainer shell, home, finance, chats, notifications and profile from `androidApp` into `:shared` (Compose resources, `kotlin.time`, one `TrainerShell` in `:shared:app` for Android and desktop). The merge follows that:
+
+- The chat package `pl.trainerapp.feature.chat` lives in `:shared` commonMain; previews in `shared/src/androidMain`, `TrainerChatsViewModelTest` in `shared/src/desktopTest`. Its strings are in `shared/.../composeResources/values/trainer_strings.xml`.
+- A5's video card is a slot (`TechniqueVideoCard`), because `:shared` cannot depend on the workout builder; `:shared:app` passes `DemoVideoCard`.
+- `DemoChatStore`, `ChatMediaSource` and the calendar's `TrainerRepository` are Koin singletons. The technique-video outbox posting into the chat store is bound in `appModule`, so `AppPlatform.techniqueVideoOutbox` was removed and desktop sends videos to the chat too.
 - The client views are Polish only, like the workout-builder module.
 
 Not verified: no build ran with the Android Gradle plugin in the implementation environment (Google Maven was unreachable), so the Compose/Android modules (`workout-logging`, `shared`, `shared:app`, `androidApp`) were **not compiled**, and their UI and ViewModel tests were not run. The pure Kotlin modules were built and tested: `:contract`, `:shared:domain` and `:shared:data` (`-Ptrainer.ui=false`), plus the calendar repository's check-in rules and the chat store compiled on the JVM. Device checks (notification with the app killed, denied permission, video capture, TalkBack, large fonts) remain open, and there are no screenshots yet.

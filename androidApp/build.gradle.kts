@@ -20,7 +20,13 @@ android {
     }
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
 }
-kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        // Session times are kotlin.time.Instant, as in :shared.
+        optIn.add("kotlin.time.ExperimentalTime")
+    }
+}
 dependencies {
     implementation(project(":shared:app"))
     implementation(project(":shared:data"))

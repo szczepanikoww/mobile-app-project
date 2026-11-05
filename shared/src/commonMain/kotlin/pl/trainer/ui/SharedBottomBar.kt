@@ -26,7 +26,14 @@ data class SharedNavItem(val label: String, val icon: ImageVector, val selected:
  * shell) there is no create button, no overhang and no centre gap.
  */
 @Composable
-fun SharedBottomBar(items: List<SharedNavItem>, createLabel: String? = null, onCreate: (() -> Unit)? = null, createEnabled: Boolean = true) {
+fun SharedBottomBar(
+    items: List<SharedNavItem>,
+    createLabel: String? = null,
+    onCreate: (() -> Unit)? = null,
+    createEnabled: Boolean = true,
+    /** The centre action's icon; "+" unless a role's centre action is something else (the client's workout). */
+    createIcon: ImageVector? = null,
+) {
     val hasCreate = onCreate != null
     val half = items.size / 2
     val expandedLabels = LocalDensity.current.fontScale >= 1.5f
@@ -63,7 +70,7 @@ fun SharedBottomBar(items: List<SharedNavItem>, createLabel: String? = null, onC
                 focusedElevation = Layout.floatingElevation, hoveredElevation = Layout.activeFloatingElevation,
             ),
         ) {
-            Icon(Icons.Outlined.Add, createLabel, Modifier.size(30.dp))
+            Icon(createIcon ?: Icons.Outlined.Add, createLabel, Modifier.size(30.dp))
         }
     }
 }

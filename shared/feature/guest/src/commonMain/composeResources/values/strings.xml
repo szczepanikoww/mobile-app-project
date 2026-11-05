@@ -168,10 +168,6 @@
     <string name="failure_offline">Not sent. Check your connection.</string>
     <string name="failure_unavailable">The service is unavailable. Try again later.</string>
     <string name="failure_google">Google sign-in is not available yet.</string>
-    <string name="client_home_title">Your account</string>
-    <string name="client_home_heading">Hi, %1$s</string>
-    <string name="client_home_body">The client area is being prepared. Sessions, plans and workout logging will appear here.</string>
-    <string name="client_pending_request">Want to ask for a session? You’ll choose a slot once booking requests are available.</string>
     <string name="log_out">Log out</string>
     <plurals name="results_count">
         <item quantity="one">%d result</item>

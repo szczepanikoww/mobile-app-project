@@ -56,7 +56,13 @@ data class Offer(
 data class PolicyTier(val description: String)
 
 /** The trainer's published cancellation policy version. Never a universal, hard-coded rule. */
-data class PublicCancellationPolicy(val version: Int, val summary: String, val tiers: List<PolicyTier>)
+data class PublicCancellationPolicy(
+    val version: Int,
+    val summary: String,
+    val tiers: List<PolicyTier>,
+    /** Cancelling at least this many hours before is free; lets the client's booking sheet use the same rule. */
+    val freeCancellationHours: Int? = null,
+)
 
 /** Public media. Only [MediaState.READY] with a [playbackUrl] is playable. */
 data class PublicMedia(

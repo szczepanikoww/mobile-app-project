@@ -1,5 +1,6 @@
 package pl.trainerapp.shell
 
+import pl.trainer.domain.PolicyRepository
 import pl.trainer.domain.TrainerRepository
 import pl.trainerapp.feature.chat.ChatMediaSource
 import pl.trainerapp.feature.chat.TrainerChatsRepository
@@ -21,6 +22,8 @@ class TrainerRepositories(
     /** The shared conversation store behind both chats and the technique-video review (A5). */
     val chatStore: DemoChatStore,
     val chatMedia: ChatMediaSource,
+    /** Cancellation policy versions (B5), from the shared demo scheduling store. */
+    val policies: PolicyRepository,
 )
 
 /**
@@ -58,6 +61,11 @@ sealed interface TrainerRoute {
         override val key = "video:$mediaId"
     }
 
+    /** B5 "Polityka odwołań", opened from the profile. */
+    data object CancellationPolicy : TrainerRoute {
+        override val key = "cancellation-policy"
+    }
+
     companion object {
         fun fromKey(key: String): TrainerRoute? = when {
             key == "chats" -> Chats
@@ -67,6 +75,7 @@ sealed interface TrainerRoute {
             key == "profile" -> Profile
             key.startsWith("check-in:") -> CheckIn(key.removePrefix("check-in:"))
             key.startsWith("video:") -> TechniqueVideo(key.removePrefix("video:"))
+            key == "cancellation-policy" -> CancellationPolicy
             else -> null
         }
     }

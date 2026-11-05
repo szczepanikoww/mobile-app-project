@@ -76,9 +76,12 @@ fun ProgressRoute(
     onOpenWorkout: (String) -> Unit,
     onBack: (() -> Unit)? = null,
     viewModel: ProgressViewModel = koinViewModel(),
+    /** False as a tab of the client shell, which owns the top bar (B0). */
+    showHeader: Boolean = true,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     ProgressScreen(
+        showHeader = showHeader,
         state = state,
         actions = ProgressActions(
             onBack = onBack,
@@ -109,13 +112,15 @@ data class ProgressActions(
 )
 
 @Composable
-fun ProgressScreen(state: ProgressUiState, actions: ProgressActions) {
+fun ProgressScreen(state: ProgressUiState, actions: ProgressActions, showHeader: Boolean = true) {
     Scaffold(
         containerColor = AppTheme.colors.background,
         topBar = {
-            val title = stringResource(Res.string.progress_title)
-            val onBack = actions.onBack
-            if (onBack != null) DetailHeader(title, onBack = onBack) else TopLevelHeader(title)
+            if (showHeader) {
+                val title = stringResource(Res.string.progress_title)
+                val onBack = actions.onBack
+                if (onBack != null) DetailHeader(title, onBack = onBack) else TopLevelHeader(title)
+            }
         },
     ) { padding ->
         when (state.status) {

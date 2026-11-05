@@ -12,13 +12,13 @@ import com.trainingapp.feature.guest.auth.AuthActions
 import com.trainingapp.feature.guest.auth.AuthMode
 import com.trainingapp.feature.guest.auth.AuthScreen
 import com.trainingapp.feature.guest.auth.AuthViewModel
-import com.trainingapp.feature.guest.auth.ClientHomePlaceholder
 import com.trainingapp.feature.guest.gymdetail.GymDetailActions
 import com.trainingapp.feature.guest.gymdetail.GymDetailScreen
 import com.trainingapp.feature.guest.gymdetail.GymDetailViewModel
 import com.trainingapp.feature.guest.model.AuthRepository
 import com.trainingapp.feature.guest.model.AuthSession
 import com.trainingapp.feature.guest.model.GuestIntent
+import com.trainingapp.feature.guest.model.Role
 import com.trainingapp.feature.guest.platform.WelcomePreferences
 import com.trainingapp.feature.guest.platform.rememberAutoAdvanceAllowed
 import com.trainingapp.feature.guest.trainerprofile.TrainerProfileActions
@@ -69,7 +69,7 @@ data class AuthDestination(
     }
 }
 
-/** D12: where a signed-in client lands until the client shell exists. */
+/** Where a signed-in client lands: the client shell (Person B), rendered by the app through `guestGraph(clientHome)`. */
 @Serializable
 data class ClientHomeDestination(val intentTrainerId: String? = null, val intentGymId: String? = null, val hasIntent: Boolean = false) {
     val pendingIntent: GuestIntent? get() = if (hasIntent) GuestIntent.RequestSession(intentTrainerId, intentGymId) else null
@@ -88,12 +88,14 @@ data class ClientHomeDestination(val intentTrainerId: String? = null, val intent
  *
  * [onSignedIn] opens the role shell; the app clears the back stack so Back never returns to Auth or the guest
  * screens. [onLogOut] returns a signed-in client to the guest shell. [videoPlayer] plays READY public media (D9).
+ * [clientHome] renders the client shell for [ClientHomeDestination]; the pending intent travels in the destination.
  */
 fun NavGraphBuilder.guestGraph(
     navController: NavController,
     onSignedIn: (AuthSession, GuestIntent?) -> Unit,
     onLogOut: () -> Unit,
     videoPlayer: VideoPlayerSlot,
+    clientHome: @Composable (ClientHomeDestination, AuthSession?) -> Unit,
 ) {
     val openAuth: (AuthMode, GuestIntent?) -> Unit = { mode, intent -> navController.navigate(AuthDestination.of(mode, intent)) }
     val browse: () -> Unit = {
@@ -133,12 +135,13 @@ fun NavGraphBuilder.guestGraph(
         val viewModel: TrainerProfileViewModel = koinViewModel { parametersOf(destination.trainerId) }
         val state by viewModel.state.collectAsStateWithLifecycle()
         val intent = GuestIntent.RequestSession(trainerId = destination.trainerId)
+        val requestSession = signedInClientRequest(intent, onSignedIn, viewModel::requestSession)
         TrainerProfileScreen(
             state = state,
             actions = TrainerProfileActions(
                 onBack = { navController.popBackStack() },
                 onOpenGym = { navController.navigate(GymDetailDestination(it)) },
-                onRequestSession = viewModel::requestSession,
+                onRequestSession = requestSession,
                 onDismissLoginSheet = viewModel::dismissLoginSheet,
                 onShowPolicy = viewModel::showPolicy,
                 onRegister = { viewModel.dismissLoginSheet(); openAuth(AuthMode.Register, intent) },
@@ -153,12 +156,13 @@ fun NavGraphBuilder.guestGraph(
         val viewModel: GymDetailViewModel = koinViewModel { parametersOf(destination.gymId) }
         val state by viewModel.state.collectAsStateWithLifecycle()
         val intent = GuestIntent.RequestSession(gymId = destination.gymId)
+        val requestSession = signedInClientRequest(intent, onSignedIn, viewModel::requestSession)
         GymDetailScreen(
             state = state,
             actions = GymDetailActions(
                 onBack = { navController.popBackStack() },
                 onOpenTrainer = { navController.navigate(TrainerProfileDestination(it)) },
-                onRequestSession = viewModel::requestSession,
+                onRequestSession = requestSession,
                 onDismissLoginSheet = viewModel::dismissLoginSheet,
                 onRegister = { viewModel.dismissLoginSheet(); openAuth(AuthMode.Register, intent) },
                 onLogIn = { viewModel.dismissLoginSheet(); openAuth(AuthMode.LogIn, intent) },
@@ -176,7 +180,21 @@ fun NavGraphBuilder.guestGraph(
         val destination = entry.toRoute<ClientHomeDestination>()
         val auth: AuthRepository = koinInject()
         val session by auth.session.collectAsStateWithLifecycle()
-        ClientHomePlaceholder(session, destination.pendingIntent, onLogOut = onLogOut)
+        clientHome(destination, session)
+    }
+}
+
+/**
+ * "Poproś o termin" on a public profile: a signed-in client goes straight to the client shell's booking sheet with
+ * the intent (never sending a request by itself); a guest sees the login-required sheet.
+ */
+@Composable
+private fun signedInClientRequest(intent: GuestIntent, onSignedIn: (AuthSession, GuestIntent?) -> Unit, guestRequest: () -> Unit): () -> Unit {
+    val auth: AuthRepository = koinInject()
+    val session by auth.session.collectAsStateWithLifecycle()
+    return {
+        val current = session
+        if (current != null && current.activeRole == Role.Client) onSignedIn(current, intent) else guestRequest()
     }
 }
 

@@ -80,6 +80,12 @@ class DemoAuthRepository(
     override suspend fun logOut() {
         state.value = null
     }
+
+    override suspend fun switchRole(role: Role): AuthSession? {
+        val current = state.value ?: return null
+        if (role !in current.roles) return null
+        return current.copy(activeRole = role).also { state.value = it }
+    }
 }
 
 /** Reserved demo accounts. The trainer one maps to the existing demo trainer data. */
@@ -88,8 +94,14 @@ object DemoAccounts {
     const val TRAINER_EMAIL = "trener@example.com"
     const val CLIENT_EMAIL = "klient@example.com"
 
-    val trainer = AuthSession(DEMO_TRAINER_ID, "Trener demo", setOf(Role.Trainer), Role.Trainer)
-    val client = AuthSession("demo-client", "Klient demo", setOf(Role.Client), Role.Client)
+    /** Holds both roles, so the client shell offers "Przełącz na trenera". */
+    const val BOTH_ROLES_EMAIL = "trener-klient@example.com"
 
-    val byEmail = mapOf(TRAINER_EMAIL to trainer, CLIENT_EMAIL to client)
+    val trainer = AuthSession(DEMO_TRAINER_ID, "Trener demo", setOf(Role.Trainer), Role.Trainer)
+
+    /** The demo client is Katarzyna ("Kasia") Nowak, relationship "c1" of the demo trainer's calendar. */
+    val client = AuthSession("demo-client", "Katarzyna Nowak", setOf(Role.Client), Role.Client)
+    val bothRoles = AuthSession(DEMO_TRAINER_ID, "Michał Kowalczyk", setOf(Role.Trainer, Role.Client), Role.Client)
+
+    val byEmail = mapOf(TRAINER_EMAIL to trainer, CLIENT_EMAIL to client, BOTH_ROLES_EMAIL to bothRoles)
 }

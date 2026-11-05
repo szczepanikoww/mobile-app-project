@@ -45,6 +45,8 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -82,7 +84,12 @@ import pl.trainerapp.feature.trainerhome.TrainerHomeRoute
 import pl.trainerapp.feature.trainernotifications.TrainerNotificationDetailRoute
 import pl.trainerapp.feature.trainernotifications.TrainerNotificationListRoute
 import pl.trainerapp.feature.trainernotifications.model.NotificationTarget
+import pl.trainerapp.feature.trainerprofile.CancellationPolicyModelKey
+import pl.trainerapp.feature.trainerprofile.CancellationPolicyScreen
+import pl.trainerapp.feature.trainerprofile.CancellationPolicySummaryCard
 import pl.trainerapp.feature.trainerprofile.TrainerProfileRoute
+import pl.trainer.data.DemoTrainerId
+import pl.trainer.presentation.CancellationPolicyViewModel
 
 enum class TrainerDestination(val label: StringResource, val icon: ImageVector) {
     Start(Res.string.shell_nav_start, Icons.Outlined.Dashboard),
@@ -254,12 +261,26 @@ fun TrainerShell(
                                 }
                             },
                         )
-                        TrainerRoute.Profile -> TrainerProfileRoute(
-                            repository = repositories.profile,
-                            onBack = pop,
-                            onUnavailable = showNotAvailable,
-                            onLogOut = onLogOut ?: showNotAvailable,
-                        )
+                        TrainerRoute.Profile -> {
+                            val policy: CancellationPolicyViewModel = viewModel(key = CancellationPolicyModelKey) {
+                                CancellationPolicyViewModel(repositories.policies, DemoTrainerId)
+                            }
+                            val policyState by policy.state.collectAsStateWithLifecycle()
+                            TrainerProfileRoute(
+                                repository = repositories.profile,
+                                onBack = pop,
+                                onUnavailable = showNotAvailable,
+                                onLogOut = onLogOut ?: showNotAvailable,
+                                cancellationPolicy = { CancellationPolicySummaryCard(policyState, onEdit = { push(TrainerRoute.CancellationPolicy) }) },
+                            )
+                        }
+                        TrainerRoute.CancellationPolicy -> {
+                            val policy: CancellationPolicyViewModel = viewModel(key = CancellationPolicyModelKey) {
+                                CancellationPolicyViewModel(repositories.policies, DemoTrainerId)
+                            }
+                            val policyState by policy.state.collectAsStateWithLifecycle()
+                            CancellationPolicyScreen(policy, policyState, onBack = pop)
+                        }
                     }
                 }
                 SnackbarHost(

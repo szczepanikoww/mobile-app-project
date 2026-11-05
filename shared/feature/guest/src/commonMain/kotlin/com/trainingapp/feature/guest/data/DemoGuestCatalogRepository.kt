@@ -113,6 +113,7 @@ object DemoCatalog {
             PolicyTier("Mniej niż $hours h przed sesją: 50% ceny sesji"),
             PolicyTier("Nieobecność bez odwołania: 100% ceny sesji"),
         ),
+        freeCancellationHours = hours,
     )
 
     private fun media(id: String, first: String, second: String) = listOf(

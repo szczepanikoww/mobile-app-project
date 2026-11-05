@@ -1,15 +1,7 @@
 package com.trainingapp.domain.format
 
 /**
- * An amount of money in integer minor units (grosze for PLN) plus an ISO 4217 currency code. Never a floating
- * point value. Charges, received money, debt and payouts are different values that all use this type.
+ * Moved to `:contract` so the cancellation fee calculation can use it (client-shell-sessions-wallet plan, §5).
+ * This alias keeps existing imports working for one release; new code imports [com.trainingapp.contract.money.Money].
  */
-data class Money(val minor: Long, val currency: String) {
-    init {
-        require(currency.length == 3) { "Currency must be an ISO 4217 code" }
-    }
-
-    companion object {
-        fun pln(zloty: Long) = Money(zloty * 100, "PLN")
-    }
-}
+typealias Money = com.trainingapp.contract.money.Money

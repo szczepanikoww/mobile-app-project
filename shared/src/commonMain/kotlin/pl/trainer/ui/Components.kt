@@ -69,6 +69,8 @@ fun StatusLabel(session: Session) {
         SessionStatus.Rejected -> Res.string.rejected
         SessionStatus.CancelledByTrainer -> Res.string.cancelled_trainer
         SessionStatus.NoShow -> Res.string.no_show
+        SessionStatus.CancelledByClient -> Res.string.cancelled_client
+        SessionStatus.Expired -> Res.string.expired
         }
     }
     val (background, color, icon) = when {
@@ -76,6 +78,8 @@ fun StatusLabel(session: Session) {
         session.proposal?.author == ProposalAuthor.Trainer -> Triple(AppColors.waitingSurface, AppColors.waitingText, Icons.Outlined.HourglassEmpty)
         session.status == SessionStatus.Completed -> Triple(AppColors.completedSurface, AppColors.completedText, Icons.Outlined.DoneAll)
         session.status == SessionStatus.Confirmed -> Triple(AppColors.successSurface, AppColors.success, Icons.Outlined.EventAvailable)
+        session.isClosedWithoutTraining() || session.status == SessionStatus.NoShow ->
+            Triple(AppColors.completedSurface, AppColors.completedText, Icons.Outlined.EventBusy)
         else -> Triple(AppColors.warningSurface, AppColors.warningText, Icons.Outlined.Schedule)
     }
     Surface(color = background, contentColor = color, shape = Layout.pill) {
@@ -118,6 +122,7 @@ fun failureText(failure: Failure): String = tr(when (failure) {
     Failure.InvalidInput -> Res.string.invalid_error
     Failure.InvalidClientInfo -> Res.string.invalid_client_info
     Failure.Save -> Res.string.save_error
+    Failure.QuoteExpired -> Res.string.quote_expired_error
 })
 
 @Composable

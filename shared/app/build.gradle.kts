@@ -31,6 +31,7 @@ kotlin {
             implementation(projects.shared.feature.workoutBuilder)
             implementation(projects.shared.feature.guest)
             api(projects.shared.feature.workoutLogging)
+            implementation(projects.shared.feature.client)
             implementation(libs.androidx.navigation.compose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(libs.androidx.lifecycle.viewmodelCompose)

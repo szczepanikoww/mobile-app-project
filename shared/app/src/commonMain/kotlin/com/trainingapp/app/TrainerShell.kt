@@ -4,7 +4,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Assignment
 import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
 import androidx.compose.material.icons.outlined.FitnessCenter
-import androidx.compose.material.icons.outlined.PersonOutline
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -15,6 +14,7 @@ import com.trainingapp.feature.workoutbuilder.media.DemoVideoCard
 import kotlinx.coroutines.flow.first
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
+import pl.trainer.domain.PolicyRepository
 import pl.trainer.domain.TrainerRepository
 import pl.trainer.presentation.Destination
 import pl.trainer.presentation.TrainerViewModel
@@ -41,8 +41,6 @@ data class WorkoutNavigationActions(
     val onOpenPlans: () -> Unit,
     val onOpenExercises: () -> Unit,
     val onLogOut: () -> Unit = {},
-    /** Temporary: opens the client views until the client shell (Person B) exists. */
-    val onOpenClientPreview: () -> Unit = {},
 )
 
 /** The technique video in A5: the media card from the workout builder, playable only when READY. */
@@ -53,15 +51,16 @@ internal val AppTechniqueVideoCard: TechniqueVideoCard = { asset, durationMs, on
 /**
  * The one trainer shell used by Android and the desktop preview: home, finance, chats, notifications and profile
  * from the main shell, with the calendar/clients feature and the workout-plan create actions inside it. Chats, the
- * calendar and media state come from the app's demo stores, so the trainer and client views share them.
+ * calendar, cancellation policies and media state come from the app's demo stores, so the trainer and client views share them.
  */
 @Composable
 fun TrainerShell(actions: WorkoutNavigationActions) {
     val chatStore: DemoChatStore = koinInject()
     val chatMedia: ChatMediaSource = koinInject()
     val calendar: TrainerRepository = koinInject()
+    val policies: PolicyRepository = koinInject()
     // Explicit demo data sources: no backend exists yet.
-    val repositories = remember(chatStore, chatMedia, calendar) {
+    val repositories = remember(chatStore, chatMedia, calendar, policies) {
         TrainerRepositories(
             home = DemoTrainerHomeRepository(
                 techniqueVideos = {
@@ -78,6 +77,7 @@ fun TrainerShell(actions: WorkoutNavigationActions) {
             calendar = calendar,
             chatStore = chatStore,
             chatMedia = chatMedia,
+            policies = policies,
         )
     }
     AppTheme {
@@ -113,9 +113,5 @@ fun WorkoutCreateActions(actions: WorkoutNavigationActions, dismiss: () -> Unit)
     }
     ActionRow(Icons.AutoMirrored.Outlined.LibraryBooks, stringResource(Res.string.add_exercises), stringResource(Res.string.add_exercises_hint)) {
         dismiss(); actions.onOpenExercises()
-    }
-    // Temporary debug entry to the client views; removed when the client shell lands.
-    ActionRow(Icons.Outlined.PersonOutline, stringResource(Res.string.client_preview_title), stringResource(Res.string.client_preview_menu_hint)) {
-        dismiss(); actions.onOpenClientPreview()
     }
 }
