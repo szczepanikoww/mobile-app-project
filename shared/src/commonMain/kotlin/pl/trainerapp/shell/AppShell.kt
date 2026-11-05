@@ -68,8 +68,14 @@ import kotlinx.coroutines.launch
 import pl.trainer.resources.*
 import pl.trainerapp.core.designsystem.AppTheme
 import pl.trainerapp.core.designsystem.Spacing
-import pl.trainerapp.feature.trainerchats.TrainerChatListRoute
-import pl.trainerapp.feature.trainerchats.TrainerChatRoute
+import pl.trainer.presentation.Attendance
+import pl.trainer.ui.CheckInRoute
+import pl.trainerapp.feature.chat.NoTechniqueVideoCard
+import pl.trainerapp.feature.chat.TechniqueVideoCard
+import pl.trainerapp.feature.chat.TechniqueVideoRoute
+import pl.trainerapp.feature.chat.model.ChatRole
+import pl.trainerapp.feature.chat.TrainerChatListRoute
+import pl.trainerapp.feature.chat.TrainerChatRoute
 import pl.trainerapp.feature.trainerfinance.TrainerFinanceRoute
 import pl.trainerapp.feature.trainerhome.TrainerHomeDestination
 import pl.trainerapp.feature.trainerhome.TrainerHomeRoute
@@ -99,6 +105,8 @@ fun TrainerShell(
     repositories: TrainerRepositories,
     trainerFeature: (@Composable (TrainerDestination, Int, (Boolean) -> Unit) -> Unit)? = null,
     onLogOut: (() -> Unit)? = null,
+    /** The technique-video player (A5); the app supplies it from the media feature. */
+    videoCard: TechniqueVideoCard = NoTechniqueVideoCard,
 ) {
     var featureIsMain by remember { mutableStateOf(true) }
     var createRequest by remember { mutableStateOf(0) }
@@ -108,6 +116,10 @@ fun TrainerShell(
     val scope = rememberCoroutineScope()
     val notAvailable = stringResource(Res.string.not_available_yet)
     val showNotAvailable: () -> Unit = { scope.launch { snackbarHostState.showSnackbar(notAvailable) } }
+    val attendanceRecorded = stringResource(Res.string.check_in_recorded_present)
+    val noShowRecorded = stringResource(Res.string.check_in_recorded_no_show)
+    val videoReviewed = stringResource(Res.string.video_reviewed_snackbar)
+    var homeRefresh by remember { mutableStateOf(0) }
 
     val push: (TrainerRoute) -> Unit = { routeKeys = ArrayList(routeKeys + it.key) }
     val pop: () -> Unit = { routeKeys = ArrayList(routeKeys.dropLast(1)) }
@@ -143,12 +155,16 @@ fun TrainerShell(
                 when (selected) {
                     TrainerDestination.Start -> TrainerHomeRoute(
                         repository = repositories.home,
+                        refreshKey = homeRefresh,
                         onNavigate = { destination ->
                             when (destination) {
                                 TrainerHomeDestination.Chats -> push(TrainerRoute.Chats)
                                 is TrainerHomeDestination.Conversation -> push(TrainerRoute.Chat(destination.clientId))
                                 TrainerHomeDestination.Notifications -> push(TrainerRoute.Notifications)
                                 TrainerHomeDestination.Profile -> push(TrainerRoute.Profile)
+                                // Q8: the home's demo session ids may not match the calendar's; see the feature plan.
+                                is TrainerHomeDestination.CheckIn -> push(TrainerRoute.CheckIn(destination.sessionId))
+                                is TrainerHomeDestination.TechniqueVideoReview -> push(TrainerRoute.TechniqueVideo(destination.mediaId))
                                 else -> showNotAvailable() // destinations owned by other features do not exist yet
                             }
                         },
@@ -185,7 +201,38 @@ fun TrainerShell(
                             onBack = pop,
                             onOpenChat = { push(TrainerRoute.Chat(it)) },
                         )
-                        is TrainerRoute.Chat -> TrainerChatRoute(route.clientId, repositories.chats, onBack = pop)
+                        is TrainerRoute.Chat -> TrainerChatRoute(
+                            route.clientId,
+                            repositories.chats,
+                            onBack = pop,
+                            mediaSource = repositories.chatMedia,
+                            onOpenVideo = { push(TrainerRoute.TechniqueVideo(it)) },
+                        )
+                        is TrainerRoute.CheckIn -> CheckInRoute(
+                            sessionId = route.sessionId,
+                            repository = repositories.calendar,
+                            onBack = pop,
+                            onRecorded = { attendance ->
+                                pop()
+                                homeRefresh++
+                                scope.launch {
+                                    snackbarHostState.showSnackbar(if (attendance == Attendance.Present) attendanceRecorded else noShowRecorded)
+                                }
+                            },
+                        )
+                        is TrainerRoute.TechniqueVideo -> TechniqueVideoRoute(
+                            mediaId = route.mediaId,
+                            viewer = ChatRole.Trainer,
+                            store = repositories.chatStore,
+                            chats = repositories.chats,
+                            mediaSource = repositories.chatMedia,
+                            onBack = pop,
+                            onReviewed = {
+                                homeRefresh++
+                                scope.launch { snackbarHostState.showSnackbar(videoReviewed) }
+                            },
+                            videoCard = videoCard,
+                        )
                         TrainerRoute.Notifications -> TrainerNotificationListRoute(
                             repository = repositories.notifications,
                             onBack = pop,

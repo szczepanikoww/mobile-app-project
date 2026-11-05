@@ -1,0 +1,94 @@
+-- Workout logs (docs/features/workout-logging-video.md section 6). Every set change is written at once,
+-- so a killed app resumes the workout.
+CREATE TABLE workout_log (
+    id TEXT NOT NULL PRIMARY KEY,
+    client_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    session_id TEXT,
+    plan_version_id TEXT,
+    plan_day_id TEXT,
+    started_at INTEGER NOT NULL,
+    finished_at INTEGER,
+    note TEXT NOT NULL,
+    state TEXT NOT NULL,
+    sync_state TEXT NOT NULL,
+    current_exercise INTEGER NOT NULL,
+    rest_ends_at INTEGER,
+    rest_after_set_id TEXT,
+    rest_total_seconds INTEGER,
+    place TEXT,
+    -- LoggedExercise entries without their sets (JSON); sets are rows of set_log.
+    exercises_json TEXT NOT NULL
+);
+
+CREATE INDEX workout_log_client ON workout_log(client_id, state);
+
+-- One row per set. The id is generated on the device, so saving again updates the same row.
+CREATE TABLE set_log (
+    id TEXT NOT NULL PRIMARY KEY,
+    workout_log_id TEXT NOT NULL,
+    exercise_entry_id TEXT NOT NULL,
+    exercise_id TEXT NOT NULL,
+    set_order INTEGER NOT NULL,
+    type TEXT NOT NULL,
+    planned_json TEXT,
+    weight_grams INTEGER,
+    reps INTEGER,
+    rpe REAL,
+    duration_seconds INTEGER,
+    distance_meters INTEGER,
+    completed_at INTEGER,
+    technique_media_id TEXT
+);
+
+CREATE INDEX set_log_workout ON set_log(workout_log_id);
+
+-- Private health data of the client. Never logged or sent to analytics.
+CREATE TABLE body_measurement (
+    id TEXT NOT NULL PRIMARY KEY,
+    client_id TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    value_thousandths INTEGER NOT NULL,
+    measured_at INTEGER NOT NULL
+);
+
+selectWorkout:
+SELECT * FROM workout_log WHERE id = ?;
+
+selectActiveWorkout:
+SELECT * FROM workout_log WHERE client_id = ? AND state = 'IN_PROGRESS' ORDER BY started_at DESC LIMIT 1;
+
+selectFinishedWorkouts:
+SELECT * FROM workout_log WHERE client_id = ? AND state = 'FINISHED' ORDER BY finished_at DESC;
+
+upsertWorkout:
+INSERT OR REPLACE INTO workout_log(id, client_id, name, session_id, plan_version_id, plan_day_id, started_at, finished_at, note, state, sync_state, current_exercise, rest_ends_at, rest_after_set_id, rest_total_seconds, place, exercises_json)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+deleteWorkout:
+DELETE FROM workout_log WHERE id = ?;
+
+selectSets:
+SELECT * FROM set_log WHERE workout_log_id = ? ORDER BY set_order;
+
+selectSetsOfClient:
+SELECT set_log.* FROM set_log JOIN workout_log ON workout_log.id = set_log.workout_log_id WHERE workout_log.client_id = ? AND workout_log.state = 'FINISHED';
+
+upsertSet:
+INSERT OR REPLACE INTO set_log(id, workout_log_id, exercise_entry_id, exercise_id, set_order, type, planned_json, weight_grams, reps, rpe, duration_seconds, distance_meters, completed_at, technique_media_id)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+selectSetIds:
+SELECT id FROM set_log WHERE workout_log_id = ?;
+
+deleteSet:
+DELETE FROM set_log WHERE id = ?;
+
+deleteSetsOfWorkout:
+DELETE FROM set_log WHERE workout_log_id = ?;
+
+selectMeasurements:
+SELECT * FROM body_measurement WHERE client_id = ? ORDER BY measured_at DESC;
+
+insertMeasurement:
+INSERT OR REPLACE INTO body_measurement(id, client_id, kind, value_thousandths, measured_at) VALUES (?, ?, ?, ?, ?);

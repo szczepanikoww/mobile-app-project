@@ -46,4 +46,12 @@ actual object LocaleFormats {
         }.format(value)
 
     private fun pow10(digits: Int): Long = (1..digits).fold(1L) { acc, _ -> acc * 10 }
+    actual fun formatInteger(value: Long, languageTag: String): String =
+        NumberFormat.getIntegerInstance(Locale.forLanguageTag(languageTag)).format(value)
+
+    actual fun formatShortDate(epochMs: Long, languageTag: String): String {
+        val locale = Locale.forLanguageTag(languageTag)
+        val pattern = if (locale.language == "pl") "d MMM" else "MMM d"
+        return DateTimeFormatter.ofPattern(pattern, locale).format(Instant.ofEpochMilli(epochMs).atZone(ZoneId.systemDefault()))
+    }
 }

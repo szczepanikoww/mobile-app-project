@@ -1,4 +1,6 @@
--- Trainer videos and their persisted upload jobs. A row survives process death, so an upload resumes.
+-- Trainer and client videos and their persisted upload jobs. owner_trainer_id holds the owning user id
+-- (MediaAsset.ownerUserId); the column keeps its name because SQLite on API 26 cannot rename columns.
+-- A row survives process death, so an upload resumes.
 CREATE TABLE media_asset (
     id TEXT NOT NULL PRIMARY KEY,
     owner_trainer_id TEXT NOT NULL,

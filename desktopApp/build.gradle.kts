@@ -3,7 +3,10 @@ plugins {
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.compose.compiler)
 }
-kotlin { jvmToolchain(17) }
+kotlin {
+    jvmToolchain(17)
+    compilerOptions { optIn.add("kotlin.time.ExperimentalTime") }
+}
 dependencies {
     implementation(project(":shared:app"))
     implementation(project(":shared:data"))

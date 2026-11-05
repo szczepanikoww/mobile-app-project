@@ -95,9 +95,10 @@ class FakeMediaRepository : com.trainingapp.domain.media.MediaRepository {
     override suspend fun import(
         video: com.trainingapp.domain.media.PickedVideo,
         kind: com.trainingapp.contract.media.MediaKind,
+        ownerUserId: String?,
     ): com.trainingapp.domain.media.MediaAsset {
         val asset = com.trainingapp.domain.media.MediaAsset(
-            id = "media${++next}", ownerTrainerId = "t1", kind = kind, localPath = video.localPath,
+            id = "media${++next}", ownerUserId = ownerUserId ?: "t1", kind = kind, localPath = video.localPath,
             thumbnailPath = video.thumbnailPath, durationMs = video.durationMs, sizeBytes = video.sizeBytes,
             state = com.trainingapp.domain.media.MediaState.QUEUED, progress = 0f, playbackUrl = null, updatedAtEpochMs = 0,
         )

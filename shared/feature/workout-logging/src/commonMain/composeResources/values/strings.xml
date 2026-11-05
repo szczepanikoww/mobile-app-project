@@ -1,0 +1,176 @@
+<resources>
+    <!-- A1 Trening na żywo -->
+    <string name="live_title">Trening na żywo</string>
+    <string name="live_today">Dzisiejszy trening</string>
+    <string name="live_plan_meta">%1$s · ćwiczenia: %2$d · serie: %3$d</string>
+    <string name="live_start">Rozpocznij trening</string>
+    <string name="live_finish">Zakończ</string>
+    <string name="live_load_error">Nie udało się wczytać treningu.</string>
+    <string name="live_no_plan_title">Brak treningu na dziś</string>
+    <string name="live_no_plan_body">Trener nie przypisał Ci planu na dziś. Gdy to zrobi, trening pojawi się tutaj.</string>
+    <string name="live_refresh">Odśwież</string>
+    <string name="live_no_exercises">Ten trening nie ma ćwiczeń.</string>
+    <string name="live_restored">Przywrócono niezakończony trening. Wszystkie serie były zapisane na telefonie.</string>
+    <string name="live_saved_on_device">Zapisano na telefonie</string>
+    <string name="live_saving">Zapisywanie na telefonie…</string>
+    <string name="live_save_failed">Nie udało się zapisać na telefonie. Zmiany są na ekranie; spróbuj ponownie.</string>
+    <string name="live_elapsed_description">Czas treningu %1$s</string>
+    <string name="live_exercise_list">Lista ćwiczeń</string>
+    <string name="live_sets_done">Serie: %1$d z %2$d</string>
+    <string name="live_discard">Odrzuć trening</string>
+    <string name="live_discard_title">Odrzucić trening?</string>
+    <string name="live_discard_body">Wszystkie zapisane serie tego treningu zostaną usunięte z telefonu. Tego nie można cofnąć.</string>
+    <string name="live_discard_confirm">Odrzuć trening</string>
+    <string name="live_keep_training">Wróć do treningu</string>
+    <string name="live_finish_title">Zakończyć trening?</string>
+    <string name="live_finish_confirm">Zakończ trening</string>
+    <plurals name="live_finish_unchecked">
+        <item quantity="one">Masz %1$d nieodhaczoną serię. Nie wejdzie do podsumowania.</item>
+        <item quantity="few">Masz %1$d nieodhaczone serie. Nie wejdą do podsumowania.</item>
+        <item quantity="many">Masz %1$d nieodhaczonych serii. Nie wejdą do podsumowania.</item>
+        <item quantity="other">Masz %1$d nieodhaczonej serii. Nie wejdą do podsumowania.</item>
+    </plurals>
+    <string name="live_previous_exercise">Poprzednie ćwiczenie</string>
+    <string name="live_next_exercise">Następne ćwiczenie</string>
+    <string name="live_exercise_position">Ćwiczenie %1$d/%2$d</string>
+    <string name="live_exercise_info">Informacje o ćwiczeniu</string>
+    <string name="live_exercise_info_missing">Nie znaleziono tego ćwiczenia w bibliotece.</string>
+    <string name="live_exercise_no_instructions">Brak opisu w języku polskim.</string>
+    <string name="live_previous">Poprzednio: %1$s</string>
+    <string name="live_sets_title">Serie</string>
+    <plurals name="live_goal_sets">
+        <item quantity="one">Cel: %1$d seria</item>
+        <item quantity="few">Cel: %1$d serie</item>
+        <item quantity="many">Cel: %1$d serii</item>
+        <item quantity="other">Cel: %1$d serii</item>
+    </plurals>
+    <plurals name="live_set_count">
+        <item quantity="one">%1$d seria</item>
+        <item quantity="few">%1$d serie</item>
+        <item quantity="many">%1$d serii</item>
+        <item quantity="other">%1$d serii</item>
+    </plurals>
+    <string name="live_now">Teraz</string>
+    <string name="live_plan_value">Plan: %1$s</string>
+    <string name="live_remove_set">Usuń serię %1$d</string>
+    <string name="live_set_description">Seria %1$d, %2$s</string>
+    <string name="live_tick_set">Odhacz serię %1$d</string>
+    <string name="live_untick_set">Cofnij odhaczenie serii %1$d</string>
+    <string name="live_set_done">Wykonana</string>
+    <string name="live_set_not_done">Niewykonana</string>
+    <string name="live_add_set">Dodaj serię</string>
+    <string name="live_record_technique">Nagraj technikę</string>
+    <string name="live_video_hint">Wideo zostanie przypisane do bieżącej serii i wysłane trenerowi w czacie. Maksymalnie 60 sekund i 100 MB.</string>
+    <string name="live_video_record">Nagraj wideo</string>
+    <string name="live_video_pick">Wybierz z galerii</string>
+    <string name="live_video_sent">Wideo techniki dodano do serii i wysłano do trenera. Postęp wysyłania widać przy serii.</string>
+    <string name="live_video_kept">Wideo techniki dodano do serii. Czat z trenerem jest dostępny w aplikacji na Androida.</string>
+    <string name="live_video_too_long">Wideo jest dłuższe niż 60 sekund. Skróć je i spróbuj ponownie.</string>
+    <string name="live_video_too_large">Plik wideo jest większy niż 100 MB.</string>
+    <string name="live_video_unreadable">Nie udało się odczytać tego pliku wideo.</string>
+    <string name="live_video_failed">Nie udało się dodać wideo. Spróbuj ponownie.</string>
+    <string name="live_rest">Odpoczynek</string>
+    <string name="live_rest_minus">−15 s</string>
+    <string name="live_rest_plus">+15 s</string>
+    <string name="live_rest_skip">Pomiń odpoczynek</string>
+    <string name="live_rest_remaining_description">Odpoczynek, zostało %1$s</string>
+    <string name="live_notifications_title">Powiadomienie o końcu przerwy</string>
+    <string name="live_notifications_body">Telefon da znać, gdy odpoczynek się skończy, także gdy aplikacja jest w tle.</string>
+    <string name="live_notifications_allow">Zezwól</string>
+    <string name="live_notifications_later">Nie teraz</string>
+    <string name="live_notifications_denied">Powiadomienia są wyłączone. Licznik przerwy nadal działa w aplikacji.</string>
+    <string name="live_open_settings">Ustawienia</string>
+    <string name="live_dismiss">OK</string>
+
+    <!-- Set fields -->
+    <string name="set_type_warm_up">Rozgrzewka</string>
+    <string name="set_type_working">Robocza</string>
+    <string name="set_type_drop">Drop set</string>
+    <string name="field_weight">Ciężar w kilogramach</string>
+    <string name="field_reps">Powtórzenia</string>
+    <string name="field_rpe">RPE</string>
+    <string name="field_duration">Czas</string>
+    <string name="field_distance">Dystans w kilometrach</string>
+    <string name="unit_kg">kg</string>
+    <string name="unit_cm">cm</string>
+    <string name="unit_km">km</string>
+    <string name="unit_reps">powt.</string>
+    <string name="unit_rpe">RPE</string>
+    <string name="value_weight_reps">%1$s kg × %2$d</string>
+    <string name="value_weight">%1$s kg</string>
+    <string name="value_reps">%1$d powt.</string>
+    <string name="value_km">%1$s km</string>
+    <string name="value_volume">%1$s kg</string>
+    <string name="value_duration_minutes">%1$d min</string>
+    <string name="value_duration_hours">%1$d h %2$s min</string>
+
+    <!-- Technique video on a set -->
+    <string name="technique_queued">Wideo czeka na połączenie</string>
+    <string name="technique_uploading">Wysyłanie wideo · %1$s</string>
+    <string name="technique_processing">Przetwarzanie wideo…</string>
+    <string name="technique_ready">Wideo techniki gotowe</string>
+    <string name="technique_failed">Nie udało się wysłać wideo</string>
+    <string name="technique_retry">Ponów</string>
+
+    <!-- Rest notification (D7). Workout content only. -->
+    <string name="rest_channel_name">Odpoczynek</string>
+    <string name="rest_channel_description">Powiadomienie o końcu przerwy między seriami</string>
+    <string name="rest_notification_title">Koniec przerwy</string>
+    <string name="rest_notification_text">Czas na serię %1$d: %2$s</string>
+    <string name="rest_notification_text_generic">Czas na następną serię.</string>
+
+    <!-- A2 Podsumowanie treningu -->
+    <string name="summary_title">Podsumowanie treningu</string>
+    <string name="summary_greeting">Świetna robota, %1$s!</string>
+    <string name="summary_greeting_plain">Świetna robota!</string>
+    <string name="summary_saved_on_device">Zapisano na telefonie</string>
+    <string name="summary_stat_time">Czas</string>
+    <string name="summary_stat_volume">Objętość</string>
+    <string name="summary_stat_sets">Serie</string>
+    <string name="summary_record_title">Nowy rekord życiowy</string>
+    <string name="summary_record_line">%1$s: %2$s</string>
+    <string name="summary_exercises">Ćwiczenia</string>
+    <string name="summary_sets_vs_plan">%1$d/%2$d serii · %3$s planu</string>
+    <string name="summary_sets_done">Serie: %1$d · poza planem</string>
+    <string name="summary_max">Maks. %1$s kg</string>
+    <string name="summary_rpe">RPE %1$s</string>
+    <string name="summary_note_label">Notatka dla trenera</string>
+    <string name="summary_note_counter">%1$d/%2$d</string>
+    <string name="summary_save">Zapisz trening</string>
+    <string name="summary_sync_note">Zapisano na telefonie. Trener zobaczy trening po synchronizacji.</string>
+    <string name="summary_save_failed">Nie udało się zapisać treningu. Notatka została w polu; spróbuj ponownie.</string>
+    <string name="summary_not_found">Nie znaleziono tego treningu na telefonie.</string>
+
+    <!-- A3 Postępy -->
+    <string name="progress_title">Postępy</string>
+    <string name="progress_load_error">Nie udało się wczytać postępów.</string>
+    <string name="progress_tab_exercises">Ćwiczenia</string>
+    <string name="progress_tab_measurements">Pomiary</string>
+    <string name="progress_tab_history">Historia</string>
+    <string name="progress_tab_records">Rekordy</string>
+    <string name="progress_empty_title">Brak zapisanych treningów</string>
+    <string name="progress_empty_body">Po pierwszym zapisanym treningu zobaczysz tu swoje wyniki.</string>
+    <string name="progress_exercise">Ćwiczenie</string>
+    <string name="progress_metric_best_set">Najlepsza seria robocza (ciężar × powtórzenia)</string>
+    <string name="progress_metric_best">Najlepsza seria robocza</string>
+    <string name="progress_chart_summary">%1$s: najlepsza seria zmieniła się z %2$s do %3$s w %4$d treningach.</string>
+    <string name="progress_chart_empty">Brak wyników tego ćwiczenia.</string>
+    <string name="progress_best_sets">Najlepsze serie</string>
+    <string name="progress_add_measurement">Dodaj pomiar</string>
+    <string name="progress_measurements_empty_title">Brak pomiarów</string>
+    <string name="progress_measurements_empty_body">Dodaj masę ciała lub obwody, aby śledzić zmiany. Pomiary widzisz tylko Ty i Twój trener.</string>
+    <string name="progress_measurement_summary">%1$s: z %2$s do %3$s, pomiarów: %4$d.</string>
+    <string name="progress_measurement_field">%1$s (%2$s)</string>
+    <string name="progress_measurement_private">Pomiary są prywatne.</string>
+    <string name="progress_measurement_save">Zapisz pomiar</string>
+    <string name="progress_measurement_required">Wpisz wartość.</string>
+    <string name="progress_measurement_invalid">Wpisz liczbę, np. 72,5.</string>
+    <string name="progress_measurement_range">Wpisz wartość większą od zera, w realnym zakresie.</string>
+    <string name="progress_measurement_save_failed">Nie udało się zapisać pomiaru. Spróbuj ponownie.</string>
+    <string name="progress_history_sets">serie: %1$d</string>
+    <string name="progress_open_workout">Otwórz podsumowanie</string>
+    <string name="progress_records_hint">Najlepsza seria robocza każdego ćwiczenia. Rozgrzewki się nie liczą.</string>
+    <string name="measurement_body_weight">Masa ciała</string>
+    <string name="measurement_waist">Talia</string>
+    <string name="measurement_hips">Biodra</string>
+</resources>

@@ -28,7 +28,26 @@ import com.trainingapp.feature.guest.data.DemoAccounts
 import com.trainingapp.feature.guest.guestModule
 import com.trainingapp.feature.guest.model.AuthRepository
 import com.trainingapp.feature.guest.model.Role
+import com.trainingapp.data.workout.DemoWorkoutData
+import com.trainingapp.data.workout.LocalMeasurementRepository
+import com.trainingapp.data.workout.LocalWorkoutRepository
+import com.trainingapp.domain.workout.CurrentClient
+import com.trainingapp.domain.workout.MeasurementRepository
+import com.trainingapp.domain.workout.TechniqueVideoContext
+import com.trainingapp.domain.workout.TechniqueVideoOutbox
+import com.trainingapp.domain.workout.TodayWorkoutSource
+import com.trainingapp.domain.workout.WorkoutRepository
 import com.trainingapp.feature.workoutbuilder.workoutBuilderModule
+import pl.trainer.data.DemoTrainerRepository
+import pl.trainer.domain.TrainerRepository
+import pl.trainerapp.feature.chat.ChatMediaSource
+import pl.trainerapp.feature.chat.data.DemoChatStore
+import pl.trainerapp.feature.chat.data.RepositoryChatMediaSource
+import pl.trainerapp.feature.chat.model.ChatRole
+import pl.trainerapp.feature.chat.model.MediaRef
+import com.trainingapp.feature.workoutlogging.rest.RestTimerNotifier
+import com.trainingapp.feature.workoutlogging.workoutLoggingModule
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -44,6 +63,9 @@ interface AppPlatform {
     val networkMonitor: NetworkMonitor
     val ioDispatcher: CoroutineDispatcher
     val localFiles: LocalFiles
+
+    /** The rest-end system notification; platforms without notifications keep the default. */
+    val restTimerNotifier: RestTimerNotifier get() = RestTimerNotifier.None
 }
 
 /** The demo trainer whose synthetic data the trainer views show. Signing in as the demo trainer maps to this id. */
@@ -57,7 +79,37 @@ private class SessionCurrentUser(private val auth: AuthRepository) : CurrentUser
         get() = auth.session.value?.takeIf { Role.Trainer in it.roles }?.userId ?: DemoTrainer.trainerId
 }
 
+/**
+ * The client of the temporary client preview. The client shell and sign-in (Person B) replace it. Matches the demo
+ * trainer chat fixtures (relationship "c1"), so a technique video lands in that conversation.
+ */
+object DemoClient : CurrentClient {
+    override val clientId: String = "c1"
+    override val firstName: String = "Kasia"
+    override val trainerRelationshipId: String = "c1"
+}
+
 private val AppScope = named("appScope")
+
+/** Posts a recorded technique video into the client's conversation with the trainer. */
+private class ChatStoreVideoOutbox(private val store: DemoChatStore) : TechniqueVideoOutbox {
+    override suspend fun send(relationshipId: String, mediaId: String, context: TechniqueVideoContext): Boolean {
+        store.send(
+            relationshipId,
+            ChatRole.Client,
+            text = "",
+            attachment = MediaRef(
+                mediaId = mediaId,
+                exerciseName = context.exerciseName,
+                setNumber = context.setNumber,
+                setCount = context.setCount,
+                weightGrams = context.weightGrams,
+                reps = context.reps,
+            ),
+        )
+        return true
+    }
+}
 
 /**
  * The backend does not exist yet (delivery slice 4), so the remotes are the fakes from `:shared:data`. They follow
@@ -97,9 +149,36 @@ fun appModule(platform: AppPlatform) = module {
     single<MediaRepository> {
         LocalMediaRepository(get(), get(), get(), get(), get(), get(), get(AppScope), platform.ioDispatcher)
     }
+
+    // Client workout logging (docs/features/workout-logging-video.md). Local only: no sync in this phase.
+    single<CurrentClient> { DemoClient }
+    single<WorkoutRepository> { LocalWorkoutRepository(get(), platform.ioDispatcher) }
+    single<MeasurementRepository> { LocalMeasurementRepository(get(), platform.ioDispatcher) }
+    // Integration point: the plan assignment flow replaces this demo source.
+    single<TodayWorkoutSource> { DemoWorkoutData.todaySource }
+    single<RestTimerNotifier> { platform.restTimerNotifier }
+    // A technique video from the live workout becomes a message in the client's conversation with the trainer.
+    single<TechniqueVideoOutbox> { ChatStoreVideoOutbox(get()) }
+
+    // Demo trainer data shared by both roles: one conversation store behind the trainer and client chats (A5, A6),
+    // their upload state from the media repository, and the calendar's sessions, which check-in writes to (A4).
+    single { DemoChatStore() }
+    single<ChatMediaSource> { RepositoryChatMediaSource(get()) }
+    single { DemoTrainerRepository() }
+    single<TrainerRepository> { get<DemoTrainerRepository>() }
+}
+
+/** Synthetic history so the progress view is not empty in the demo. Runs once per device. */
+private fun seedDemoClient(koin: org.koin.core.Koin) {
+    val client = koin.get<CurrentClient>()
+    koin.get<CoroutineScope>(AppScope).launch {
+        runCatching {
+            DemoWorkoutData.seedIfEmpty(client.clientId, koin.get(), koin.get(), koin.get(), koin.get<TimeSource>().nowEpochMs())
+        }
+    }
 }
 
 fun initKoin(platform: AppPlatform, platformDeclaration: KoinAppDeclaration = {}) = startKoin {
     platformDeclaration()
-    modules(appModule(platform), workoutBuilderModule, guestModule)
-}
+    modules(appModule(platform), workoutBuilderModule, guestModule, workoutLoggingModule)
+}.also { seedDemoClient(it.koin) }

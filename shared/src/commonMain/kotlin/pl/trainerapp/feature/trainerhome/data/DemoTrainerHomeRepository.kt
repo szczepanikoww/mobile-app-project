@@ -87,10 +87,19 @@ object TrainerHomeFixtures {
 class DemoTrainerHomeRepository(
     private val summary: TrainerHomeSummary = TrainerHomeFixtures.summary,
     private val latencyMillis: Long = 600,
+    /**
+     * Technique videos waiting for review (READY only), from the shared chat store. When given, they replace the
+     * fixture items, so marking a video as reviewed removes it from "Wymaga uwagi".
+     */
+    private val techniqueVideos: (suspend () -> List<AttentionItem.TechniqueVideo>)? = null,
 ) : TrainerHomeRepository {
 
     override suspend fun load(): HomeSnapshot {
         delay(latencyMillis)
-        return HomeSnapshot(summary, isOffline = false, lastUpdated = summary.generatedAt)
+        val videos = techniqueVideos?.invoke()
+        val current = if (videos == null) summary else summary.copy(
+            attention = videos + summary.attention.filterNot { it is AttentionItem.TechniqueVideo },
+        )
+        return HomeSnapshot(current, isOffline = false, lastUpdated = current.generatedAt)
     }
 }

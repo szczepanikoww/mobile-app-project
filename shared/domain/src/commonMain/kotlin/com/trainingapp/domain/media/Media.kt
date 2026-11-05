@@ -12,7 +12,8 @@ enum class MediaState { QUEUED, UPLOADING, PROCESSING, READY, FAILED }
 
 data class MediaAsset(
     val id: String,
-    val ownerTrainerId: String,
+    /** The trainer (exercise demo) or client (technique video) who recorded it. */
+    val ownerUserId: String,
     val kind: MediaKind,
     /** The copy kept on this device until the upload is confirmed. */
     val localPath: String?,
@@ -40,16 +41,16 @@ data class PickedVideo(
 enum class VideoProblem { TOO_LONG, TOO_LARGE, EMPTY }
 
 object VideoValidator {
-    fun validate(video: PickedVideo): VideoProblem? = when {
+    fun validate(video: PickedVideo, kind: MediaKind = MediaKind.EXERCISE_DEMO): VideoProblem? = when {
         video.sizeBytes <= 0 -> VideoProblem.EMPTY
-        video.sizeBytes > MediaLimits.DEMO_VIDEO_MAX_SIZE_BYTES -> VideoProblem.TOO_LARGE
-        (video.durationMs ?: 0) > MediaLimits.DEMO_VIDEO_MAX_DURATION_MS -> VideoProblem.TOO_LONG
+        video.sizeBytes > MediaLimits.maxSizeBytes(kind) -> VideoProblem.TOO_LARGE
+        (video.durationMs ?: 0) > MediaLimits.maxDurationMs(kind) -> VideoProblem.TOO_LONG
         else -> null
     }
 }
 
 /**
- * Trainer videos on their way to private storage. Importing persists the asset and its upload job, so an upload
+ * Trainer and client videos on their way to private storage. Importing persists the asset and its upload job, so an upload
  * survives process death and resumes when the device is online.
  */
 interface MediaRepository {
@@ -57,8 +58,11 @@ interface MediaRepository {
 
     fun observeAll(): Flow<Map<String, MediaAsset>>
 
-    /** Persists the asset as [MediaState.QUEUED] and starts the upload when possible. */
-    suspend fun import(video: PickedVideo, kind: MediaKind): MediaAsset
+    /**
+     * Persists the asset as [MediaState.QUEUED] and starts the upload when possible. [ownerUserId] is the user who
+     * recorded it; `null` means the signed-in trainer (exercise demos).
+     */
+    suspend fun import(video: PickedVideo, kind: MediaKind, ownerUserId: String? = null): MediaAsset
 
     /** Retries a [MediaState.FAILED] upload. */
     suspend fun retry(id: String)

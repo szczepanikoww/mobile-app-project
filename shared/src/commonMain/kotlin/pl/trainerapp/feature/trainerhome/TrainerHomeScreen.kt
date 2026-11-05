@@ -93,9 +93,13 @@ fun TrainerHomeRoute(
     repository: TrainerHomeRepository,
     onNavigate: (TrainerHomeDestination) -> Unit,
     modifier: Modifier = Modifier,
+    /** Incremented by the shell after a change made elsewhere (check-in, reviewed video) to reload the home. */
+    refreshKey: Int = 0,
 ) {
     val viewModel = viewModel { TrainerHomeViewModel(repository) }
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    LaunchedEffect(refreshKey) { if (refreshKey > 0) viewModel.onAction(TrainerHomeAction.Refresh) }
 
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->

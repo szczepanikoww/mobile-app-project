@@ -20,6 +20,8 @@ kotlin {
             api(compose.material3)
             api(compose.materialIconsExtended)
             implementation(compose.components.resources)
+            // Media state for technique videos in the chat; money, cancellation policy rules and locale formats.
+            api(project(":shared:domain"))
             implementation(libs.coroutines.core)
             implementation(libs.datetime)
             implementation(libs.lifecycle.viewmodel.compose)

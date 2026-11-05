@@ -12,6 +12,8 @@ import com.trainingapp.app.initKoin
 import com.trainingapp.data.db.TrainingDatabase
 import com.trainingapp.domain.common.NetworkMonitor
 import com.trainingapp.domain.media.LocalFiles
+import com.trainingapp.feature.workoutlogging.rest.AndroidRestTimerNotifier
+import com.trainingapp.feature.workoutlogging.rest.RestTimerNotifier
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,6 +33,7 @@ private class AndroidPlatform(private val context: Context) : AppPlatform {
     override val networkMonitor: NetworkMonitor = AndroidNetworkMonitor(context)
     override val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
     override val localFiles: LocalFiles = LocalFiles { File(it).delete() }
+    override val restTimerNotifier: RestTimerNotifier = AndroidRestTimerNotifier(context)
 }
 
 /** Online when the default network has validated internet access. */

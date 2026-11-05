@@ -4,21 +4,31 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Assignment
 import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
 import androidx.compose.material.icons.outlined.FitnessCenter
+import androidx.compose.material.icons.outlined.PersonOutline
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.trainingapp.app.resources.*
+import com.trainingapp.domain.media.MediaState
+import com.trainingapp.feature.workoutbuilder.media.DemoVideoCard
+import kotlinx.coroutines.flow.first
 import org.jetbrains.compose.resources.stringResource
-import pl.trainer.data.DemoTrainerRepository
+import org.koin.compose.koinInject
+import pl.trainer.domain.TrainerRepository
 import pl.trainer.presentation.Destination
 import pl.trainer.presentation.TrainerViewModel
 import pl.trainer.ui.ActionRow
 import pl.trainer.ui.TrainerApp
 import pl.trainerapp.core.designsystem.AppTheme
-import pl.trainerapp.feature.trainerchats.data.DemoTrainerChatsRepository
+import pl.trainerapp.feature.chat.ChatMediaSource
+import pl.trainerapp.feature.chat.TechniqueVideoCard
+import pl.trainerapp.feature.chat.data.DemoChatStore
+import pl.trainerapp.feature.chat.data.DemoTrainerChatsRepository
 import pl.trainerapp.feature.trainerfinance.data.DemoTrainerFinanceRepository
 import pl.trainerapp.feature.trainerhome.data.DemoTrainerHomeRepository
+import pl.trainerapp.feature.trainerhome.model.AttentionItem
+import pl.trainerapp.feature.trainerhome.model.ClientRef
 import pl.trainerapp.feature.trainernotifications.data.DemoTrainerNotificationsRepository
 import pl.trainerapp.feature.trainerprofile.data.DemoTrainerProfileRepository
 import pl.trainerapp.shell.TrainerDestination
@@ -31,38 +41,64 @@ data class WorkoutNavigationActions(
     val onOpenPlans: () -> Unit,
     val onOpenExercises: () -> Unit,
     val onLogOut: () -> Unit = {},
+    /** Temporary: opens the client views until the client shell (Person B) exists. */
+    val onOpenClientPreview: () -> Unit = {},
 )
+
+/** The technique video in A5: the media card from the workout builder, playable only when READY. */
+internal val AppTechniqueVideoCard: TechniqueVideoCard = { asset, durationMs, onRetry ->
+    DemoVideoCard(thumbnailPath = asset?.thumbnailPath, durationMs = durationMs, asset = asset, onRetry = onRetry)
+}
 
 /**
  * The one trainer shell used by Android and the desktop preview: home, finance, chats, notifications and profile
- * from the main shell, with the calendar/clients feature and the workout-plan create actions inside it.
+ * from the main shell, with the calendar/clients feature and the workout-plan create actions inside it. Chats, the
+ * calendar and media state come from the app's demo stores, so the trainer and client views share them.
  */
 @Composable
 fun TrainerShell(actions: WorkoutNavigationActions) {
+    val chatStore: DemoChatStore = koinInject()
+    val chatMedia: ChatMediaSource = koinInject()
+    val calendar: TrainerRepository = koinInject()
     // Explicit demo data sources: no backend exists yet.
-    val repositories = remember {
+    val repositories = remember(chatStore, chatMedia, calendar) {
         TrainerRepositories(
-            home = DemoTrainerHomeRepository(),
+            home = DemoTrainerHomeRepository(
+                techniqueVideos = {
+                    chatStore.pendingReviews()
+                        // "Wymaga uwagi" lists only videos that are ready to watch.
+                        .filter { chatMedia.observe(it.mediaId).first()?.state == MediaState.READY }
+                        .map { AttentionItem.TechniqueVideo(it.mediaId, ClientRef(it.relationshipId, it.clientName), it.exerciseName) }
+                },
+            ),
             finance = DemoTrainerFinanceRepository(),
-            chats = DemoTrainerChatsRepository(),
+            chats = DemoTrainerChatsRepository(chatStore),
             notifications = DemoTrainerNotificationsRepository(),
             profile = DemoTrainerProfileRepository(),
+            calendar = calendar,
+            chatStore = chatStore,
+            chatMedia = chatMedia,
         )
     }
     AppTheme {
-        val trainer: TrainerViewModel = viewModel { TrainerViewModel(DemoTrainerRepository()) }
-        MainTrainerShell(repositories, trainerFeature = { destination, createRequest, onMain ->
-            LaunchedEffect(destination) {
-                trainer.destination(if (destination == TrainerDestination.Calendar) Destination.Calendar else Destination.Clients)
-            }
-            TrainerApp(
-                trainer,
-                showNavigation = false,
-                createRequest = createRequest,
-                onMainRouteChanged = onMain,
-                extraCreateActions = { dismiss -> WorkoutCreateActions(actions, dismiss) },
-            )
-        }, onLogOut = actions.onLogOut)
+        val trainer: TrainerViewModel = viewModel { TrainerViewModel(calendar) }
+        MainTrainerShell(
+            repositories,
+            trainerFeature = { destination, createRequest, onMain ->
+                LaunchedEffect(destination) {
+                    trainer.destination(if (destination == TrainerDestination.Calendar) Destination.Calendar else Destination.Clients)
+                }
+                TrainerApp(
+                    trainer,
+                    showNavigation = false,
+                    createRequest = createRequest,
+                    onMainRouteChanged = onMain,
+                    extraCreateActions = { dismiss -> WorkoutCreateActions(actions, dismiss) },
+                )
+            },
+            onLogOut = actions.onLogOut,
+            videoCard = AppTechniqueVideoCard,
+        )
     }
 }
 
@@ -77,5 +113,9 @@ fun WorkoutCreateActions(actions: WorkoutNavigationActions, dismiss: () -> Unit)
     }
     ActionRow(Icons.AutoMirrored.Outlined.LibraryBooks, stringResource(Res.string.add_exercises), stringResource(Res.string.add_exercises_hint)) {
         dismiss(); actions.onOpenExercises()
+    }
+    // Temporary debug entry to the client views; removed when the client shell lands.
+    ActionRow(Icons.Outlined.PersonOutline, stringResource(Res.string.client_preview_title), stringResource(Res.string.client_preview_menu_hint)) {
+        dismiss(); actions.onOpenClientPreview()
     }
 }

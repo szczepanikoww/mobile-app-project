@@ -165,4 +165,24 @@
     <string name="no_archived_clients">Archiwum jest puste</string>
     <string name="no_archived_clients_body">Tu pojawią się podopieczni, z którymi zakończono współpracę.</string>
     <string name="your_clients_reflow">Twoi podo­pieczni</string>
+    <string name="check_in_title">Check-in sesji</string>
+    <string name="check_in_plan">Plan: %1$s</string>
+    <string name="check_in_payment_package_count">Pakiet: %1$d z %2$d</string>
+    <string name="check_in_payment_package">Opłacone z pakietu</string>
+    <string name="check_in_payment_online">Płatność online</string>
+    <string name="check_in_payment_cash">Gotówka</string>
+    <string name="check_in_attendance">Obecność</string>
+    <string name="check_in_present">Potwierdź obecność</string>
+    <string name="check_in_no_show">Nieobecny</string>
+    <string name="check_in_grace">„Nieobecny” będzie dostępne o %1$s, %2$d min po rozpoczęciu, zgodnie z Twoją polityką odwołań.</string>
+    <string name="check_in_not_started">Sesja jeszcze się nie zaczęła. „Nieobecny” będzie dostępne o %1$s (%2$d min po rozpoczęciu).</string>
+    <string name="check_in_fee_note">Ewentualna opłata za nieobecność wynika z Twojej polityki odwołań i nalicza ją serwer.</string>
+    <string name="check_in_no_show_title">Oznaczyć nieobecność?</string>
+    <string name="check_in_no_show_body">Sesja zostanie zapisana jako nieobecność. Ewentualną opłatę nalicza serwer zgodnie z Twoją polityką odwołań; kwota nie jest tu pokazywana.</string>
+    <string name="check_in_no_show_confirm">Oznacz nieobecność</string>
+    <string name="check_in_done_present">Obecność potwierdzona. Sesja jest zakończona.</string>
+    <string name="check_in_done_no_show">Zapisano nieobecność.</string>
+    <string name="check_in_unavailable">Check-in jest dostępny tylko dla potwierdzonych sesji.</string>
+    <string name="check_in_not_sent">Niewysłane. Sprawdź połączenie i spróbuj ponownie; nic nie zostało zapisane.</string>
+    <string name="check_in_conflict">Ta sesja zmieniła się w międzyczasie. Odśwież, aby zobaczyć aktualny stan.</string>
 </resources>

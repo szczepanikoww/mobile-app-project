@@ -15,6 +15,7 @@ kotlin {
         all {
             languageSettings.optIn("org.jetbrains.compose.resources.ExperimentalResourceApi")
             languageSettings.optIn("androidx.compose.material3.ExperimentalMaterial3Api")
+            languageSettings.optIn("kotlin.time.ExperimentalTime")
         }
         named("desktopTest").dependencies {
             implementation(kotlin("test"))
@@ -29,6 +30,7 @@ kotlin {
             implementation(projects.shared.data)
             implementation(projects.shared.feature.workoutBuilder)
             implementation(projects.shared.feature.guest)
+            api(projects.shared.feature.workoutLogging)
             implementation(libs.androidx.navigation.compose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(libs.androidx.lifecycle.viewmodelCompose)

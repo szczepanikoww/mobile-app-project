@@ -3,6 +3,7 @@ package com.trainingapp.app
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,13 +31,25 @@ import com.trainingapp.feature.workoutbuilder.common.PlanEditorDestination
 import com.trainingapp.feature.workoutbuilder.common.PlanLibraryDestination
 import com.trainingapp.feature.workoutbuilder.workoutBuilderGraph
 import kotlinx.coroutines.launch
+import com.trainingapp.feature.workoutlogging.LiveWorkoutDestination
+import com.trainingapp.feature.workoutlogging.ProgressDestination
+import com.trainingapp.feature.workoutlogging.workoutLoggingGraph
 import kotlinx.serialization.Serializable
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
+import com.trainingapp.domain.workout.CurrentClient
 
 /** The trainer's top-level destinations (bottom navigation). Detail screens are pushed over it. */
 @Serializable
 data object TrainerHomeDestination
+
+/** Temporary entry to the client views until Person B's client shell exists. Remove it when that shell lands. */
+@Serializable
+data object ClientPreviewDestination
+
+/** The client's chat (A6). */
+@Serializable
+data object ClientChatDestination
 
 /**
  * Where the app opens: the role shell for a signed-in session, otherwise "Zaloguj się / Załóż konto". Guests reach
@@ -52,11 +65,14 @@ internal fun startDestinationFor(session: AuthSession?): Any = when {
  * The app entry point shared by Android and the desktop preview. It starts in the role shell of the signed-in
  * session ([initialSession] lets tests and previews start signed in), otherwise in the guest views. Client and
  * trainer shells use the same theme.
+ *
+ * Incrementing [openLiveWorkoutRequest] opens the live workout, e.g. after tapping the rest notification.
  */
 @Composable
 fun App(
     initialSession: AuthSession? = null,
     host: (@Composable (WorkoutNavigationActions) -> Unit)? = null,
+    openLiveWorkoutRequest: Int = 0,
 ) {
     AppTheme {
         val navController = rememberNavController()
@@ -74,6 +90,12 @@ fun App(
             replaceStack(AuthDestination())
         }
 
+        LaunchedEffect(openLiveWorkoutRequest) {
+            if (openLiveWorkoutRequest > 0) {
+                navController.navigate(LiveWorkoutDestination) { launchSingleTop = true }
+            }
+        }
+
         NavHost(navController = navController, startDestination = startDestination) {
             composable<TrainerHomeDestination> {
                 val actions = WorkoutNavigationActions(
@@ -81,6 +103,7 @@ fun App(
                     onOpenPlans = { navController.navigate(PlanLibraryDestination) },
                     onOpenExercises = { navController.navigate(ExerciseBrowserDestination()) },
                     onLogOut = logOut,
+                    onOpenClientPreview = { navController.navigate(ClientPreviewDestination) },
                 )
                 if (host != null) host(actions) else TrainerShell(actions)
             }
@@ -98,6 +121,19 @@ fun App(
                 onLogOut = logOut,
                 videoPlayer = { url, modifier -> DemoVideoPlayer(url, modifier) },
             )
+            workoutLoggingGraph(navController)
+            composable<ClientPreviewDestination> {
+                ClientPreviewScreen(
+                    onBack = { navController.popBackStack() },
+                    onLiveWorkout = { navController.navigate(LiveWorkoutDestination) },
+                    onProgress = { navController.navigate(ProgressDestination) },
+                    onChat = { navController.navigate(ClientChatDestination) },
+                )
+            }
+            composable<ClientChatDestination> {
+                val client: CurrentClient = koinInject()
+                ClientChat(client.trainerRelationshipId, onBack = { navController.popBackStack() })
+            }
         }
 
         if (showAssignInfo) {
