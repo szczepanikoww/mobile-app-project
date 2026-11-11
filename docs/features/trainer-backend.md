@@ -1,6 +1,6 @@
 # Trainer backend (`:server`)
 
-Status: implemented on branch `trainer-backend`, 2026-11-11. The app's trainer calendar, requests, clients and cancellation policy can use it (§8); everything else in the app still uses demo data. Follows [initial-architecture.md](../initial-architecture.md) §5–§11 and [database-design.md](../database-design.md).
+Status: implemented on branch `trainer-backend`, 2026-11-11. Every trainer screen of the app can use it (§8) except notifications; the client views still use demo data. Follows [initial-architecture.md](../initial-architecture.md) §5–§11 and [database-design.md](../database-design.md).
 
 ## 1. Run locally
 
@@ -102,7 +102,7 @@ Conventions: a "client id" is the trainer–client **relationship id** (as in th
 
 ## 7. Not done yet
 
-- Remaining app screens on the server: trainer home, finance, chat, profile and price list, plans/exercises and media still use the demo repositories and fakes (the endpoints exist, §4).
+- Trainer notifications in the app stay on demo data (no table in the schema).
 - Client-side endpoints (booking requests, client cancellation with quotes, wallet, workout sync) — the client backend.
 - Real identity provider, Stripe test mode, invoices, push notifications (FCM), WebSocket chat, S3 storage and video processing (the local processor marks uploads READY at once), HTTP range requests for video seeking.
 - Trainer notifications list (no table in the schema), payouts, iCal feed.
@@ -121,5 +121,7 @@ docker compose up -d && ./gradlew -Ptrainer.ui=false :server:run          # serv
 - `pl.trainer.data.remote` (in `:shared`): `TrainerApiClient` (Ktor; a dev token for the signed-in trainer, `demo-trainer` by default, renewed once on 401), mappers from `:contract` DTOs to the app models, `RemoteTrainerRepository` and `RemotePolicyRepository`. Server errors map to the app's `Failure` values (409 → `Conflict`, `QUOTE_EXPIRED` → `QuoteExpired`, 422 → `InvalidInput`, 401/403 → `Denied`, no connection → `Offline`).
 - The calendar opens on the server's date (`TrainerDashboard.today`) instead of the fixed demo date.
 - Client information is read-only for the trainer when connected (TB1): the edit button is hidden and saving is refused.
+- Also on the server when connected: home (`RemoteTrainerHomeRepository`), finance, profile with availability and the hourly rate (changing the rate creates a new single-session offer and archives the old one), chat (`RemoteTrainerChatsRepository`), plan publishing, exercise edits and exercise demo video uploads (`com.trainingapp.app.remote`). Each keeps its last successful answer in memory and shows it as offline when the server is unreachable.
+- Known gaps: profile settings, phone, location and payout figures have no endpoint and stay in memory; finance has no payout or goal data; home shows unread messages as a total only; a client's technique video still goes through the demo media source (the trainer API accepts exercise demo videos only), so in connected mode a video recorded in the client view does not reach the trainer's chat.
 - The client views stay on the demo server; policies of other trainers fall back to it.
-- Tests: `RemoteTrainerRepositoryTest` (scripted server, runs always) and `LiveTrainerApiTest` (only with `TRAINER_API_URL` set; it rejects the seeded booking request, so use a development database).
+- Tests: `RemoteTrainerRepositoryTest`, `RemoteFeatureRepositoriesTest`, `RemoteTrainerChatsRepositoryTest`, `RemoteTrainingSourcesTest` (scripted server, run always) and `LiveTrainerApiTest` (only with `TRAINER_API_URL` set; it rejects the seeded booking request, so use a development database).

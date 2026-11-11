@@ -13,7 +13,13 @@ import com.trainingapp.domain.media.MediaState
 import com.trainingapp.feature.workoutbuilder.media.DemoVideoCard
 import kotlinx.coroutines.flow.first
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.getKoin
 import org.koin.compose.koinInject
+import pl.trainer.data.remote.TrainerApiClient
+import pl.trainerapp.feature.chat.data.RemoteTrainerChatsRepository
+import pl.trainerapp.feature.trainerfinance.data.RemoteTrainerFinanceRepository
+import pl.trainerapp.feature.trainerhome.data.RemoteTrainerHomeRepository
+import pl.trainerapp.feature.trainerprofile.data.RemoteTrainerProfileRepository
 import pl.trainer.domain.PolicyRepository
 import pl.trainer.domain.TrainerRepository
 import pl.trainer.presentation.Destination
@@ -59,21 +65,22 @@ fun TrainerShell(actions: WorkoutNavigationActions) {
     val chatMedia: ChatMediaSource = koinInject()
     val calendar: TrainerRepository = koinInject()
     val policies: PolicyRepository = koinInject()
-    // Explicit demo data sources: no backend exists yet.
-    val repositories = remember(chatStore, chatMedia, calendar, policies) {
+    // The trainer API when the app has a server address (docs/features/trainer-backend.md §8); demo data otherwise.
+    val api: TrainerApiClient? = getKoin().getOrNull()
+    val repositories = remember(chatStore, chatMedia, calendar, policies, api) {
+        val techniqueVideos: suspend () -> List<AttentionItem.TechniqueVideo> = {
+            chatStore.pendingReviews()
+                // "Wymaga uwagi" lists only videos that are ready to watch.
+                .filter { chatMedia.observe(it.mediaId).first()?.state == MediaState.READY }
+                .map { AttentionItem.TechniqueVideo(it.mediaId, ClientRef(it.relationshipId, it.clientName), it.exerciseName) }
+        }
         TrainerRepositories(
-            home = DemoTrainerHomeRepository(
-                techniqueVideos = {
-                    chatStore.pendingReviews()
-                        // "Wymaga uwagi" lists only videos that are ready to watch.
-                        .filter { chatMedia.observe(it.mediaId).first()?.state == MediaState.READY }
-                        .map { AttentionItem.TechniqueVideo(it.mediaId, ClientRef(it.relationshipId, it.clientName), it.exerciseName) }
-                },
-            ),
-            finance = DemoTrainerFinanceRepository(),
-            chats = DemoTrainerChatsRepository(chatStore),
+            home = api?.let { RemoteTrainerHomeRepository(it, techniqueVideos) } ?: DemoTrainerHomeRepository(techniqueVideos = techniqueVideos),
+            finance = api?.let { RemoteTrainerFinanceRepository(it) } ?: DemoTrainerFinanceRepository(),
+            chats = api?.let { RemoteTrainerChatsRepository(it) } ?: DemoTrainerChatsRepository(chatStore),
+            // No notifications table on the server yet.
             notifications = DemoTrainerNotificationsRepository(),
-            profile = DemoTrainerProfileRepository(),
+            profile = api?.let { RemoteTrainerProfileRepository(it) } ?: DemoTrainerProfileRepository(),
             calendar = calendar,
             chatStore = chatStore,
             chatMedia = chatMedia,

@@ -65,6 +65,12 @@ import pl.trainerapp.feature.chat.model.MediaRef
 import com.trainingapp.feature.workoutlogging.rest.RestTimerNotifier
 import com.trainingapp.feature.workoutlogging.workoutLoggingModule
 import kotlinx.coroutines.launch
+import com.trainingapp.contract.media.CreateUploadSessionRequest
+import com.trainingapp.contract.media.MediaKind
+import com.trainingapp.contract.media.MediaStatusDto
+import com.trainingapp.app.remote.RemoteExerciseRemoteDataSource
+import com.trainingapp.app.remote.RemoteMediaRemoteDataSource
+import com.trainingapp.app.remote.RemotePlanRemoteDataSource
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -161,6 +167,11 @@ private fun AuthSession.clientIdentity(): ClientIdentity? = takeIf { Role.Client
  * the server contract and add latency so the pending and saving states are visible.
  */
 fun appModule(platform: AppPlatform) = module {
+    // With a server address the trainer features use the trainer API (docs/features/trainer-backend.md §8);
+    // without one they keep the demo data and fakes.
+    val apiUrl = platform.trainerApiUrl?.takeIf { it.isNotBlank() }
+    if (apiUrl != null) single { TrainerApiClient(apiUrl, subject = { get<CurrentUser>().trainerId }) }
+
     single<SqlDriver> { platform.createDriver() }
     single { createTrainingDatabase(get()) }
     single<NetworkMonitor> { platform.networkMonitor }
@@ -171,7 +182,7 @@ fun appModule(platform: AppPlatform) = module {
     single<TimeSource> { TimeSource.System }
     single(AppScope) { CoroutineScope(SupervisorJob() + Dispatchers.Default) }
 
-    single<ExerciseRemoteDataSource> { FakeExerciseRemoteDataSource(get(), latencyMs = 800) }
+    single<ExerciseRemoteDataSource> { if (apiUrl != null) RemoteExerciseRemoteDataSource(get()) else FakeExerciseRemoteDataSource(get(), latencyMs = 800) }
     single<ExerciseRepository> {
         LocalExerciseRepository(
             db = get(),
@@ -184,13 +195,16 @@ fun appModule(platform: AppPlatform) = module {
         )
     }
     single<PlanRemoteDataSource> {
-        FakePlanRemoteDataSource(get(), get(), get(), get(), get(), platform.ioDispatcher, latencyMs = 600)
+        if (apiUrl != null) RemotePlanRemoteDataSource(get()) else FakePlanRemoteDataSource(get(), get(), get(), get(), get(), platform.ioDispatcher, latencyMs = 600)
     }
     single<PlanRepository> { LocalPlanRepository(get(), get(), get(), platform.ioDispatcher) }
     single<ExerciseUsage> { PublishedPlanExerciseUsage(get()) }
 
     single<LocalFiles> { platform.localFiles }
-    single<MediaRemoteDataSource> { FakeMediaRemoteDataSource(get(), stepDelayMs = 300) }
+    single<MediaRemoteDataSource> {
+        val fake = FakeMediaRemoteDataSource(get(), stepDelayMs = 300)
+        if (apiUrl != null) TrainerMediaRouting(RemoteMediaRemoteDataSource(get()), fake) else fake
+    }
     single<MediaRepository> {
         LocalMediaRepository(get(), get(), get(), get(), get(), get(), get(AppScope), platform.ioDispatcher)
     }
@@ -199,11 +213,8 @@ fun appModule(platform: AppPlatform) = module {
     // (docs/features/client-shell-sessions-wallet.md, D10). Its clock starts at the fixture date and moves forward.
     single { DemoSchedulingStore(AdvancingDemoClock()::now, get(AppScope)) }
     single { DemoTrainerRepository(store = get()) }
-    // With a server address the trainer's calendar, requests, clients and policy come from the trainer API; the
-    // client views stay on the demo server until the client backend exists.
-    val apiUrl = platform.trainerApiUrl?.takeIf { it.isNotBlank() }
+    // The client views stay on the demo server until the client backend exists.
     if (apiUrl != null) {
-        single { TrainerApiClient(apiUrl, subject = { get<CurrentUser>().trainerId }) }
         single<TrainerRepository> { RemoteTrainerRepository(get()) }
     } else {
         single<TrainerRepository> { get<DemoTrainerRepository>() }
@@ -246,6 +257,17 @@ fun appModule(platform: AppPlatform) = module {
     // One conversation store behind the trainer and client chats (A5, A6), with upload state from the media repository.
     single { DemoChatStore() }
     single<ChatMediaSource> { RepositoryChatMediaSource(get()) }
+}
+
+/**
+ * The trainer API accepts only the trainer's exercise demo videos; a client's technique video needs the client
+ * backend, so it stays on the fake until then. Status asks the server first and falls back to the fake.
+ */
+private class TrainerMediaRouting(private val server: MediaRemoteDataSource, private val fake: MediaRemoteDataSource) : MediaRemoteDataSource {
+    override suspend fun upload(request: CreateUploadSessionRequest, localPath: String, onProgress: suspend (Float) -> Unit) =
+        (if (request.kind == MediaKind.EXERCISE_DEMO) server else fake).upload(request, localPath, onProgress)
+
+    override suspend fun status(mediaId: String): MediaStatusDto? = server.status(mediaId) ?: fake.status(mediaId)
 }
 
 /** Synthetic history so the progress view is not empty in the demo. Runs once per device. */
