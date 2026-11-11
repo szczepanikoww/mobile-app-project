@@ -8,6 +8,7 @@ import com.trainingapp.server.platform.AuthConfig
 import com.trainingapp.server.platform.Db
 import com.trainingapp.server.platform.SCHEMAS
 import com.trainingapp.server.platform.ServerClock
+import com.trainingapp.server.platform.toMicros
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.ktor.client.HttpClient
@@ -44,7 +45,7 @@ object Seed {
 }
 
 /** A clock the test moves by hand. Starts at the real time so the seed's now()-relative sessions line up. */
-class TestClock(var current: Instant = Clock.System.now()) : ServerClock {
+class TestClock(var current: Instant = Clock.System.now().toMicros()) : ServerClock {
     override fun now() = current
     fun advance(by: Duration) { current += by }
 }
@@ -70,6 +71,7 @@ object TestDatabase {
             c.autoCommit = true
             c.createStatement().use { st ->
                 SCHEMAS.forEach { st.execute("DROP SCHEMA IF EXISTS $it CASCADE") }
+                st.execute("DROP TABLE IF EXISTS public.flyway_schema_history")
             }
         }
         Db.migrate(dataSource, devSeed = true)

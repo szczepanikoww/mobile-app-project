@@ -11,9 +11,12 @@ fun interface ServerClock {
     fun now(): Instant
 
     companion object {
-        val System = ServerClock { kotlin.time.Clock.System.now() }
+        val System = ServerClock { kotlin.time.Clock.System.now().toMicros() }
     }
 }
+
+/** PostgreSQL stores microseconds; truncating keeps a stored instant equal to the one the server computed. */
+fun Instant.toMicros(): Instant = Instant.fromEpochSeconds(epochSeconds, nanosecondsOfSecond / 1000 * 1000)
 
 fun OffsetDateTime.toInstantK(): Instant = toInstant().toKotlinInstant()
 fun Instant.toOffset(): OffsetDateTime = OffsetDateTime.ofInstant(toJavaInstant(), ZoneOffset.UTC)

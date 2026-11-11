@@ -11,7 +11,7 @@ docker compose up -d                      # PostgreSQL 16 on localhost:5432 (db/
 ./gradlew -Ptrainer.ui=false :server:run  # http://localhost:8080
 ```
 
-On start the server runs the Flyway migrations (`V1` = `docs/database/schema-draft.sql`, `V2` = client information), loads the synthetic demo seed (`db/dev/R__demo_seed.sql`, only while `AUTH_MODE=dev`) and imports the global exercise library once.
+On start the server runs the Flyway migrations (history table `public.flyway_schema_history`, because V1 creates the module schemas itself) (`V1` = `docs/database/schema-draft.sql`, `V2` = client information), loads the synthetic demo seed (`db/dev/R__demo_seed.sql`, only while `AUTH_MODE=dev`) and imports the global exercise library once.
 
 Sign in as a demo account and call the API:
 

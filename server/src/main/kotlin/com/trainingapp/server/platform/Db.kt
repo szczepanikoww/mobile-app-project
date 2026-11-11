@@ -44,10 +44,12 @@ class Db(val dataSource: DataSource) {
                 add("classpath:db/migration")
                 if (devSeed) add("classpath:db/dev")
             }
+            // V1 creates the module schemas itself, so Flyway keeps its history table in `public` (it must exist
+            // before V1 runs). database-design.md proposed `platform`; that would require editing V1.
             Flyway.configure()
                 .dataSource(ds)
-                .schemas(*SCHEMAS)
-                .createSchemas(false) // V1 creates them
+                .defaultSchema("public")
+                .createSchemas(false)
                 .locations(*locations.toTypedArray())
                 .load()
                 .migrate()
