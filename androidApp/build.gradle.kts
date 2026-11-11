@@ -12,8 +12,20 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
+        // Trainer API address, e.g. `-Ptrainer.apiUrl=http://10.0.2.2:8080` for a local server seen from the emulator.
+        // Empty keeps the in-memory demo data (docs/features/trainer-backend.md).
+        val apiUrl = providers.gradleProperty("trainer.apiUrl").orElse("").get()
+        buildConfigField("String", "TRAINER_API_URL", "\"$apiUrl\"")
     }
-    buildFeatures { compose = true }
+    buildTypes {
+        // Plain HTTP only to a local development server, only in debug builds.
+        getByName("debug") { manifestPlaceholders["networkSecurityConfig"] = "@xml/network_security_config_debug" }
+        getByName("release") { manifestPlaceholders["networkSecurityConfig"] = "@xml/network_security_config" }
+    }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

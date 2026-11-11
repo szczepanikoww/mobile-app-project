@@ -65,7 +65,7 @@ fun ClientsScreen(state: TrainerUiState, onSearch: (String) -> Unit, onFilter: (
             })
         }
         items(state.visibleClients, key = { it.id }) { client ->
-            ClientRow(client, data.sessions.filter { it.clientId == client.id && it.isActive() && it.start.toLocalDateTime(TrainerZone).date >= DemoDate }.minByOrNull { it.start }, onClick = { onClient(client.id) })
+            ClientRow(client, data.sessions.filter { it.clientId == client.id && it.isActive() && it.start.toLocalDateTime(TrainerZone).date >= state.today }.minByOrNull { it.start }, onClick = { onClient(client.id) })
         }
         item { Spacer(Modifier.height(Layout.padding)) }
     }

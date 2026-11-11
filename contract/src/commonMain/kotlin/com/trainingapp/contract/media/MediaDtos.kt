@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
  * the server checks the file during [PROCESSING].
  */
 @Serializable
-enum class RemoteMediaState { PROCESSING, READY, FAILED }
+enum class RemoteMediaState { UPLOADING, PROCESSING, READY, FAILED }
 
 @Serializable
 enum class MediaKind {

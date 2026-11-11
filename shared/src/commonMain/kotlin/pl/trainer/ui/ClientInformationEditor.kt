@@ -64,6 +64,6 @@ fun ClientInformationEditor(state: TrainerUiState, clientId: String, onRetry: ()
             onSave(birthDate.takeIf { it.isNotBlank() }?.let(LocalDate::parse), weight, height, goal, injuries, limitations)
         })
     }
-    if (datePicker) AppDatePicker(birthDate.takeIf { it.isNotBlank() }?.let(LocalDate::parse) ?: DemoDate.minus(30, DateTimeUnit.YEAR),
+    if (datePicker) AppDatePicker(birthDate.takeIf { it.isNotBlank() }?.let(LocalDate::parse) ?: state.today.minus(30, DateTimeUnit.YEAR),
         onDismiss = { datePicker = false }, onDate = { birthDate = it.toString(); datePicker = false })
 }

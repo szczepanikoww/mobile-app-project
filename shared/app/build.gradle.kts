@@ -22,6 +22,8 @@ kotlin {
             implementation(compose.desktop.uiTestJUnit4)
             implementation(libs.sqldelight.sqliteDriver)
             implementation(libs.kotlinx.coroutines.swing)
+            implementation(libs.ktor.client.mock)
+            implementation(libs.kotlinx.coroutines.test)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
         }
         commonMain.dependencies {

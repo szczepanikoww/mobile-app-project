@@ -123,7 +123,7 @@ fun ClientDetailScreen(state: TrainerUiState, client: Client, onSession: (String
     }
     val data = state.data!!
     val sessions = data.sessions.filter { it.clientId == client.id }
-    val next = sessions.filter { it.isActive() && it.start.toLocalDateTime(TrainerZone).date >= DemoDate }.minByOrNull { it.start }
+    val next = sessions.filter { it.isActive() && it.start.toLocalDateTime(TrainerZone).date >= state.today }.minByOrNull { it.start }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(Layout.gutter), verticalArrangement = Arrangement.spacedBy(Layout.section)) {
         Row(horizontalArrangement = Arrangement.spacedBy(Layout.padding), verticalAlignment = Alignment.CenterVertically) {
             Avatar(client, large = true)
@@ -134,8 +134,11 @@ fun ClientDetailScreen(state: TrainerUiState, client: Client, onSession: (String
         if (client.hasOverduePayment) MetaLine(Icons.Outlined.Payments, tr(Res.string.overdue_label))
         Column(verticalArrangement = Arrangement.spacedBy(Layout.medium)) {
             SectionTitle(tr(Res.string.client_information)) {
-                IconButton(onClick = onInformation, enabled = state.clientInformation != null && !state.informationLoading) {
-                    Icon(Icons.Outlined.Edit, tr(Res.string.edit_client_information))
+                // The client enters this information when the trainer may only read it (TB1).
+                if (state.canEditClientInformation) {
+                    IconButton(onClick = onInformation, enabled = state.clientInformation != null && !state.informationLoading) {
+                        Icon(Icons.Outlined.Edit, tr(Res.string.edit_client_information))
+                    }
                 }
             }
             when {
@@ -149,7 +152,7 @@ fun ClientDetailScreen(state: TrainerUiState, client: Client, onSession: (String
                     val language = DateFormats.defaultLanguage()
                     FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Layout.section),
                         verticalArrangement = Arrangement.spacedBy(Layout.medium)) {
-                        InformationValue(tr(Res.string.age), information.ageOn(DemoDate)?.let { tr(Res.string.age_value, it) })
+                        InformationValue(tr(Res.string.age), information.ageOn(state.today)?.let { tr(Res.string.age_value, it) })
                         InformationValue(tr(Res.string.weight), information.weightKg?.let { tr(Res.string.weight_value, DateFormats.number(it, language)) })
                         InformationValue(tr(Res.string.height), information.heightCm?.let { tr(Res.string.height_value, DateFormats.number(it, language)) })
                     }

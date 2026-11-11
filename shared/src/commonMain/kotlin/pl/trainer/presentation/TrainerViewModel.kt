@@ -50,8 +50,12 @@ data class TrainerUiState(
     val review: RequestReview? = null,
     val reviewLoading: Boolean = false,
     val reviewFailure: Failure? = null,
+    /** Whether the trainer may edit client information; the client owns it when this is false (TB1). */
+    val canEditClientInformation: Boolean = true,
 ) {
     val route get() = routes.last()
+    /** The server's date for the trainer; the fixed preview date in the demo. Never the device clock. */
+    val today: LocalDate get() = data?.today ?: DemoDate
     val offline get() = scenario == DemoScenario.Offline
     val visibleClients get() = data?.clients.orEmpty().filter {
         it.active == (clientTab == ClientTab.Current) && it.name.searchKey().contains(search.searchKey()) && when (clientFilter) {
@@ -62,7 +66,7 @@ data class TrainerUiState(
 }
 
 class TrainerViewModel(private val repository: TrainerRepository) : ViewModel() {
-    private val mutableState = MutableStateFlow(TrainerUiState())
+    private val mutableState = MutableStateFlow(TrainerUiState(canEditClientInformation = repository.canEditClientInformation))
     val state = mutableState.asStateFlow()
     private var loadingJob: Job? = null
     private var informationJob: Job? = null
@@ -77,7 +81,9 @@ class TrainerViewModel(private val repository: TrainerRepository) : ViewModel() 
         loadingJob = viewModelScope.launch {
             try {
                 val data = repository.load()
-                mutableState.update { it.copy(data = data, loading = false) }
+                // The calendar opens on the server's today; a date the trainer chose stays.
+                mutableState.update { it.copy(data = data, loading = false,
+                    selectedDate = if (it.selectedDate == it.today) data.today ?: it.selectedDate else it.selectedDate) }
             } catch (e: TrainerException) {
                 mutableState.update { it.copy(data = null, loading = false, failure = e.failure) }
             } catch (e: kotlinx.coroutines.CancellationException) { throw e
@@ -195,7 +201,7 @@ class TrainerViewModel(private val repository: TrainerRepository) : ViewModel() 
         if (state.value.submitting) return
         fun number(text: String) = text.trim().replace(',', '.').toDoubleOrNull()
         val information = ClientInformation(birthDate, number(weight), number(height), goal.trim(), injuries.trim(), limitations.trim())
-        if ((weight.isNotBlank() && information.weightKg == null) || (height.isNotBlank() && information.heightCm == null) || !information.isValidAsOf(DemoDate)) {
+        if ((weight.isNotBlank() && information.weightKg == null) || (height.isNotBlank() && information.heightCm == null) || !information.isValidAsOf(state.value.today)) {
             mutableState.update { it.copy(actionFailure = Failure.InvalidClientInfo) }
             return
         }

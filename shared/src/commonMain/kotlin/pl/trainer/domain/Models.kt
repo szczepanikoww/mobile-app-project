@@ -104,6 +104,8 @@ data class TrainerDashboard(
     val sessions: List<Session>,
     val blocks: List<AvailabilityBlock>,
     val notes: Map<String, String> = emptyMap(),
+    /** The server's current date in the trainer's time zone; null in the demo, which uses [DemoDate]. */
+    val today: LocalDate? = null,
 )
 
 enum class DemoScenario { Normal, Loading, Empty, Error, Offline, Denied }
@@ -113,6 +115,9 @@ class TrainerException(val failure: Failure) : Exception()
 
 /** Integration boundary: production implementations must enforce role/relationship and revisions. */
 interface TrainerRepository {
+    /** False when the client enters their own information and the trainer only reads it (TB1). */
+    val canEditClientInformation: Boolean get() = true
+
     suspend fun load(): TrainerDashboard
     suspend fun acceptRequest(id: String, revision: Int): TrainerDashboard
     suspend fun rejectRequest(id: String, revision: Int): TrainerDashboard
