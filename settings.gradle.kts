@@ -8,7 +8,7 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 rootProject.name = "TrainerApp"
 val includeUi = providers.gradleProperty("trainer.ui").orNull?.toBooleanStrictOrNull() ?: true
 if (file("contract/build.gradle.kts").exists()) {
-    include(":contract", ":shared:domain", ":shared:data")
+    include(":contract", ":shared:domain", ":shared:data", ":server")
     if (!includeUi) project(":shared").buildFileName = "headless.gradle.kts"
 }
 if (includeUi) {

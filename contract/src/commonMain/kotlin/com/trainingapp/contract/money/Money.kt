@@ -6,6 +6,7 @@ package com.trainingapp.contract.money
  *
  * Lives in `:contract` so the app's fee preview and the server's charge use one type and one calculation.
  */
+@kotlinx.serialization.Serializable
 data class Money(val minor: Long, val currency: String) {
     init {
         require(currency.length == 3) { "Currency must be an ISO 4217 code" }
