@@ -16,6 +16,17 @@ import com.trainingapp.data.plan.PlanRemoteDataSource
 import com.trainingapp.data.plan.PublishedPlanExerciseUsage
 import com.trainingapp.data.remote.ApiClient
 import com.trainingapp.data.remote.BackendConfig
+import com.trainingapp.feature.guest.data.RemoteAuthRepository
+import com.trainingapp.app.remote.ApiClientAdapter
+import com.trainingapp.app.remote.client.RemoteTodayWorkoutSource
+import com.trainingapp.app.remote.client.WorkoutSyncer
+import com.trainingapp.data.workout.LocalWorkoutSyncStore
+import kotlinx.datetime.TimeZone
+import kotlinx.coroutines.flow.MutableStateFlow
+import pl.trainer.data.remote.client.ClientApi
+import pl.trainer.data.remote.client.PublicPolicyRepository
+import pl.trainer.data.remote.client.RemoteClientScheduleRepository
+import pl.trainer.data.remote.client.RemoteWalletRepository
 import com.trainingapp.feature.guest.data.RemoteGuestCatalogRepository
 import com.trainingapp.domain.common.AppLanguage
 import com.trainingapp.domain.common.CurrentUser
@@ -63,6 +74,17 @@ import com.trainingapp.feature.workoutbuilder.workoutBuilderModule
 import pl.trainerapp.feature.chat.ChatMediaSource
 import pl.trainerapp.feature.chat.data.DemoChatStore
 import pl.trainerapp.feature.chat.data.RepositoryChatMediaSource
+import pl.trainerapp.feature.chat.ClientChatRepository
+import pl.trainerapp.feature.chat.data.remote.ChatServerApi
+import pl.trainerapp.feature.chat.data.remote.CompositeChatMediaSource
+import pl.trainerapp.feature.chat.data.remote.RemoteChatMediaSource
+import pl.trainerapp.feature.chat.data.remote.RemoteClientChatRepository
+import pl.trainerapp.feature.chat.data.remote.RemoteClientContext
+import pl.trainerapp.feature.chat.data.remote.RemoteTechniqueVideoReviews
+import pl.trainerapp.feature.chat.data.remote.rebaseUrl
+import com.trainingapp.app.remote.media.ApiClientChatServer
+import com.trainingapp.app.remote.media.RemoteClientMediaRemoteDataSource
+import com.trainingapp.app.remote.media.RemoteTechniqueVideoOutbox
 import pl.trainerapp.feature.chat.model.ChatRole
 import pl.trainerapp.feature.chat.model.MediaRef
 import com.trainingapp.feature.workoutlogging.rest.RestTimerNotifier
@@ -132,6 +154,14 @@ private class SessionCurrentClient(private val auth: AuthRepository, private val
         get() = session?.let { if (store.clientIdOf(it.userId) == DemoClient.clientId) DemoClient.firstName else it.displayName.substringBefore(' ') }
             ?: DemoClient.firstName
     override val trainerRelationshipId: String get() = clientId
+}
+
+/** The signed-in client in remote mode: the session subject; the relationship comes from the server. */
+private class RemoteCurrentClient(private val auth: AuthRepository, private val context: RemoteClientContext) : CurrentClient {
+    private val session get() = auth.session.value?.takeIf { Role.Client in it.roles }
+    override val clientId: String get() = session?.userId.orEmpty()
+    override val firstName: String get() = session?.displayName?.substringBefore(' ').orEmpty()
+    override val trainerRelationshipId: String get() = context.relationshipId.orEmpty()
 }
 
 /** A public trainer profile from the guest catalogue, as the demo server needs it for a booking request. */
@@ -266,14 +296,14 @@ fun appModule(platform: AppPlatform) = module {
 }
 
 /**
- * The trainer API accepts only the trainer's exercise demo videos; a client's technique video needs the client
- * backend, so it stays on the fake until then. Status asks the server first and falls back to the fake.
+ * The trainer API accepts only the trainer's exercise demo videos; a client's technique video goes to [other] (the
+ * client API in remote mode, the fake otherwise). Status asks the trainer API first and falls back to [other].
  */
-private class TrainerMediaRouting(private val server: MediaRemoteDataSource, private val fake: MediaRemoteDataSource) : MediaRemoteDataSource {
+private class TrainerMediaRouting(private val server: MediaRemoteDataSource, private val other: MediaRemoteDataSource) : MediaRemoteDataSource {
     override suspend fun upload(request: CreateUploadSessionRequest, localPath: String, onProgress: suspend (Float) -> Unit) =
-        (if (request.kind == MediaKind.EXERCISE_DEMO) server else fake).upload(request, localPath, onProgress)
+        (if (request.kind == MediaKind.EXERCISE_DEMO) server else other).upload(request, localPath, onProgress)
 
-    override suspend fun status(mediaId: String): MediaStatusDto? = server.status(mediaId) ?: fake.status(mediaId)
+    override suspend fun status(mediaId: String): MediaStatusDto? = server.status(mediaId) ?: other.status(mediaId)
 }
 
 /** Synthetic history so the progress view is not empty in the demo. Runs once per device. */
@@ -291,13 +321,91 @@ private fun seedDemoClient(koin: org.koin.core.Koin) {
  * definitions override the demo bindings. Connected so far: the public catalogue (guest views); sign-in, sessions,
  * wallet, workouts and chat still use the demo sources (docs/plans/backend-client-guest.md §11).
  */
-fun remoteModule(backend: BackendConfig) = module {
-    single { ApiClient(backend.baseUrl!!, language = { get<AppLanguage>().current() }) }
+fun remoteModule(backend: BackendConfig, io: CoroutineDispatcher = Dispatchers.Default) = module {
+    val baseUrl = backend.baseUrl!!
+    // Until an identity provider exists the server accepts `dev.<subject>` tokens (decision TB2); the session's
+    // userId is the auth subject in remote mode.
+    single {
+        val auth = lazy { get<AuthRepository>() }
+        ApiClient(baseUrl, language = { get<AppLanguage>().current() }, token = { auth.value.session.value?.userId?.let { "dev.$it" } })
+    }
+    single<AuthRepository> {
+        RemoteAuthRepository(apiFor = { token -> ApiClient(baseUrl, language = { get<AppLanguage>().current() }, token = token) })
+    }
     single<GuestCatalogRepository> { RemoteGuestCatalogRepository(get()) }
+
+    // Client workouts: today's plan day from the server; local logs and measurements are synced to it.
+    single { LocalWorkoutSyncStore(get(), io) }
+    single<TodayWorkoutSource> { RemoteTodayWorkoutSource(get(), get()) }
+    single {
+        WorkoutSyncer(get(), get(), get(), get(), get(), timeZone = { TimeZone.currentSystemDefault().id })
+    }
+
+    // Client sessions, requests, cancellations and wallet (`/v1/client`). One update counter, so a cancellation
+    // fee also refreshes the wallet.
+    single<ClientApi> { ApiClientAdapter(get()) }
+    single(ClientUpdates) { MutableStateFlow(0L) }
+    single<ClientScheduleRepository> {
+        val auth: AuthRepository = get()
+        RemoteClientScheduleRepository(get(), identity = { auth.session.value?.userId }, updated = get(ClientUpdates))
+    }
+    single<WalletRepository> {
+        val auth: AuthRepository = get()
+        RemoteWalletRepository(get(), identity = { auth.session.value?.userId }, updated = get(ClientUpdates))
+    }
+    // Own policy from the trainer API; any other trainer's (the client views) from the public client API.
+    single<PolicyRepository> {
+        val user: CurrentUser = get()
+        RemotePolicyRepository(get(), isOwnTrainer = { it == user.trainerId }, others = PublicPolicyRepository(get()))
+    }
+
+    // Chat and technique videos. The shared ApiClient carries the signed-in subject's token, so it serves the
+    // client chat and, when a trainer is signed in, the media status the trainer needs to watch client videos.
+    single<ChatServerApi> { ApiClientChatServer(get()) }
+    single { RemoteClientContext(get()) }
+    single<CurrentClient> { RemoteCurrentClient(get(), get()) }
+    single<ClientChatRepository> { RemoteClientChatRepository(get(), get()) }
+    single<ChatMediaSource> {
+        val server: ChatServerApi = get()
+        CompositeChatMediaSource(
+            local = RepositoryChatMediaSource(get<MediaRepository>()),
+            remote = RemoteChatMediaSource({ server.mediaStatus(it) }, rebase = { rebaseUrl(it, baseUrl) }),
+        )
+    }
+    single<TechniqueVideoOutbox> { RemoteTechniqueVideoOutbox(get(), get(), get(AppScope)) }
+    single<MediaRemoteDataSource> {
+        TrainerMediaRouting(RemoteMediaRemoteDataSource(get()), RemoteClientMediaRemoteDataSource(get(), get(), baseUrl))
+    }
+    // The trainer's technique-video inbox; one instance so the review screen and the home list share its cache.
+    single {
+        val server: ChatServerApi = get()
+        RemoteTechniqueVideoReviews(get<TrainerApiClient>(), { server.mediaStatus(it) })
+    }
+}
+
+private val ClientUpdates = named("clientUpdates")
+
+/** Starts pushing the client's workout logs and measurements to the server (on reconnect and every few minutes). */
+private fun startWorkoutSync(koin: org.koin.core.Koin) {
+    koin.get<WorkoutSyncer>().startPeriodicSync(koin.get<CoroutineScope>(AppScope), koin.get<NetworkMonitor>().isOnline)
+}
+
+/** Keeps the client's trainer relationship (chat, technique videos) in step with the signed-in session. */
+private fun startClientContextSync(koin: org.koin.core.Koin) {
+    val context = koin.get<RemoteClientContext>()
+    val auth = koin.get<AuthRepository>()
+    koin.get<CoroutineScope>(AppScope).launch {
+        auth.session.collect { session ->
+            if (session != null && Role.Client in session.roles) runCatching { context.refresh() } else context.clear()
+        }
+    }
 }
 
 fun initKoin(platform: AppPlatform, platformDeclaration: KoinAppDeclaration = {}) = startKoin {
     platformDeclaration()
     modules(appModule(platform), workoutBuilderModule, guestModule, workoutLoggingModule, clientModule)
-    if (platform.backend.isRemote) modules(remoteModule(platform.backend))
-}.also { seedDemoClient(it.koin) }
+    if (platform.backend.isRemote) modules(remoteModule(platform.backend, platform.ioDispatcher))
+}.also {
+    // Synthetic history only for the demo; with a server the history comes from the client's workout logs there.
+    if (!platform.backend.isRemote) seedDemoClient(it.koin) else { startWorkoutSync(it.koin); startClientContextSync(it.koin) }
+}

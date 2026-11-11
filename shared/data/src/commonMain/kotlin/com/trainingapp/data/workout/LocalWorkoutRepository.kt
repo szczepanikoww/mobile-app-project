@@ -63,7 +63,11 @@ class LocalWorkoutRepository(
                 finished_at = log.finishedAtEpochMs,
                 note = log.note,
                 state = log.state.name,
-                sync_state = log.syncState.name,
+                // A change after a sync is not on the server yet; the syncer sets SYNCED / CONFLICT / FAILED itself.
+                sync_state = when (log.syncState) {
+                    WorkoutSyncState.SYNCED, WorkoutSyncState.CONFLICT, WorkoutSyncState.FAILED -> WorkoutSyncState.PENDING
+                    else -> log.syncState
+                }.name,
                 current_exercise = log.currentExerciseIndex.toLong(),
                 rest_ends_at = log.rest?.endsAtEpochMs,
                 rest_after_set_id = log.rest?.afterSetId,

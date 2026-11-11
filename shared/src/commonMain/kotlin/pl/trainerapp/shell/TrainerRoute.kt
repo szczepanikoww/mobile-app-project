@@ -4,7 +4,7 @@ import pl.trainer.domain.PolicyRepository
 import pl.trainer.domain.TrainerRepository
 import pl.trainerapp.feature.chat.ChatMediaSource
 import pl.trainerapp.feature.chat.TrainerChatsRepository
-import pl.trainerapp.feature.chat.data.DemoChatStore
+import pl.trainerapp.feature.chat.data.remote.VideoReviewStore
 import pl.trainerapp.feature.trainerfinance.TrainerFinanceRepository
 import pl.trainerapp.feature.trainerhome.TrainerHomeRepository
 import pl.trainerapp.feature.trainernotifications.TrainerNotificationsRepository
@@ -20,7 +20,7 @@ class TrainerRepositories(
     /** The calendar's sessions; check-in writes through it (A4). */
     val calendar: TrainerRepository,
     /** The shared conversation store behind both chats and the technique-video review (A5). */
-    val chatStore: DemoChatStore,
+    val chatStore: VideoReviewStore,
     val chatMedia: ChatMediaSource,
     /** Cancellation policy versions (B5), from the shared demo scheduling store. */
     val policies: PolicyRepository,

@@ -59,7 +59,7 @@ import pl.trainerapp.core.designsystem.ErrorState
 import pl.trainerapp.core.designsystem.InlineBanner
 import pl.trainerapp.core.designsystem.ScreenLoading
 import pl.trainerapp.core.format.formatListWhen
-import pl.trainerapp.feature.chat.data.DemoChatStore
+import pl.trainerapp.feature.chat.data.remote.VideoReviewStore
 import pl.trainerapp.feature.chat.model.ChatMessage
 import pl.trainerapp.feature.chat.model.ChatRole
 
@@ -108,7 +108,7 @@ sealed interface TechniqueVideoEvent {
 class TechniqueVideoViewModel(
     private val mediaId: String,
     private val viewer: ChatRole,
-    private val store: DemoChatStore,
+    private val store: VideoReviewStore,
     private val chats: TrainerChatsRepository,
     private val media: ChatMediaSource,
 ) : ViewModel() {
@@ -183,7 +183,7 @@ class TechniqueVideoViewModel(
 fun TechniqueVideoRoute(
     mediaId: String,
     viewer: ChatRole,
-    store: DemoChatStore,
+    store: VideoReviewStore,
     chats: TrainerChatsRepository,
     mediaSource: ChatMediaSource,
     onBack: () -> Unit,

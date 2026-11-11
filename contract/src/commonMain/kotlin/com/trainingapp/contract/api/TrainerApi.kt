@@ -349,6 +349,8 @@ data class TrainerHomeDto(
     val weekSessionsDone: Int,
     val weekSessionsPlanned: Int,
     val serverNow: ApiInstant,
+    /** The trainer's display name for the greeting. */
+    val trainerName: String? = null,
 )
 
 @Serializable

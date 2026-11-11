@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -455,7 +456,8 @@ fun formatKg(grams: Int): String = LocaleFormats.formatDecimal(grams / 1000.0, "
 @Composable
 private fun Composer(state: ChatUiState, onAction: (ChatAction) -> Unit) {
     val canSend = state.draft.isNotBlank() && !state.isSending
-    Surface(color = MaterialTheme.colorScheme.surface) {
+    // The app draws edge to edge, so the composer moves above the keyboard itself.
+    Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.imePadding()) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()

@@ -83,6 +83,7 @@ class TrainerHome(private val db: Db, private val clock: ServerClock) {
             weekSessionsDone = week.count { it == "COMPLETED" },
             weekSessionsPlanned = week.count { it == "CONFIRMED" || it == "COMPLETED" || it == "NO_SHOW" },
             serverNow = now,
+            trainerName = AppUsers.selectAll().where { AppUsers.id eq trainerId }.singleOrNull()?.get(AppUsers.displayName),
         )
     }
 

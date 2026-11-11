@@ -30,12 +30,14 @@ import pl.trainerapp.core.designsystem.AppTheme
 import pl.trainerapp.feature.chat.ChatMediaSource
 import pl.trainerapp.feature.chat.TechniqueVideoCard
 import pl.trainerapp.feature.chat.data.DemoChatStore
+import pl.trainerapp.feature.chat.data.remote.RemoteTechniqueVideoReviews
 import pl.trainerapp.feature.chat.data.DemoTrainerChatsRepository
 import pl.trainerapp.feature.trainerfinance.data.DemoTrainerFinanceRepository
 import pl.trainerapp.feature.trainerhome.data.DemoTrainerHomeRepository
 import pl.trainerapp.feature.trainerhome.model.AttentionItem
 import pl.trainerapp.feature.trainerhome.model.ClientRef
 import pl.trainerapp.feature.trainernotifications.data.DemoTrainerNotificationsRepository
+import pl.trainerapp.feature.trainernotifications.data.RemoteTrainerNotificationsRepository
 import pl.trainerapp.feature.trainerprofile.data.DemoTrainerProfileRepository
 import pl.trainerapp.shell.TrainerDestination
 import pl.trainerapp.shell.TrainerRepositories
@@ -67,8 +69,10 @@ fun TrainerShell(actions: WorkoutNavigationActions) {
     val policies: PolicyRepository = koinInject()
     // The trainer API when the app has a server address (docs/features/trainer-backend.md §8); demo data otherwise.
     val api: TrainerApiClient? = getKoin().getOrNull()
-    val repositories = remember(chatStore, chatMedia, calendar, policies, api) {
-        val techniqueVideos: suspend () -> List<AttentionItem.TechniqueVideo> = {
+    // Server-backed technique-video inbox and review (remote mode only).
+    val reviews: RemoteTechniqueVideoReviews? = if (api != null) getKoin().getOrNull() else null
+    val repositories = remember(chatStore, chatMedia, calendar, policies, api, reviews) {
+        val techniqueVideos: suspend () -> List<AttentionItem.TechniqueVideo> = reviews?.let { r -> { r.techniqueVideos() } } ?: {
             chatStore.pendingReviews()
                 // "Wymaga uwagi" lists only videos that are ready to watch.
                 .filter { chatMedia.observe(it.mediaId).first()?.state == MediaState.READY }
@@ -78,11 +82,11 @@ fun TrainerShell(actions: WorkoutNavigationActions) {
             home = api?.let { RemoteTrainerHomeRepository(it, techniqueVideos) } ?: DemoTrainerHomeRepository(techniqueVideos = techniqueVideos),
             finance = api?.let { RemoteTrainerFinanceRepository(it) } ?: DemoTrainerFinanceRepository(),
             chats = api?.let { RemoteTrainerChatsRepository(it) } ?: DemoTrainerChatsRepository(chatStore),
-            // No notifications table on the server yet.
-            notifications = DemoTrainerNotificationsRepository(),
+            // No notifications table on the server: derived from the dashboard and home counts.
+            notifications = api?.let { RemoteTrainerNotificationsRepository(it) } ?: DemoTrainerNotificationsRepository(),
             profile = api?.let { RemoteTrainerProfileRepository(it) } ?: DemoTrainerProfileRepository(),
             calendar = calendar,
-            chatStore = chatStore,
+            chatStore = reviews ?: chatStore,
             chatMedia = chatMedia,
             policies = policies,
         )

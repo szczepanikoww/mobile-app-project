@@ -134,6 +134,7 @@
     <string name="reason_late_reschedule">Opłata za późną zmianę terminu</string>
     <string name="reason_no_show">Opłata za nieobecność</string>
     <string name="reason_session">Sesja treningowa</string>
+    <string name="reason_package_period">Opłata za pakiet</string>
     <string name="charge_session">Sesja %1$s · %2$s</string>
     <string name="pay_amount">Zapłać %1$s</string>
     <string name="pay_trainer_cash">Zapłacisz trenerowi przy następnej sesji.</string>
@@ -151,6 +152,7 @@
     <string name="method_blik">BLIK</string>
     <string name="method_p24">Przelewy24</string>
     <string name="method_test">Tryb testowy</string>
+    <string name="method_cash">Gotówka</string>
     <string name="test_mode_note">Tryb testowy: żadne pieniądze nie zostaną pobrane.</string>
 
     <string name="error_unsent">Niewysłane. Brak połączenia – spróbuj ponownie, gdy wrócisz do sieci.</string>

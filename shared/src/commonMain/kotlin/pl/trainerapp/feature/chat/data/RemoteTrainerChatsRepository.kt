@@ -17,6 +17,8 @@ import pl.trainerapp.feature.chat.model.ChatThread
 import pl.trainerapp.feature.chat.model.Conversation
 import pl.trainerapp.feature.chat.model.ConversationsSnapshot
 import pl.trainerapp.feature.chat.model.MediaRef
+import pl.trainerapp.feature.chat.data.remote.TechniqueCaption
+import pl.trainerapp.feature.chat.data.remote.TechniqueCaption.toMediaRef
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
@@ -30,8 +32,9 @@ import kotlin.uuid.Uuid
  * - Messages have no quote field. [replyToVideo] sends the text with the video's media id in `attachmentMediaIds`
  *   (the server accepts READY media of that relationship); a trainer-authored message with an attachment is mapped
  *   back to [ChatMessage.quotedMediaId] and has no [ChatMessage.attachment].
- * - A client's attachment becomes a [MediaRef] with only the media id: the exercise name is empty and the set
- *   number and count are 0 (unknown); weight, reps, duration and size are null. Upload state comes from the media
+ * - A client's attachment becomes a [MediaRef]; exercise, set, weight and reps come from the caption line the client
+ *   app writes ([TechniqueCaption]); without one the exercise name is empty and the set number and count are 0.
+ *   Duration and size are null. Upload state comes from the media
  *   repository by id. Only the first attachment is shown.
  * - The server sends no time zone or snapshot time: [zone] is used for display and the device clock stamps
  *   [ConversationsSnapshot.generatedAt] (display only).
@@ -118,12 +121,14 @@ class RemoteTrainerChatsRepository(
     private fun MessageDto.toMessage(): ChatMessage {
         val author = if (mine) ChatRole.Trainer else ChatRole.Client
         val media = attachmentMediaIds.firstOrNull()
+        // A client's video message starts with a caption line (exercise and set), see TechniqueCaption.
+        val caption = if (media != null && !mine) TechniqueCaption.parse(body) else null
         return ChatMessage(
             id = id,
             author = author,
-            text = body,
+            text = caption?.note ?: body,
             at = createdAt,
-            attachment = if (media != null && !mine) MediaRef(media, exerciseName = "", setNumber = 0, setCount = 0) else null,
+            attachment = if (media != null && !mine) caption?.toMediaRef(media) ?: MediaRef(media, exerciseName = "", setNumber = 0, setCount = 0) else null,
             quotedMediaId = if (media != null && mine) media else null,
         )
     }

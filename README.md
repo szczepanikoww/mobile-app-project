@@ -48,7 +48,7 @@ The app uses the demo data by default. With a running server, `-Ptrainer.backend
 ./gradlew :androidApp:installDebug "-Ptrainer.backend=local"   # emulator reaches the computer at 10.0.2.2:8080
 ```
 
-Any `http(s)://` URL works instead of `local`. Connected: the public catalogue (guest views) and the trainer views (calendar, requests, clients, policy, home, finance, profile, chat, plans, exercises, media). Client sign-in, sessions, wallet, workouts and chat still use the demo sources. Log in as the trainer with `trener@example.com` (any password of at least 8 characters); it maps to the server's `demo-trainer` account.
+Any `http(s)://` URL works instead of `local`. Connected: sign-in (dev accounts), the public catalogue, every trainer view (calendar, requests, clients, policy, home, finance, profile, notifications, chat, plans, exercises, media) and every client view (sessions, booking/reschedule/cancel with quotes, wallet, today's workout, workout and measurement sync, chat, technique videos). Log in with `trener@example.com` (trainer), `klient@example.com` (client) or `trener-klient@example.com` (both roles), any password of at least 8 characters; they map to the server's `demo-trainer` and `demo-client` accounts.
 
 ## Guest views and demo accounts
 

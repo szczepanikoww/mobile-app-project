@@ -134,6 +134,7 @@
     <string name="reason_late_reschedule">Late change fee</string>
     <string name="reason_no_show">No-show fee</string>
     <string name="reason_session">Training session</string>
+    <string name="reason_package_period">Package fee</string>
     <string name="charge_session">Session %1$s · %2$s</string>
     <string name="pay_amount">Pay %1$s</string>
     <string name="pay_trainer_cash">You pay the trainer at your next session.</string>
@@ -151,6 +152,7 @@
     <string name="method_blik">BLIK</string>
     <string name="method_p24">Przelewy24</string>
     <string name="method_test">Test mode</string>
+    <string name="method_cash">Cash</string>
     <string name="test_mode_note">Test mode: no money is charged.</string>
 
     <string name="error_unsent">Not sent. No connection – try again when you are back online.</string>

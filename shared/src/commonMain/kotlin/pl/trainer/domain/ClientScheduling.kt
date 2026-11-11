@@ -147,7 +147,7 @@ data class SessionPackage(
     val validUntil: LocalDate?,
 )
 
-enum class ChargeReason { LateCancellation, LateReschedule, NoShow }
+enum class ChargeReason { LateCancellation, LateReschedule, NoShow, Session, PackagePeriod }
 
 enum class ChargeState {
     /** Not paid yet. Online charges can be paid in the app; cash charges are paid to the trainer. */
@@ -169,11 +169,23 @@ data class Charge(
     val createdAt: Instant,
     /** For a package credit: the share of one package entry that was used. */
     val packagePercent: Int? = null,
+    /** When the charge falls due, if the server gives a date. */
+    val dueAt: Instant? = null,
 ) {
     val payableInApp: Boolean get() = kind == ChargeKind.Online && state == ChargeState.Unpaid
 }
 
-enum class PaymentMethod { Card, Blik, Przelewy24, TestMode }
+enum class PaymentMethod {
+    Card, Blik, Przelewy24, TestMode,
+
+    /** Recorded by the trainer as money received; the server rejects it as an in-app payment method. */
+    Cash;
+
+    /** The methods the client may choose when paying in the app. */
+    companion object {
+        val payableInApp: List<PaymentMethod> get() = entries.filter { it != Cash }
+    }
+}
 
 enum class PaymentState { Pending, Paid, Failed, Refunded }
 

@@ -38,6 +38,7 @@ kotlin {
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.kotlinx.serialization.json)
+            implementation(libs.datetime)
             api(libs.koin.core)
             implementation(libs.koin.compose)
         }

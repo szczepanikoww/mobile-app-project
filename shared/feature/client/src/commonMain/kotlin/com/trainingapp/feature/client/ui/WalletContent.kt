@@ -56,6 +56,8 @@ internal fun chargeReasonText(reason: ChargeReason): StringResource = when (reas
     ChargeReason.LateCancellation -> Res.string.reason_late_cancellation
     ChargeReason.LateReschedule -> Res.string.reason_late_reschedule
     ChargeReason.NoShow -> Res.string.reason_no_show
+    ChargeReason.Session -> Res.string.reason_session
+    ChargeReason.PackagePeriod -> Res.string.reason_package_period
 }
 
 private fun PaymentMethod.label(): StringResource = when (this) {
@@ -63,6 +65,7 @@ private fun PaymentMethod.label(): StringResource = when (this) {
     PaymentMethod.Blik -> Res.string.method_blik
     PaymentMethod.Przelewy24 -> Res.string.method_p24
     PaymentMethod.TestMode -> Res.string.method_test
+    PaymentMethod.Cash -> Res.string.method_cash
 }
 
 /**
@@ -213,7 +216,7 @@ fun PaymentSheet(
         Text(stringResource(chargeReasonText(charge.reason)) + " · " + charge.trainer.name, style = AppTheme.type.compactBody, color = AppTheme.colors.textSecondary)
         Text(stringResource(Res.string.payment_method), style = AppTheme.type.label, color = AppTheme.colors.textSecondary)
         Column(Modifier.selectableGroup()) {
-            PaymentMethod.entries.forEach { method ->
+            PaymentMethod.payableInApp.forEach { method ->
                 Row(
                     Modifier.fillMaxWidth()
                         .heightIn(min = Sizes.minTouchTarget)

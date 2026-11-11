@@ -1,0 +1,69 @@
+-- Sync bookkeeping for workout logs (client-connect slice). One row per synced entity (log, exercise entry, set):
+-- `content` is the exact payload the server last acknowledged (or refused), so a change is detected by comparing it
+-- with the current local row. A retry therefore re-sends only what differs and never duplicates a set.
+CREATE TABLE workout_sync_entry (
+    entity_id TEXT NOT NULL PRIMARY KEY,
+    kind TEXT NOT NULL,
+    client_id TEXT NOT NULL,
+    workout_log_id TEXT NOT NULL,
+    content TEXT NOT NULL,
+    server_revision INTEGER NOT NULL,
+    -- SYNCED, CONFLICT or REJECTED
+    state TEXT NOT NULL
+);
+
+CREATE INDEX workout_sync_entry_log ON workout_sync_entry(client_id, workout_log_id);
+
+-- Measurements the server already has (private health data: ids only).
+CREATE TABLE measurement_sync_entry (
+    id TEXT NOT NULL PRIMARY KEY,
+    client_id TEXT NOT NULL
+);
+
+-- Small key-value store: pull cursors and the cached "today" answer, per client.
+CREATE TABLE sync_kv (
+    client_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    value TEXT NOT NULL,
+    PRIMARY KEY (client_id, name)
+);
+
+selectEntriesOfClient:
+SELECT * FROM workout_sync_entry WHERE client_id = ?;
+
+upsertEntry:
+INSERT OR REPLACE INTO workout_sync_entry(entity_id, kind, client_id, workout_log_id, content, server_revision, state)
+VALUES (?, ?, ?, ?, ?, ?, ?);
+
+deleteEntry:
+DELETE FROM workout_sync_entry WHERE entity_id = ?;
+
+deleteEntriesOfLog:
+DELETE FROM workout_sync_entry WHERE workout_log_id = ?;
+
+selectOrphanLogEntries:
+SELECT * FROM workout_sync_entry WHERE client_id = ? AND kind = 'LOG' AND entity_id NOT IN (SELECT id FROM workout_log);
+
+selectUnsyncedLogIds:
+SELECT id FROM workout_log WHERE client_id = ? AND sync_state <> 'SYNCED';
+
+updateWorkoutSyncState:
+UPDATE workout_log SET sync_state = ? WHERE id = ?;
+
+selectMeasurementSyncIds:
+SELECT id FROM measurement_sync_entry WHERE client_id = ?;
+
+insertMeasurementSync:
+INSERT OR REPLACE INTO measurement_sync_entry(id, client_id) VALUES (?, ?);
+
+deleteMeasurementSync:
+DELETE FROM measurement_sync_entry WHERE id = ?;
+
+deleteLocalMeasurement:
+DELETE FROM body_measurement WHERE id = ? AND client_id = ?;
+
+selectKv:
+SELECT value FROM sync_kv WHERE client_id = ? AND name = ?;
+
+upsertKv:
+INSERT OR REPLACE INTO sync_kv(client_id, name, value) VALUES (?, ?, ?);

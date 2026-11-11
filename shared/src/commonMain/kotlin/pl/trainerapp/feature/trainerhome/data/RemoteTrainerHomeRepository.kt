@@ -21,7 +21,7 @@ import com.trainingapp.contract.api.SessionStatus as ApiSessionStatus
  * The trainer's start screen from `GET trainer/home`.
  *
  * Mapping notes (the DTO does not carry everything the screen model has):
- * - [TrainerHomeSummary.trainerName] is null (not in the DTO) and [WeekStats.newClients] / [WeekStats.cancellations]
+ * - [TrainerHomeSummary.trainerName] is the first name from the DTO; [WeekStats.newClients] / [WeekStats.cancellations]
  *   are 0 (not in the DTO).
  * - Unread messages are only a total on the server, so [TrainerHomeSummary.unreadChats] carries it but no
  *   [AttentionItem.UnreadMessages] is produced (those need a client). Technique videos likewise come from
@@ -79,7 +79,7 @@ internal fun TrainerHomeDto.toSummary(videos: List<AttentionItem> = emptyList())
         attention = videos + overdue,
         upcomingAfterToday = if (next != null && !nextIsToday) next.toSummary() else null,
         isNewTrainer = clients.isEmpty() && today.isEmpty() && next == null,
-        trainerName = null,
+        trainerName = trainerName?.substringBefore(' ')?.takeIf { it.isNotBlank() },
         unreadChats = unreadMessages,
         hasNotifications = openRequests > 0 || unreadMessages > 0 || pendingVideos > 0,
         week = WeekStats(weekSessionsDone, weekSessionsPlanned, newClients = 0, cancellations = 0),

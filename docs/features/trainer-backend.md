@@ -1,6 +1,6 @@
 # Trainer backend (`:server`)
 
-Status: implemented on branch `trainer-backend`, 2026-11-11, and merged with the client/guest backend into one server. Every trainer screen of the app can use it (§8) except notifications; the client views still use demo data. Follows [initial-architecture.md](../initial-architecture.md) §5–§11 and [database-design.md](../database-design.md).
+Status: implemented on branch `trainer-backend`, 2026-11-11, and merged with the client/guest backend into one server. Every trainer and client screen of the app uses it in remote mode (§8); notifications are derived from the dashboard (no table). Follows [initial-architecture.md](../initial-architecture.md) §5–§11 and [database-design.md](../database-design.md).
 
 ## 1. Run locally
 
@@ -106,7 +106,9 @@ Conventions: a "client id" is the trainer–client **relationship id** (as in th
 ## 7. Not done yet
 
 - Trainer notifications in the app stay on demo data (no table in the schema).
-- Wiring the client views to the server's `/v1` client API (booking requests, client cancellation with quotes, wallet, workout sync).
+- Identity provider (sign-in uses dev tokens: `dev.<subject>` for `/v1`, the dev JWT for `/api/v1`); the session is not kept across app restarts.
+- Persistent outbox for technique-video messages (retries are lost if the process dies); WebSocket live updates (screens refresh instead); a server-side "video reviewed" marker; the client chat unread badge.
+- Workout sync gaps: `assignedPlanId` is not sent, logs edited on another device are not merged.
 - Real identity provider, Stripe test mode, invoices, push notifications (FCM), WebSocket chat, S3 storage and video processing (the local processor marks uploads READY at once), HTTP range requests for video seeking.
 - Trainer notifications list (no table in the schema), payouts, iCal feed.
 
@@ -126,5 +128,5 @@ docker compose -f server/docker-compose.yml up -d && ./gradlew -Ptrainer.ui=fals
 - Client information is read-only for the trainer when connected (TB1): the edit button is hidden and saving is refused.
 - Also on the server when connected: home (`RemoteTrainerHomeRepository`), finance, profile with availability and the hourly rate (changing the rate creates a new single-session offer and archives the old one), chat (`RemoteTrainerChatsRepository`), plan publishing, exercise edits and exercise demo video uploads (`com.trainingapp.app.remote`). Each keeps its last successful answer in memory and shows it as offline when the server is unreachable.
 - Known gaps: profile settings, phone, location and payout figures have no endpoint and stay in memory; finance has no payout or goal data; home shows unread messages as a total only; a client's technique video still goes through the demo media source (the trainer API accepts exercise demo videos only), so in connected mode a video recorded in the client view does not reach the trainer's chat.
-- The client views still use the in-app demo sources (the server's `/v1` client API exists but is not wired to them yet, except the public catalogue); policies of other trainers fall back to the demo source.
+- The client views use the `/v1` client API in remote mode: `RemoteAuthRepository`, `RemoteClientScheduleRepository`, `RemoteWalletRepository`, `PublicPolicyRepository` (other trainers' policies), `RemoteTodayWorkoutSource` + `WorkoutSyncer` (local logs and measurements pushed on reconnect and every 5 minutes), `RemoteClientChatRepository`, `RemoteClientMediaRemoteDataSource` (resumable technique-video upload) and `RemoteTechniqueVideoOutbox`. The trainer home lists client videos from the server (`RemoteTechniqueVideoReviews`). All are bound in `remoteModule` (AppModule.kt).
 - Tests: `RemoteTrainerRepositoryTest`, `RemoteFeatureRepositoriesTest`, `RemoteTrainerChatsRepositoryTest`, `RemoteTrainingSourcesTest` (scripted server, run always) and `LiveTrainerApiTest` (only with env `TRAINER_API_URL=http://localhost:8080` set; it rejects the seeded booking request, so use a development database).

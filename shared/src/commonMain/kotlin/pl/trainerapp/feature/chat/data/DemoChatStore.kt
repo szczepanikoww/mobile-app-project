@@ -12,6 +12,7 @@ import pl.trainerapp.feature.chat.model.ChatThread
 import pl.trainerapp.feature.chat.model.Conversation
 import pl.trainerapp.feature.chat.model.MediaRef
 import pl.trainerapp.feature.chat.model.PendingReview
+import pl.trainerapp.feature.chat.data.remote.VideoReviewStore
 import kotlin.time.Instant
 
 /**
@@ -23,7 +24,7 @@ class DemoChatStore(
     private val fixtures: ChatFixtures = TrainerChatsFixtures,
     /** Display clock of the demo; advances one minute per message. Never used for policy. */
     start: Instant = fixtures.now,
-) {
+) : VideoReviewStore {
     private val mutex = Mutex()
     private val threads = fixtures.threads.mapValues { it.value.toMutableList() }.toMutableMap()
     private val unread = mutableMapOf<Pair<String, ChatRole>, Int>().apply {
@@ -38,7 +39,7 @@ class DemoChatStore(
     /** Increments on every change, so open screens can refresh. */
     val version: StateFlow<Int> = _version.asStateFlow()
 
-    val now: Instant get() = clock
+    override val now: Instant get() = clock
 
     suspend fun conversations(viewer: ChatRole): List<Conversation> = mutex.withLock {
         fixtures.clients.mapNotNull { (id, clientName) ->
@@ -85,20 +86,20 @@ class DemoChatStore(
     }
 
     /** The message that carries [mediaId], with its relationship, or `null`. */
-    suspend fun findVideo(mediaId: String): Pair<String, ChatMessage>? = mutex.withLock {
+    override suspend fun findVideo(mediaId: String): Pair<String, ChatMessage>? = mutex.withLock {
         threads.entries.firstNotNullOfOrNull { (id, messages) ->
             messages.firstOrNull { it.attachment?.mediaId == mediaId }?.let { id to it }
         }
     }
 
-    fun clientName(relationshipId: String): String = fixtures.clients[relationshipId] ?: relationshipId
+    override fun clientName(relationshipId: String): String = fixtures.clients[relationshipId] ?: relationshipId
 
-    suspend fun markReviewed(mediaId: String) = mutex.withLock {
+    override suspend fun markReviewed(mediaId: String): Unit = mutex.withLock {
         reviewed += mediaId
         _version.value++
     }
 
-    suspend fun isReviewed(mediaId: String): Boolean = mutex.withLock { mediaId in reviewed }
+    override suspend fun isReviewed(mediaId: String): Boolean = mutex.withLock { mediaId in reviewed }
 
     /** Client technique videos the trainer has not marked as reviewed, newest first. */
     suspend fun pendingReviews(): List<PendingReview> = mutex.withLock {
