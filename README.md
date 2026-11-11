@@ -30,6 +30,19 @@ The debug APK is written to `androidApp/build/outputs/apk/debug/androidApp-debug
 
 Desktop tests render the shared Compose UI without requiring an unlocked desktop. Reports and screenshots are in `shared/build/reports/`. UI tests use Polish and cover a 390 × 844 viewport and a 320 × 720 viewport at 200% font scaling. UI resources also include English; the app follows the platform locale.
 
+## Backend
+
+`:server` is the Ktor backend for the client and guest views (PostgreSQL, Flyway, Exposed). See [server/README.md](server/README.md) to run it locally; `./gradlew :server:test` runs its integration tests on a real PostgreSQL.
+
+The app uses the demo data by default. With a running server, `-Ptrainer.backend=local` connects it (quoted, because PowerShell splits the argument at the dot):
+
+```sh
+./gradlew :desktopApp:run "-Ptrainer.backend=local"        # server at localhost:8080
+./gradlew :androidApp:assembleDebug "-Ptrainer.backend=local"   # emulator reaches the computer at 10.0.2.2:8080
+```
+
+Connected so far: the public catalogue (guest Start, Trenerzy, trainer profile, Siłownie). Sign-in, sessions, wallet, workouts and chat still use the demo sources. Any `http(s)://` URL works instead of `local`.
+
 ## Guest views and demo accounts
 
 Signed out, the app opens on **Zaloguj się / Załóż konto**. "Przeglądaj bez logowania" leads to the guest shell: Start, Trenerzy, Siłownie and Zaloguj się ([plan](docs/plans/guest-views.md), [handoff](docs/features/guest-views.md)). Signing in replaces the back stack with the role shell.

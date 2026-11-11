@@ -4,10 +4,10 @@ import kotlinx.serialization.Serializable
 
 /**
  * Server-side state of an uploaded file (architecture section 9.3). Only [READY] media may be played;
- * the server checks the file during [PROCESSING].
+ * the server checks the file during [PROCESSING]. [UPLOADING]: the server has not received the whole file yet (C3).
  */
 @Serializable
-enum class RemoteMediaState { PROCESSING, READY, FAILED }
+enum class RemoteMediaState { UPLOADING, PROCESSING, READY, FAILED }
 
 @Serializable
 enum class MediaKind {
@@ -45,6 +45,21 @@ data class CreateUploadSessionRequest(
     val kind: MediaKind,
     val sizeBytes: Long,
     val contentType: String,
+    /** The trainer–client relationship a private file belongs to; required for [MediaKind.TECHNIQUE_VIDEO] (G-11). */
+    val relationshipId: String? = null,
+)
+
+/**
+ * The answer to [CreateUploadSessionRequest]: a resumable (tus) upload URL and how many bytes the server already has.
+ * Resume by sending the rest from [offset].
+ */
+@Serializable
+data class UploadSessionDto(
+    val mediaId: String,
+    val uploadUrl: String,
+    val offset: Long,
+    val sizeBytes: Long,
+    val state: RemoteMediaState,
 )
 
 @Serializable

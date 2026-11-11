@@ -16,6 +16,7 @@ import com.trainingapp.app.App
 import com.trainingapp.app.AppPlatform
 import com.trainingapp.app.initKoin
 import com.trainingapp.data.db.TrainingDatabase
+import com.trainingapp.data.remote.BackendConfig
 import com.trainingapp.domain.common.NetworkMonitor
 import com.trainingapp.domain.media.LocalFiles
 import kotlinx.coroutines.CoroutineDispatcher
@@ -24,7 +25,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import java.io.File
 import java.util.Properties
 
-/** Set `-Dtrainer.offline=true` to try the offline states. */
+/**
+ * Set `-Dtrainer.offline=true` to try the offline states, and `-Dtrainer.backend=local` (or a URL) to use the backend
+ * instead of the demo data: `./gradlew :desktopApp:run -Ptrainer.backend=local`.
+ */
 private object DesktopPlatform : AppPlatform {
     override fun createDriver(): SqlDriver {
         val dir = File(System.getProperty("user.home"), ".trainingapp").apply { mkdirs() }
@@ -36,6 +40,7 @@ private object DesktopPlatform : AppPlatform {
     }
     override val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
     override val localFiles: LocalFiles = LocalFiles { File(it).delete() }
+    override val backend: BackendConfig = BackendConfig.parse(System.getProperty("trainer.backend"))
 }
 
 fun main() {

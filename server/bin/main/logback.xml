@@ -1,0 +1,19 @@
+<!--
+  No private data in logs (plan §4): request lines carry method, route template, status and duration only; Exposed
+  statements contain values (messages, measurements), so the Exposed logger stays at WARN. Local SQL logging is
+  opt-in with DB_LOG_SQL=true, which prints through Exposed's own StdOutSqlLogger.
+-->
+<configuration>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} %-5level %logger{20} - %msg%n</pattern>
+        </encoder>
+    </appender>
+    <logger name="Exposed" level="WARN"/>
+    <logger name="com.zaxxer.hikari" level="WARN"/>
+    <logger name="io.netty" level="WARN"/>
+    <logger name="org.flywaydb" level="INFO"/>
+    <root level="INFO">
+        <appender-ref ref="STDOUT"/>
+    </root>
+</configuration>

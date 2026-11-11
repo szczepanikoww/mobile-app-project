@@ -12,8 +12,13 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
+        // `-Ptrainer.backend=local` (the emulator reaches this computer at 10.0.2.2) or a URL; default: demo data.
+        buildConfigField("String", "TRAINER_BACKEND", "\"${providers.gradleProperty("trainer.backend").getOrElse("demo")}\"")
     }
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

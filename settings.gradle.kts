@@ -10,6 +10,8 @@ val includeUi = providers.gradleProperty("trainer.ui").orNull?.toBooleanStrictOr
 if (file("contract/build.gradle.kts").exists()) {
     include(":contract", ":shared:domain", ":shared:data")
     if (!includeUi) project(":shared").buildFileName = "headless.gradle.kts"
+    // The Ktor backend (docs/plans/backend-client-guest.md). JVM only; shares DTOs and rules through :contract.
+    if (file("server/build.gradle.kts").exists()) include(":server")
 }
 if (includeUi) {
     include(":shared", ":androidApp")

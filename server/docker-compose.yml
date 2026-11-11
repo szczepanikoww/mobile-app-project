@@ -1,0 +1,22 @@
+# Local backend environment (docs/plans/backend-client-guest.md §2, local profile).
+#   docker compose -f server/docker-compose.yml up -d
+#   ./gradlew :server:run
+# PostgreSQL 16 is the version the schema draft was verified on. MinIO and the Firebase Auth emulator are not
+# needed yet: media is stored on local disk (MEDIA_STORAGE_DIR) and the local profile accepts `dev.<subject>` tokens.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./docker/init-roles.sql:/docker-entrypoint-initdb.d/10-roles.sql:ro
+      - trainer-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      retries: 30
+
+volumes:
+  trainer-pg:

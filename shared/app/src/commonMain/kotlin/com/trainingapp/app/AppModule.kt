@@ -14,6 +14,9 @@ import com.trainingapp.data.plan.FakePlanRemoteDataSource
 import com.trainingapp.data.plan.LocalPlanRepository
 import com.trainingapp.data.plan.PlanRemoteDataSource
 import com.trainingapp.data.plan.PublishedPlanExerciseUsage
+import com.trainingapp.data.remote.ApiClient
+import com.trainingapp.data.remote.BackendConfig
+import com.trainingapp.feature.guest.data.RemoteGuestCatalogRepository
 import com.trainingapp.domain.common.AppLanguage
 import com.trainingapp.domain.common.CurrentUser
 import com.trainingapp.domain.common.IdGenerator
@@ -80,6 +83,9 @@ interface AppPlatform {
 
     /** The rest-end system notification; platforms without notifications keep the default. */
     val restTimerNotifier: RestTimerNotifier get() = RestTimerNotifier.None
+
+    /** Which server to use (`trainer.backend`). The default keeps every demo source, so no server is needed. */
+    val backend: BackendConfig get() = BackendConfig.Demo
 }
 
 /** The demo trainer whose synthetic data the trainer views show. Signing in as the demo trainer maps to this id. */
@@ -237,7 +243,18 @@ private fun seedDemoClient(koin: org.koin.core.Koin) {
     }
 }
 
+/**
+ * Remote sources that replace demo ones when [AppPlatform.backend] points at a server. Loaded last, so its
+ * definitions override the demo bindings. Connected so far: the public catalogue (guest views); sign-in, sessions,
+ * wallet, workouts and chat still use the demo sources (docs/plans/backend-client-guest.md §11).
+ */
+fun remoteModule(backend: BackendConfig) = module {
+    single { ApiClient(backend.baseUrl!!, language = { get<AppLanguage>().current() }) }
+    single<GuestCatalogRepository> { RemoteGuestCatalogRepository(get()) }
+}
+
 fun initKoin(platform: AppPlatform, platformDeclaration: KoinAppDeclaration = {}) = startKoin {
     platformDeclaration()
     modules(appModule(platform), workoutBuilderModule, guestModule, workoutLoggingModule, clientModule)
+    if (platform.backend.isRemote) modules(remoteModule(platform.backend))
 }.also { seedDemoClient(it.koin) }

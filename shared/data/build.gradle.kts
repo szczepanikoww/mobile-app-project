@@ -16,6 +16,11 @@ kotlin {
             api(libs.sqldelight.runtime)
             implementation(libs.sqldelight.coroutines)
             implementation(libs.kotlinx.serialization.json)
+            // HTTP client for the backend (docs/plans/backend-client-guest.md §11). CIO runs on Android and desktop.
+            implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.cio)
+            implementation(libs.ktor.client.contentNegotiation)
+            implementation(libs.ktor.serialization.json)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
