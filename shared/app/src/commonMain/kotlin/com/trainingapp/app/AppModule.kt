@@ -39,6 +39,9 @@ import pl.trainer.data.DemoPolicyRepository
 import pl.trainer.data.DemoSchedulingStore
 import pl.trainer.data.DemoTrainerRepository
 import pl.trainer.data.DemoWalletRepository
+import pl.trainer.data.remote.RemotePolicyRepository
+import pl.trainer.data.remote.RemoteTrainerRepository
+import pl.trainer.data.remote.TrainerApiClient
 import pl.trainer.domain.ClientScheduleRepository
 import pl.trainer.domain.PolicyRepository
 import pl.trainer.domain.TrainerRepository
@@ -77,6 +80,12 @@ interface AppPlatform {
     val networkMonitor: NetworkMonitor
     val ioDispatcher: CoroutineDispatcher
     val localFiles: LocalFiles
+
+    /**
+     * The trainer API (`server`, docs/features/trainer-backend.md), e.g. `http://10.0.2.2:8080` from the Android
+     * emulator. Null keeps the in-memory demo server, so the app runs without a backend.
+     */
+    val trainerApiUrl: String? get() = null
 
     /** The rest-end system notification; platforms without notifications keep the default. */
     val restTimerNotifier: RestTimerNotifier get() = RestTimerNotifier.None
@@ -190,7 +199,15 @@ fun appModule(platform: AppPlatform) = module {
     // (docs/features/client-shell-sessions-wallet.md, D10). Its clock starts at the fixture date and moves forward.
     single { DemoSchedulingStore(AdvancingDemoClock()::now, get(AppScope)) }
     single { DemoTrainerRepository(store = get()) }
-    single<TrainerRepository> { get<DemoTrainerRepository>() }
+    // With a server address the trainer's calendar, requests, clients and policy come from the trainer API; the
+    // client views stay on the demo server until the client backend exists.
+    val apiUrl = platform.trainerApiUrl?.takeIf { it.isNotBlank() }
+    if (apiUrl != null) {
+        single { TrainerApiClient(apiUrl, subject = { get<CurrentUser>().trainerId }) }
+        single<TrainerRepository> { RemoteTrainerRepository(get()) }
+    } else {
+        single<TrainerRepository> { get<DemoTrainerRepository>() }
+    }
     single<ClientScheduleRepository> {
         val auth: AuthRepository = get()
         val network: NetworkMonitor = get()
@@ -209,7 +226,11 @@ fun appModule(platform: AppPlatform) = module {
     }
     single<PolicyRepository> {
         val network: NetworkMonitor = get()
-        DemoPolicyRepository(get(), isOnline = { network.isOnline.value })
+        val demo = DemoPolicyRepository(get(), isOnline = { network.isOnline.value })
+        if (apiUrl == null) demo else {
+            val user: CurrentUser = get()
+            RemotePolicyRepository(get(), isOwnTrainer = { it == user.trainerId }, others = demo)
+        }
     }
 
     // Client workout logging (docs/features/workout-logging-video.md). Local only: no sync in this phase.

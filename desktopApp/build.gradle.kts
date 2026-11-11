@@ -18,7 +18,11 @@ dependencies {
     implementation(libs.lifecycle.viewmodel.compose)
 }
 compose.desktop {
-    application { mainClass = "com.trainingapp.desktop.MainKt" }
+    application {
+        mainClass = "com.trainingapp.desktop.MainKt"
+        // `-Ptrainer.apiUrl=http://localhost:8080` connects the trainer views to a local server.
+        providers.gradleProperty("trainer.apiUrl").orNull?.let { jvmArgs += "-Dtrainer.apiUrl=$it" }
+    }
 }
 
 tasks.register<JavaExec>("runPreview") {

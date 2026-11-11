@@ -24,7 +24,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import java.io.File
 import java.util.Properties
 
-/** Set `-Dtrainer.offline=true` to try the offline states. */
+/** Set `-Dtrainer.offline=true` to try the offline states, `-Dtrainer.apiUrl=http://localhost:8080` to use a local server. */
 private object DesktopPlatform : AppPlatform {
     override fun createDriver(): SqlDriver {
         val dir = File(System.getProperty("user.home"), ".trainingapp").apply { mkdirs() }
@@ -36,6 +36,7 @@ private object DesktopPlatform : AppPlatform {
     }
     override val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
     override val localFiles: LocalFiles = LocalFiles { File(it).delete() }
+    override val trainerApiUrl: String? = System.getProperty("trainer.apiUrl") ?: System.getenv("TRAINER_API_URL")
 }
 
 fun main() {

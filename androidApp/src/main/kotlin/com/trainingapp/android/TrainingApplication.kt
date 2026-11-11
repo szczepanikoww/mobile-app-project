@@ -1,5 +1,7 @@
 package com.trainingapp.android
 
+import pl.trainerapp.BuildConfig
+
 import android.app.Application
 import android.content.Context
 import android.net.ConnectivityManager
@@ -34,6 +36,7 @@ private class AndroidPlatform(private val context: Context) : AppPlatform {
     override val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
     override val localFiles: LocalFiles = LocalFiles { File(it).delete() }
     override val restTimerNotifier: RestTimerNotifier = AndroidRestTimerNotifier(context)
+    override val trainerApiUrl: String? = BuildConfig.TRAINER_API_URL.ifBlank { null }
 }
 
 /** Online when the default network has validated internet access. */

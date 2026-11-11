@@ -1,6 +1,6 @@
 # Trainer backend (`:server`)
 
-Status: implemented on branch `trainer-backend`, 2026-11-11. Server only; the Android app still uses its demo repositories (connecting it is the next step). Follows [initial-architecture.md](../initial-architecture.md) §5–§11 and [database-design.md](../database-design.md).
+Status: implemented on branch `trainer-backend`, 2026-11-11. The app's trainer calendar, requests, clients and cancellation policy can use it (§8); everything else in the app still uses demo data. Follows [initial-architecture.md](../initial-architecture.md) §5–§11 and [database-design.md](../database-design.md).
 
 ## 1. Run locally
 
@@ -102,7 +102,24 @@ Conventions: a "client id" is the trainer–client **relationship id** (as in th
 
 ## 7. Not done yet
 
-- Connecting the Android app (Ktor client, mapping DTOs to the app models, replacing `Demo*` repositories).
+- Remaining app screens on the server: trainer home, finance, chat, profile and price list, plans/exercises and media still use the demo repositories and fakes (the endpoints exist, §4).
 - Client-side endpoints (booking requests, client cancellation with quotes, wallet, workout sync) — the client backend.
 - Real identity provider, Stripe test mode, invoices, push notifications (FCM), WebSocket chat, S3 storage and video processing (the local processor marks uploads READY at once), HTTP range requests for video seeking.
 - Trainer notifications list (no table in the schema), payouts, iCal feed.
+
+## 8. Connecting the app
+
+The app talks to the server only when it is given an address; without one it keeps the in-memory demo data, so nobody needs a running backend.
+
+```sh
+docker compose up -d && ./gradlew -Ptrainer.ui=false :server:run          # server on :8080
+./gradlew :androidApp:installDebug -Ptrainer.apiUrl=http://10.0.2.2:8080   # emulator (10.0.2.2 = the computer)
+./gradlew :desktopApp:run -Ptrainer.apiUrl=http://localhost:8080           # desktop
+```
+
+- `AppPlatform.trainerApiUrl` carries the address (Android `BuildConfig.TRAINER_API_URL`, desktop `-Dtrainer.apiUrl` or `TRAINER_API_URL`). Debug Android builds allow plain HTTP only to `10.0.2.2`, `localhost` and `127.0.0.1`; release builds require HTTPS.
+- `pl.trainer.data.remote` (in `:shared`): `TrainerApiClient` (Ktor; a dev token for the signed-in trainer, `demo-trainer` by default, renewed once on 401), mappers from `:contract` DTOs to the app models, `RemoteTrainerRepository` and `RemotePolicyRepository`. Server errors map to the app's `Failure` values (409 → `Conflict`, `QUOTE_EXPIRED` → `QuoteExpired`, 422 → `InvalidInput`, 401/403 → `Denied`, no connection → `Offline`).
+- The calendar opens on the server's date (`TrainerDashboard.today`) instead of the fixed demo date.
+- Client information is read-only for the trainer when connected (TB1): the edit button is hidden and saving is refused.
+- The client views stay on the demo server; policies of other trainers fall back to it.
+- Tests: `RemoteTrainerRepositoryTest` (scripted server, runs always) and `LiveTrainerApiTest` (only with `TRAINER_API_URL` set; it rejects the seeded booking request, so use a development database).

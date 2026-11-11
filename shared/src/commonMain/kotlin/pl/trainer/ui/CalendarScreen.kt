@@ -58,7 +58,7 @@ fun CalendarScreen(state: TrainerUiState, onDate: (LocalDate) -> Unit, onMode: (
             }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                 IconButton(onClick = { onDate(state.selectedDate.minus(7, DateTimeUnit.DAY)) }) { Icon(Icons.Outlined.ChevronLeft, tr(Res.string.previous_week)) }
-                TextButton(onClick = { onDate(DemoDate) }, modifier = Modifier.heightIn(min = Layout.target)) { Text(tr(Res.string.today)) }
+                TextButton(onClick = { onDate(state.today) }, modifier = Modifier.heightIn(min = Layout.target)) { Text(tr(Res.string.today)) }
                 IconButton(onClick = { onDate(state.selectedDate.plus(7, DateTimeUnit.DAY)) }) { Icon(Icons.Outlined.ChevronRight, tr(Res.string.next_week)) }
             }
             BoxWithConstraints {
