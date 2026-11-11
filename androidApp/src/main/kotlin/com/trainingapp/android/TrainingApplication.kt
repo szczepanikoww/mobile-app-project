@@ -1,6 +1,5 @@
 package com.trainingapp.android
 
-import pl.trainerapp.BuildConfig
 
 import android.app.Application
 import android.content.Context
@@ -12,6 +11,8 @@ import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import com.trainingapp.app.AppPlatform
 import com.trainingapp.app.initKoin
 import com.trainingapp.data.db.TrainingDatabase
+import com.trainingapp.data.remote.BackendConfig
+import pl.trainerapp.BuildConfig
 import com.trainingapp.domain.common.NetworkMonitor
 import com.trainingapp.domain.media.LocalFiles
 import com.trainingapp.feature.workoutlogging.rest.AndroidRestTimerNotifier
@@ -36,7 +37,7 @@ private class AndroidPlatform(private val context: Context) : AppPlatform {
     override val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
     override val localFiles: LocalFiles = LocalFiles { File(it).delete() }
     override val restTimerNotifier: RestTimerNotifier = AndroidRestTimerNotifier(context)
-    override val trainerApiUrl: String? = BuildConfig.TRAINER_API_URL.ifBlank { null }
+    override val backend: BackendConfig = BackendConfig.parse(BuildConfig.TRAINER_BACKEND, localHost = "10.0.2.2")
 }
 
 /** Online when the default network has validated internet access. */

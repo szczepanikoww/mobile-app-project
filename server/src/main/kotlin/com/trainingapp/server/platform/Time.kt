@@ -1,5 +1,6 @@
 package com.trainingapp.server.platform
 
+import org.jetbrains.exposed.v1.core.and
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import kotlin.time.Instant

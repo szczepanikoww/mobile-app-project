@@ -5,9 +5,9 @@ import com.zaxxer.hikari.HikariDataSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.flywaydb.core.Flyway
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.Transaction
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.Database
+import org.jetbrains.exposed.v1.jdbc.JdbcTransaction
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import java.sql.Connection
 import javax.sql.DataSource
 
@@ -18,8 +18,8 @@ class Db(val dataSource: DataSource) {
     val database: Database = Database.connect(dataSource)
 
     /** Runs [block] in one READ COMMITTED transaction off the request thread. No external calls inside (architecture §7). */
-    suspend fun <T> tx(block: Transaction.() -> T): T = withContext(Dispatchers.IO) {
-        transaction(Connection.TRANSACTION_READ_COMMITTED, db = database) {
+    suspend fun <T> tx(block: JdbcTransaction.() -> T): T = withContext(Dispatchers.IO) {
+        transaction(db = database, transactionIsolation = Connection.TRANSACTION_READ_COMMITTED) {
             maxAttempts = 1 // a conflict is reported to the caller, never silently retried
             block()
         }
@@ -50,6 +50,7 @@ class Db(val dataSource: DataSource) {
                 .dataSource(ds)
                 .defaultSchema("public")
                 .createSchemas(false)
+                .placeholders(mapOf("appRole" to "trainer_app"))
                 .locations(*locations.toTypedArray())
                 .load()
                 .migrate()

@@ -52,8 +52,8 @@ INSERT INTO catalogue.trainer_gym (trainer_id, gym_id) VALUES
     ('11111111-1111-1111-1111-111111111111', '77777777-7777-7777-7777-777777777771')
 ON CONFLICT DO NOTHING;
 
-INSERT INTO catalogue.trainer_listing (trainer_id, headline, bio, specialties, is_public) VALUES
-    ('11111111-1111-1111-1111-111111111111', 'Trening siłowy i technika', 'Przykładowy opis trenera.', ARRAY['strength', 'technique'], true)
+INSERT INTO catalogue.trainer_listing (trainer_id, display_name, headline, bio, specialties, is_public) VALUES
+    ('11111111-1111-1111-1111-111111111111', 'Demo Trainer', 'Trening siłowy i technika', 'Przykładowy opis trenera.', ARRAY['strength', 'technique'], true)
 ON CONFLICT DO NOTHING;
 
 INSERT INTO catalogue.offer (id, trainer_id, kind, name, duration_minutes, price_minor, currency, sessions_per_period) VALUES

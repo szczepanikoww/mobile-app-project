@@ -7,3 +7,6 @@ local.properties
 .DS_Store
 .tools/
 artifacts/
+
+# IDE (Eclipse / VS Code Java) build output
+bin/

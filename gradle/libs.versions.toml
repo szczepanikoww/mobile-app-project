@@ -19,12 +19,14 @@ kotlinx-coroutines = "1.10.2"
 kotlinx-serialization = "1.9.0"
 kotlinx-datetime = "0.7.1"
 sqldelight = "2.1.0"
-ktor = "3.3.2"
-exposed = "0.61.0"
-flyway = "11.10.0"
-postgresql = "42.7.7"
-hikari = "6.3.0"
-logback = "1.5.18"
+# Server (:server). Ktor 3.3.x and Exposed 1.2.x are the newest lines built with Kotlin 2.2.
+ktor = "3.3.3"
+exposed = "1.2.0"
+flyway = "11.20.3"
+postgresql = "42.7.8"
+hikari = "6.3.3"
+logback = "1.5.21"
+embedded-postgres = "2.1.1"
 testcontainers = "2.0.2"
 android-compileSdk = "35"
 android-minSdk = "26"
@@ -105,6 +107,13 @@ koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
 koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
 koin-compose = { module = "io.insert-koin:koin-compose", version.ref = "koin" }
 koin-composeViewmodel = { module = "io.insert-koin:koin-compose-viewmodel", version.ref = "koin" }
+
+# Server
+ktor-server-websockets = { module = "io.ktor:ktor-server-websockets", version.ref = "ktor" }
+ktor-server-rateLimit = { module = "io.ktor:ktor-server-rate-limit", version.ref = "ktor" }
+ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
+exposed-json = { module = "org.jetbrains.exposed:exposed-json", version.ref = "exposed" }
+embeddedPostgres = { module = "io.zonky.test:embedded-postgres", version.ref = "embedded-postgres" }
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }

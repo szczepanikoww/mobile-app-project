@@ -1,10 +1,11 @@
 package com.trainingapp.server.platform
 
+import org.jetbrains.exposed.v1.core.or
 import com.trainingapp.server.db.OutboxEvents
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.v1.jdbc.insert
 import java.util.UUID
 
 /** Parses a path/body id; a malformed id is INVALID_INPUT, never a 500. */
@@ -25,7 +26,7 @@ val ApiJson = Json {
  * Transactional outbox (architecture §5): written in the same transaction as the change, published later by the
  * worker. Payload holds ids only — never health data, notes or message text.
  */
-object Outbox {
+object TrainerOutbox {
     fun emit(type: String, aggregateType: String, aggregateId: UUID, ids: Map<String, UUID?> = emptyMap(), now: kotlin.time.Instant) {
         val payload = JsonObject(ids.filterValues { it != null }.mapValues { JsonPrimitive(it.value.toString()) })
         OutboxEvents.insert {

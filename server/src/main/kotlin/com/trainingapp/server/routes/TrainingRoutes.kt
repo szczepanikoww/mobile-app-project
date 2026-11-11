@@ -1,5 +1,6 @@
 package com.trainingapp.server.routes
 
+import org.jetbrains.exposed.v1.core.and
 import com.trainingapp.contract.api.AssignPlanRequest
 import com.trainingapp.contract.exercise.UpsertExerciseRequest
 import com.trainingapp.contract.plan.PublishPlanRequest

@@ -17,11 +17,13 @@ dependencies {
     implementation(libs.coroutines.swing)
     implementation(libs.lifecycle.viewmodel.compose)
 }
+// `-Ptrainer.backend=local` (or a URL) connects the app to the backend; the default is the demo data.
+val trainerBackend = providers.gradleProperty("trainer.backend").orElse("demo")
+
 compose.desktop {
     application {
         mainClass = "com.trainingapp.desktop.MainKt"
-        // `-Ptrainer.apiUrl=http://localhost:8080` connects the trainer views to a local server.
-        providers.gradleProperty("trainer.apiUrl").orNull?.let { jvmArgs += "-Dtrainer.apiUrl=$it" }
+        jvmArgs += listOf("-Dtrainer.backend=${trainerBackend.get()}")
     }
 }
 
@@ -33,4 +35,5 @@ tasks.register<JavaExec>("runPreview") {
     mainClass.set("pl.trainer.desktop.MainKt")
     javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(17)) })
     systemProperty("trainer.preview", "true")
+    systemProperty("trainer.backend", trainerBackend.get())
 }

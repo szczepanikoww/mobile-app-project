@@ -44,7 +44,7 @@ class PolicyAndClientsTest {
     private fun policyRequest(basedOn: String?, tiers: List<PolicyTierDto> = listOf(PolicyTierDto(48, 50), PolicyTierDto(24, 100))) =
         SavePolicyRequest(basedOnVersionId = basedOn, tiers = tiers, noShowPercent = 100, graceMinutes = 15, freeLateCancellationsPerMonth = 1)
 
-    private fun ApiTest.clientsService() =
+    private fun TrainerApiTest.clientsService() =
         TrainerClientsService(services.db, services.clock, services.audit, DataCipher(services.config.dataKeyId, services.config.dataKey))
 
     // ---------------------------------------------------------------- policy
@@ -67,7 +67,7 @@ class PolicyAndClientsTest {
         val stale = trainer.post("$base/policy") { setBody(policyRequest(Seed.POLICY)) }
         assertEquals(HttpStatusCode.Conflict, stale.status)
         assertEquals("CONFLICT", stale.body<ApiError>().code)
-        assertEquals(2L, TestDatabase.count("SELECT count(*) FROM catalogue.policy_version WHERE trainer_id = '${Seed.TRAINER}'"))
+        assertEquals(2L, TrainerTestDatabase.count("SELECT count(*) FROM catalogue.policy_version WHERE trainer_id = '${Seed.TRAINER}'"))
 
         // Version 1 stays readable: sessions keep the version the client accepted.
         assertEquals(HttpStatusCode.OK, trainer.get("$base/policy/versions/${Seed.POLICY}").status)
@@ -86,7 +86,7 @@ class PolicyAndClientsTest {
         val badPercent = trainer.post("$base/policy") { setBody(policyRequest(Seed.POLICY, tiers = listOf(PolicyTierDto(24, 33)))) }
         assertEquals(HttpStatusCode.UnprocessableEntity, badPercent.status)
         assertTrue("Percent" in badPercent.body<ApiError>().details)
-        assertEquals(1L, TestDatabase.count("SELECT count(*) FROM catalogue.policy_version WHERE trainer_id = '${Seed.TRAINER}'"))
+        assertEquals(1L, TrainerTestDatabase.count("SELECT count(*) FROM catalogue.policy_version WHERE trainer_id = '${Seed.TRAINER}'"))
     }
 
     // ---------------------------------------------------------------- clients
@@ -140,16 +140,16 @@ class PolicyAndClientsTest {
         val created = trainer.put(path) { setBody(SaveNoteRequest("Pierwsza wersja")) }
         assertEquals(HttpStatusCode.OK, created.status)
         val note = created.body<NoteDto>()
-        assertEquals(1L, TestDatabase.count(liveNotes))
+        assertEquals(1L, TrainerTestDatabase.count(liveNotes))
 
         val updated = trainer.put(path) { setBody(SaveNoteRequest("Druga wersja")) }.body<NoteDto>()
         assertEquals(note.id, updated.id)
         assertEquals("Druga wersja", updated.body)
-        assertEquals(1L, TestDatabase.count(liveNotes))
+        assertEquals(1L, TrainerTestDatabase.count(liveNotes))
 
         val blank = trainer.put(path) { setBody(SaveNoteRequest("   ")) }
         assertEquals(HttpStatusCode.NoContent, blank.status)
-        assertEquals(0L, TestDatabase.count(liveNotes))
+        assertEquals(0L, TrainerTestDatabase.count(liveNotes))
         assertTrue(trainer.get("$base/clients/${Seed.REL_2}/notes").body<List<NoteDto>>().isEmpty())
     }
 
@@ -170,17 +170,17 @@ class PolicyAndClientsTest {
         assertEquals(62.5, read.weightKg)
         assertEquals(
             1L,
-            TestDatabase.count("SELECT count(*) FROM platform.audit_record WHERE actor_id = '${Seed.TRAINER}' AND relationship_id = '${Seed.REL_1}' AND outcome = 'ALLOWED'"),
+            TrainerTestDatabase.count("SELECT count(*) FROM platform.audit_record WHERE actor_id = '${Seed.TRAINER}' AND relationship_id = '${Seed.REL_1}' AND outcome = 'ALLOWED'"),
         )
         // The stored payload is encrypted: the injury text never appears in plain form.
-        assertEquals(0L, TestDatabase.count("SELECT count(*) FROM coaching.client_information WHERE position('Kolano'::bytea in payload_encrypted) > 0"))
+        assertEquals(0L, TrainerTestDatabase.count("SELECT count(*) FROM coaching.client_information WHERE position('Kolano'::bytea in payload_encrypted) > 0"))
 
         val denied = trainer.get("$base/clients/${Seed.REL_2}/information")
         assertEquals(HttpStatusCode.Forbidden, denied.status)
         assertEquals("DENIED", denied.body<ApiError>().code)
         assertEquals(
             1L,
-            TestDatabase.count("SELECT count(*) FROM platform.audit_record WHERE actor_id = '${Seed.TRAINER}' AND relationship_id = '${Seed.REL_2}' AND outcome = 'DENIED'"),
+            TrainerTestDatabase.count("SELECT count(*) FROM platform.audit_record WHERE actor_id = '${Seed.TRAINER}' AND relationship_id = '${Seed.REL_2}' AND outcome = 'DENIED'"),
         )
     }
 
@@ -214,8 +214,8 @@ class PolicyAndClientsTest {
     fun `ending a relationship revokes grants and refuses later commands`() = apiTest {
         val trainer = signedIn("demo-trainer")
         assertEquals(HttpStatusCode.NoContent, trainer.post("$base/clients/${Seed.REL_1}/end").status)
-        assertEquals(0L, TestDatabase.count("SELECT count(*) FROM identity.access_grant WHERE relationship_id = '${Seed.REL_1}' AND revoked_at IS NULL"))
-        assertEquals(1L, TestDatabase.count("SELECT count(*) FROM identity.trainer_client WHERE id = '${Seed.REL_1}' AND status = 'ENDED'"))
+        assertEquals(0L, TrainerTestDatabase.count("SELECT count(*) FROM identity.access_grant WHERE relationship_id = '${Seed.REL_1}' AND revoked_at IS NULL"))
+        assertEquals(1L, TrainerTestDatabase.count("SELECT count(*) FROM identity.trainer_client WHERE id = '${Seed.REL_1}' AND status = 'ENDED'"))
 
         val detail = trainer.get("$base/clients/${Seed.REL_1}").body<ClientDetailDto>()
         assertTrue(detail.grants.isEmpty())
@@ -226,7 +226,7 @@ class PolicyAndClientsTest {
             setBody(CreateSessionRequest(Seed.REL_1, start, start + 1.hours, "Sala 1", operationId = op()))
         }
         assertEquals(HttpStatusCode.Forbidden, create.status)
-        assertEquals(0L, TestDatabase.count("SELECT count(*) FROM scheduling.session WHERE relationship_id = '${Seed.REL_1}' AND starts_at = '$start'"))
+        assertEquals(0L, TrainerTestDatabase.count("SELECT count(*) FROM scheduling.session WHERE relationship_id = '${Seed.REL_1}' AND starts_at = '$start'"))
 
         // Ending twice is a conflict, not a silent success.
         assertEquals(HttpStatusCode.Conflict, trainer.post("$base/clients/${Seed.REL_1}/end").status)

@@ -30,6 +30,26 @@ The debug APK is written to `androidApp/build/outputs/apk/debug/androidApp-debug
 
 Desktop tests render the shared Compose UI without requiring an unlocked desktop. Reports and screenshots are in `shared/build/reports/`. UI tests use Polish and cover a 390 × 844 viewport and a 320 × 720 viewport at 200% font scaling. UI resources also include English; the app follows the platform locale.
 
+## Backend
+
+`:server` is one Ktor process (PostgreSQL, Flyway, Exposed) that serves the client/guest API under `/v1/...` (plus `GET /health`) and the trainer API under `/api/v1/...`. See [server/README.md](server/README.md) and [trainer backend](docs/features/trainer-backend.md).
+
+```sh
+docker compose -f server/docker-compose.yml up -d     # PostgreSQL with the trainer_owner and trainer_app roles
+./gradlew -Ptrainer.ui=false :server:run              # http://localhost:8080
+```
+
+Reset the database with `docker compose -f server/docker-compose.yml down -v`. Tests: `./gradlew -Ptrainer.ui=false :server:test` (both suites; the trainer API tests use Testcontainers, so Docker must be running).
+
+The app uses the demo data by default. With a running server, `-Ptrainer.backend=local` connects it (quoted, because PowerShell splits the argument at the dot):
+
+```sh
+./gradlew :desktopApp:run "-Ptrainer.backend=local"        # server at localhost:8080
+./gradlew :androidApp:installDebug "-Ptrainer.backend=local"   # emulator reaches the computer at 10.0.2.2:8080
+```
+
+Any `http(s)://` URL works instead of `local`. Connected: the public catalogue (guest views) and the trainer views (calendar, requests, clients, policy, home, finance, profile, chat, plans, exercises, media). Client sign-in, sessions, wallet, workouts and chat still use the demo sources. Log in as the trainer with `trener@example.com` (any password of at least 8 characters); it maps to the server's `demo-trainer` account.
+
 ## Guest views and demo accounts
 
 Signed out, the app opens on **Zaloguj się / Załóż konto**. "Przeglądaj bez logowania" leads to the guest shell: Start, Trenerzy, Siłownie and Zaloguj się ([plan](docs/plans/guest-views.md), [handoff](docs/features/guest-views.md)). Signing in replaces the back stack with the role shell.
@@ -67,13 +87,13 @@ PR merge order: merge calendar/trainee PR #1 before workout PR #2. Workout-plan 
 
 ## Backend (trainer API)
 
-The Ktor server in `:server` serves the trainer API on PostgreSQL. Run it with `docker compose up -d` and `./gradlew -Ptrainer.ui=false :server:run`; test it with `./gradlew -Ptrainer.ui=false :server:test` (Docker required). The app is not connected to it yet. See [trainer backend](docs/features/trainer-backend.md).
+The trainer API (`/api/v1/...`) is served by the same `:server` process as the client API; run and test it as described under Backend above. The app connects with `-Ptrainer.backend=local`. See [trainer backend](docs/features/trainer-backend.md).
 
 ## Modules
 
 | Module | Contents | Targets |
 |---|---|---|
-| `:server` | Ktor + Exposed + Flyway backend: trainer API, PostgreSQL schema, dev seed ([docs](docs/features/trainer-backend.md)). | JVM |
+| `:server` | Ktor + Exposed + Flyway backend: client/guest and trainer APIs, PostgreSQL schema, demo seed ([docs](docs/features/trainer-backend.md)). | JVM |
 | `:shared` | Canonical trainer theme/navigation and calendar/trainee feature. | Android, desktop |
 | `:contract` | DTOs and rules shared with the server: exercise and plan DTOs, enums, `PlanValidator`, `ExerciseValidator`, `SearchText`, `Money`, cancellation policy rules and `FeeCalculator`. | JVM (Android uses it too) |
 | `:shared:domain` | Models, plan-draft reducers, set-input parsing, search, use cases, locale formats. | JVM |

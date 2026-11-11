@@ -4,7 +4,7 @@ import com.trainingapp.contract.api.DevTokenRequest
 import com.trainingapp.contract.api.MeDto
 import com.trainingapp.contract.api.Role
 import com.trainingapp.contract.api.TokenDto
-import com.trainingapp.server.Services
+import com.trainingapp.server.TrainerServices
 import com.trainingapp.server.auth.AUTH
 import com.trainingapp.server.auth.caller
 import com.trainingapp.server.platform.notFound
@@ -17,7 +17,7 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 
-fun Route.commonRoutes(services: Services) {
+fun Route.commonRoutes(services: TrainerServices) {
     get("/health") { call.respond(HttpStatusCode.OK, mapOf("status" to "ok")) }
 
     route("/api/v1") {

@@ -1,12 +1,16 @@
 package com.trainingapp.server.worker
 
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.lessEq
+import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.isNull
 import com.trainingapp.contract.api.RescheduleStatus
 import com.trainingapp.contract.api.SessionStatus
 import com.trainingapp.server.db.OutboxEvents
 import com.trainingapp.server.db.RescheduleRequests
 import com.trainingapp.server.db.Sessions
 import com.trainingapp.server.platform.Db
-import com.trainingapp.server.platform.Outbox
+import com.trainingapp.server.platform.TrainerOutbox
 import com.trainingapp.server.platform.ServerClock
 import com.trainingapp.server.platform.toOffset
 import com.trainingapp.server.scheduling.SessionReads
@@ -18,11 +22,11 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import org.jetbrains.exposed.sql.SortOrder
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.or
-import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.update
+import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.or
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
 import org.slf4j.LoggerFactory
 import kotlin.time.Duration.Companion.seconds
 
@@ -52,7 +56,7 @@ class Worker(private val db: Db, private val clock: ServerClock) {
         val now = clock.now()
         val sessions = Sessions.selectAll()
             .where { (Sessions.status eq SessionStatus.REQUESTED.name) and (Sessions.startsAt lessEq now.toOffset()) }
-            .forUpdate(org.jetbrains.exposed.sql.vendors.ForUpdateOption.PostgreSQL.ForUpdate(org.jetbrains.exposed.sql.vendors.ForUpdateOption.PostgreSQL.MODE.SKIP_LOCKED))
+            .forUpdate(org.jetbrains.exposed.v1.core.vendors.ForUpdateOption.PostgreSQL.ForUpdate(org.jetbrains.exposed.v1.core.vendors.ForUpdateOption.PostgreSQL.MODE.SKIP_LOCKED))
             .toList()
         sessions.forEach { row ->
             val id = row[Sessions.id]
@@ -63,10 +67,10 @@ class Worker(private val db: Db, private val clock: ServerClock) {
                 it[closedAt] = now.toOffset()
             }
             event(id, revision, "EXPIRED", null, now)
-            Outbox.emit("session.expired", "session", id, mapOf("relationshipId" to row[Sessions.relationshipId]), now)
+            TrainerOutbox.emit("session.expired", "session", id, mapOf("relationshipId" to row[Sessions.relationshipId]), now)
         }
         // Proposals whose proposed (or countered) time, or the session itself, has started.
-        val proposals = RescheduleRequests.join(Sessions, org.jetbrains.exposed.sql.JoinType.INNER, RescheduleRequests.sessionId, Sessions.id)
+        val proposals = RescheduleRequests.join(Sessions, org.jetbrains.exposed.v1.core.JoinType.INNER, RescheduleRequests.sessionId, Sessions.id)
             .selectAll()
             .where {
                 (RescheduleRequests.status inList SessionReads.OPEN_RESCHEDULE) and

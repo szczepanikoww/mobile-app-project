@@ -1,14 +1,13 @@
 package com.trainingapp.server.auth
 
+import org.jetbrains.exposed.v1.core.and
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import com.trainingapp.server.platform.ApiException
 import com.trainingapp.server.platform.AuthConfig
 import com.trainingapp.server.platform.ErrorCode
-import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
-import io.ktor.server.application.install
-import io.ktor.server.auth.Authentication
+import io.ktor.server.auth.AuthenticationConfig
 import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.jwt.jwt
 import io.ktor.server.auth.principal
@@ -36,13 +35,11 @@ class TokenService(private val config: AuthConfig) {
         .sign(algorithm)
 }
 
-fun Application.installAuth(tokens: TokenService) {
-    install(Authentication) {
-        jwt(AUTH) {
-            verifier(tokens.verifier)
-            validate { credential -> credential.payload.subject?.let { JWTPrincipal(credential.payload) } }
-            challenge { _, _ -> throw ApiException(ErrorCode.UNAUTHENTICATED, "Sign in required") }
-        }
+fun AuthenticationConfig.trainerJwt(tokens: TokenService) {
+    jwt(AUTH) {
+        verifier(tokens.verifier)
+        validate { credential -> credential.payload.subject?.let { JWTPrincipal(credential.payload) } }
+        challenge { _, _ -> throw ApiException(ErrorCode.UNAUTHENTICATED, "Sign in required") }
     }
 }
 

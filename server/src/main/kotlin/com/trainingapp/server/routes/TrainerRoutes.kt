@@ -6,7 +6,7 @@ import com.trainingapp.contract.api.CreateBlockRequest
 import com.trainingapp.contract.api.CreateSessionRequest
 import com.trainingapp.contract.api.ProposeTimeRequest
 import com.trainingapp.contract.api.RevisionRequest
-import com.trainingapp.server.Services
+import com.trainingapp.server.TrainerServices
 import com.trainingapp.server.auth.AUTH
 import com.trainingapp.server.auth.trainer
 import com.trainingapp.server.platform.invalid
@@ -35,7 +35,7 @@ fun ApplicationCall.instantQuery(name: String): Instant? =
  * `/api/v1/trainer/...`: every route requires a signed-in user with the trainer role. Relationship checks happen in
  * the services, inside their transactions.
  */
-fun Route.trainerRoutes(services: Services) {
+fun Route.trainerRoutes(services: TrainerServices) {
     route("/api/v1/trainer") {
         authenticate(AUTH) {
             suspend fun ApplicationCall.trainerId(): UUID = trainer(services.callers).userId

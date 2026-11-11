@@ -62,7 +62,7 @@ class TrainerSessionsTest {
         val stale = trainer.post("/api/v1/trainer/sessions/${Seed.REQUESTED_SESSION}/reject") { setBody(RevisionRequest(revision = 1)) }
         assertEquals(HttpStatusCode.Conflict, stale.status)
         assertEquals("CONFLICT", stale.errorCode())
-        assertEquals(1L, TestDatabase.count("SELECT count(*) FROM scheduling.session_event WHERE session_id = '${Seed.REQUESTED_SESSION}' AND type = 'CONFIRMED'"))
+        assertEquals(1L, TrainerTestDatabase.count("SELECT count(*) FROM scheduling.session_event WHERE session_id = '${Seed.REQUESTED_SESSION}' AND type = 'CONFIRMED'"))
     }
 
     @Test
@@ -118,8 +118,8 @@ class TrainerSessionsTest {
         val session = trainer.create(Seed.REL_1, clock.now() + 2.hours).session()
         val cancelled = trainer.post("/api/v1/trainer/sessions/${session.id}/cancel") { setBody(RevisionRequest(session.revision)) }.session()
         assertEquals(SessionStatus.CANCELLED_BY_TRAINER, cancelled.status)
-        assertEquals(0L, TestDatabase.count("SELECT count(*) FROM billing.charge WHERE session_id = '${session.id}'"))
-        assertEquals(1L, TestDatabase.count("SELECT count(*) FROM billing.fee_decision WHERE session_id = '${session.id}' AND action = 'TRAINER_CANCEL' AND quoted_minor = 0"))
+        assertEquals(0L, TrainerTestDatabase.count("SELECT count(*) FROM billing.charge WHERE session_id = '${session.id}'"))
+        assertEquals(1L, TrainerTestDatabase.count("SELECT count(*) FROM billing.fee_decision WHERE session_id = '${session.id}' AND action = 'TRAINER_CANCEL' AND quoted_minor = 0"))
     }
 
     @Test
@@ -138,7 +138,7 @@ class TrainerSessionsTest {
         val noShow = trainer.post("/api/v1/trainer/sessions/${session.id}/no-show") { setBody(RevisionRequest(session.revision)) }.session()
         assertEquals(SessionStatus.NO_SHOW, noShow.status)
         // Standard preset: no-show 100 % of 150 zł.
-        assertEquals(15000L, TestDatabase.count("SELECT amount_minor FROM billing.charge WHERE session_id = '${session.id}' AND kind = 'NO_SHOW_FEE'"))
+        assertEquals(15000L, TrainerTestDatabase.count("SELECT amount_minor FROM billing.charge WHERE session_id = '${session.id}' AND kind = 'NO_SHOW_FEE'"))
     }
 
     @Test
@@ -150,13 +150,13 @@ class TrainerSessionsTest {
         clock.advance(40.minutes)
         val done = trainer.post("/api/v1/trainer/sessions/${session.id}/complete") { setBody(RevisionRequest(session.revision)) }.session()
         assertEquals(SessionStatus.COMPLETED, done.status)
-        assertEquals(1L, TestDatabase.count("SELECT count(*) FROM billing.charge WHERE session_id = '${session.id}' AND kind = 'SESSION' AND settlement = 'CASH'"))
-        assertEquals(1L, TestDatabase.count("SELECT count(*) FROM scheduling.attendance WHERE session_id = '${session.id}' AND outcome = 'ATTENDED'"))
+        assertEquals(1L, TrainerTestDatabase.count("SELECT count(*) FROM billing.charge WHERE session_id = '${session.id}' AND kind = 'SESSION' AND settlement = 'CASH'"))
+        assertEquals(1L, TrainerTestDatabase.count("SELECT count(*) FROM scheduling.attendance WHERE session_id = '${session.id}' AND outcome = 'ATTENDED'"))
     }
 
     /** Inserts what the client backend would: a client's reschedule proposal received at [receivedAt]. */
     private fun clientProposal(sessionId: String, revision: Int, start: Instant, receivedAt: Instant) {
-        TestDatabase.exec(
+        TrainerTestDatabase.exec(
             """
             INSERT INTO scheduling.reschedule_request (id, session_id, base_revision, proposed_by, proposer_role,
                 proposed_starts_at, proposed_ends_at, status, received_at, operation_id)
@@ -188,8 +188,8 @@ class TrainerSessionsTest {
         }.session()
         assertEquals(newStart, accepted.start)
         assertNull(accepted.proposal)
-        assertEquals(0L, TestDatabase.count("SELECT count(*) FROM billing.charge WHERE session_id = '${session.id}'"))
-        assertEquals(15000L, TestDatabase.count("SELECT waived_minor FROM billing.fee_decision WHERE session_id = '${session.id}'"))
+        assertEquals(0L, TrainerTestDatabase.count("SELECT count(*) FROM billing.charge WHERE session_id = '${session.id}'"))
+        assertEquals(15000L, TrainerTestDatabase.count("SELECT waived_minor FROM billing.fee_decision WHERE session_id = '${session.id}'"))
     }
 
     @Test
@@ -200,7 +200,7 @@ class TrainerSessionsTest {
         val accepted = trainer.post("/api/v1/trainer/sessions/${session.id}/accept") { setBody(AcceptRequest(session.revision)) }
         assertEquals(HttpStatusCode.OK, accepted.status)
         // < 24 h: 50 % of 150 zł.
-        assertEquals(7500L, TestDatabase.count("SELECT amount_minor FROM billing.charge WHERE session_id = '${session.id}' AND kind = 'LATE_RESCHEDULE_FEE'"))
+        assertEquals(7500L, TrainerTestDatabase.count("SELECT amount_minor FROM billing.charge WHERE session_id = '${session.id}' AND kind = 'LATE_RESCHEDULE_FEE'"))
     }
 
     @Test
@@ -223,7 +223,7 @@ class TrainerSessionsTest {
         clock.advance(3.days)
         val expired = services.worker.runOnce()
         assertTrue(expired >= 1)
-        assertEquals(1L, TestDatabase.count("SELECT count(*) FROM scheduling.session WHERE id = '${Seed.REQUESTED_SESSION}' AND status = 'EXPIRED'"))
+        assertEquals(1L, TrainerTestDatabase.count("SELECT count(*) FROM scheduling.session WHERE id = '${Seed.REQUESTED_SESSION}' AND status = 'EXPIRED'"))
     }
 
     @Test

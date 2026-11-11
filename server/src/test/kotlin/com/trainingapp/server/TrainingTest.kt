@@ -105,8 +105,8 @@ class TrainingTest {
         val second = trainer.publishNew(exercise.id, operationId).body<PublishPlanResponse>()
         assertEquals(firstBody.version.id, second.version.id)
         assertEquals(firstBody.template.id, second.template.id)
-        assertEquals(1L, TestDatabase.count("SELECT count(*) FROM training.plan_version WHERE operation_id = '$operationId'"))
-        assertEquals(1L, TestDatabase.count("SELECT count(*) FROM training.plan_template WHERE owner_trainer_id = '${Seed.TRAINER}'"))
+        assertEquals(1L, TrainerTestDatabase.count("SELECT count(*) FROM training.plan_version WHERE operation_id = '$operationId'"))
+        assertEquals(1L, TrainerTestDatabase.count("SELECT count(*) FROM training.plan_template WHERE owner_trainer_id = '${Seed.TRAINER}'"))
         assertEquals("pe-1", firstBody.version.body.days.single().exercises.single().id)
     }
 
@@ -131,7 +131,7 @@ class TrainingTest {
         }
         assertEquals(HttpStatusCode.Conflict, stale.status)
         assertEquals("CONFLICT", stale.body<ApiError>().code)
-        assertEquals(2L, TestDatabase.count("SELECT count(*) FROM training.plan_version WHERE template_id = '$templateId'"))
+        assertEquals(2L, TrainerTestDatabase.count("SELECT count(*) FROM training.plan_version WHERE template_id = '$templateId'"))
 
         // Version 1 is immutable history: its content is unchanged.
         val old = trainer.get("$base/plans/$templateId/versions/1").body<PlanVersionDto>()
@@ -146,7 +146,7 @@ class TrainingTest {
         val response = trainer.publishNew(foreign.id)
         assertEquals(HttpStatusCode.UnprocessableEntity, response.status)
         assertEquals("INVALID_INPUT", response.body<ApiError>().code)
-        assertEquals(0L, TestDatabase.count("SELECT count(*) FROM training.plan_template WHERE owner_trainer_id = '${Seed.TRAINER}'"))
+        assertEquals(0L, TrainerTestDatabase.count("SELECT count(*) FROM training.plan_template WHERE owner_trainer_id = '${Seed.TRAINER}'"))
     }
 
     // ---------------------------------------------------------------- assignment
@@ -171,13 +171,13 @@ class TrainingTest {
         // A retry of the same operation returns the same assignment.
         val retry = trainer.post("$base/clients/${Seed.REL_1}/assigned-plan") { setBody(AssignPlanRequest(v1.version.id, operationId = operationId)) }.body<AssignedPlanDto>()
         assertEquals(firstDto.id, retry.id)
-        assertEquals(1L, TestDatabase.count("SELECT count(*) FROM training.assigned_plan WHERE relationship_id = '${Seed.REL_1}'"))
+        assertEquals(1L, TrainerTestDatabase.count("SELECT count(*) FROM training.assigned_plan WHERE relationship_id = '${Seed.REL_1}'"))
 
         val second = trainer.post("$base/clients/${Seed.REL_1}/assigned-plan") { setBody(AssignPlanRequest(v2.version.id, operationId = uuid())) }
         assertEquals(HttpStatusCode.Created, second.status)
         assertEquals(2, second.body<AssignedPlanDto>().versionNumber)
-        assertEquals(1L, TestDatabase.count("SELECT count(*) FROM training.assigned_plan WHERE relationship_id = '${Seed.REL_1}' AND status = 'REPLACED' AND id = '${firstDto.id}'"))
-        assertEquals(1L, TestDatabase.count("SELECT count(*) FROM training.assigned_plan WHERE relationship_id = '${Seed.REL_1}' AND status = 'ACTIVE'"))
+        assertEquals(1L, TrainerTestDatabase.count("SELECT count(*) FROM training.assigned_plan WHERE relationship_id = '${Seed.REL_1}' AND status = 'REPLACED' AND id = '${firstDto.id}'"))
+        assertEquals(1L, TrainerTestDatabase.count("SELECT count(*) FROM training.assigned_plan WHERE relationship_id = '${Seed.REL_1}' AND status = 'ACTIVE'"))
         assertEquals(2, trainer.get("$base/clients/${Seed.REL_1}/assigned-plan").body<AssignedPlanDto>().versionNumber)
 
         // Another trainer cannot assign to this client.
@@ -194,7 +194,7 @@ class TrainingTest {
         val workoutId = uuid()
         val workoutExerciseId = uuid()
         val setId = uuid()
-        TestDatabase.exec(
+        TrainerTestDatabase.exec(
             """
             INSERT INTO training.workout_log (id, client_id, name, state, started_at, finished_at, time_zone)
             VALUES ('$workoutId', '${Seed.CLIENT_1}', 'Klatka', 'FINISHED', now() - interval '2 hours', now() - interval '1 hour', 'Europe/Warsaw');
@@ -217,7 +217,7 @@ class TrainingTest {
         // REL_3 shared nothing: the read is refused and the refusal is audited.
         val denied = trainer.get("$base/clients/${Seed.REL_3}/workouts")
         assertEquals(HttpStatusCode.Forbidden, denied.status)
-        assertEquals(1L, TestDatabase.count("SELECT count(*) FROM platform.audit_record WHERE relationship_id = '${Seed.REL_3}' AND outcome = 'DENIED'"))
+        assertEquals(1L, TrainerTestDatabase.count("SELECT count(*) FROM platform.audit_record WHERE relationship_id = '${Seed.REL_3}' AND outcome = 'DENIED'"))
 
         assertEquals(HttpStatusCode.NotFound, signedIn("demo-other-trainer").get("$base/clients/${Seed.REL_1}/workouts").status)
     }

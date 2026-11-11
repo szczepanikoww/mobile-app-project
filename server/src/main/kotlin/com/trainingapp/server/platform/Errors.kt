@@ -1,10 +1,9 @@
 package com.trainingapp.server.platform
 
+import org.jetbrains.exposed.v1.core.and
 import io.ktor.http.HttpStatusCode
-import io.ktor.server.application.Application
-import io.ktor.server.application.install
+import io.ktor.server.application.ApplicationCall
 import io.ktor.server.plugins.BadRequestException
-import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.response.respond
 import kotlinx.serialization.Serializable
 import org.slf4j.LoggerFactory
@@ -53,27 +52,23 @@ fun Throwable.sqlState(): String? {
     return null
 }
 
-fun Application.installErrors() {
-    install(StatusPages) {
-        exception<ApiException> { call, e ->
-            call.respond(e.code.status, ErrorBody(e.code.name, e.message ?: e.code.name, e.details))
-        }
-        exception<BadRequestException> { call, _ ->
-            call.respond(HttpStatusCode.UnprocessableEntity, ErrorBody(ErrorCode.INVALID_INPUT.name, "Malformed request"))
-        }
-        exception<IllegalArgumentException> { call, e ->
-            call.respond(HttpStatusCode.UnprocessableEntity, ErrorBody(ErrorCode.INVALID_INPUT.name, e.message ?: "Invalid input"))
-        }
-        exception<Throwable> { call, e ->
+suspend fun ApplicationCall.respondTrainerError(e: Throwable) {
+    when (e) {
+        is ApiException -> respond(e.code.status, ErrorBody(e.code.name, e.message ?: e.code.name, e.details))
+        is BadRequestException ->
+            respond(HttpStatusCode.UnprocessableEntity, ErrorBody(ErrorCode.INVALID_INPUT.name, "Malformed request"))
+        is IllegalArgumentException ->
+            respond(HttpStatusCode.UnprocessableEntity, ErrorBody(ErrorCode.INVALID_INPUT.name, e.message ?: "Invalid input"))
+        else -> {
             val state = e.sqlState()
             when {
                 state in conflictStates ->
-                    call.respond(HttpStatusCode.Conflict, ErrorBody(ErrorCode.CONFLICT.name, "Conflicting change"))
+                    respond(HttpStatusCode.Conflict, ErrorBody(ErrorCode.CONFLICT.name, "Conflicting change"))
                 state != null && state.startsWith("23") ->
-                    call.respond(HttpStatusCode.UnprocessableEntity, ErrorBody(ErrorCode.INVALID_INPUT.name, "Constraint violated"))
+                    respond(HttpStatusCode.UnprocessableEntity, ErrorBody(ErrorCode.INVALID_INPUT.name, "Constraint violated"))
                 else -> {
                     log.error("Unhandled error (sql state {})", state, e)
-                    call.respond(HttpStatusCode.InternalServerError, ErrorBody(ErrorCode.INTERNAL.name, "Internal error"))
+                    respond(HttpStatusCode.InternalServerError, ErrorBody(ErrorCode.INTERNAL.name, "Internal error"))
                 }
             }
         }

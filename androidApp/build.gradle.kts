@@ -12,10 +12,9 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
-        // Trainer API address, e.g. `-Ptrainer.apiUrl=http://10.0.2.2:8080` for a local server seen from the emulator.
-        // Empty keeps the in-memory demo data (docs/features/trainer-backend.md).
-        val apiUrl = providers.gradleProperty("trainer.apiUrl").orElse("").get()
-        buildConfigField("String", "TRAINER_API_URL", "\"$apiUrl\"")
+        // `-Ptrainer.backend=local` (the emulator reaches this computer at 10.0.2.2) or a URL; default: demo data.
+        // The same server serves the client/guest API (/v1) and the trainer API (/api/v1).
+        buildConfigField("String", "TRAINER_BACKEND", "\"${providers.gradleProperty("trainer.backend").getOrElse("demo")}\"")
     }
     buildTypes {
         // Plain HTTP only to a local development server, only in debug builds.

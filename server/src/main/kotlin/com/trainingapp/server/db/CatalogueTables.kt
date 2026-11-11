@@ -2,11 +2,12 @@ package com.trainingapp.server.db
 
 import com.trainingapp.server.platform.jsonb
 import com.trainingapp.server.platform.tstz
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.v1.core.Table
+import org.jetbrains.exposed.v1.core.java.javaUUID
 
 /** The only trainer data guests may see (public listing). */
 object TrainerListings : Table("catalogue.trainer_listing") {
-    val trainerId = uuid("trainer_id")
+    val trainerId = javaUUID("trainer_id")
     val headline = text("headline")
     val bio = text("bio").nullable()
     val specialties = array<String>("specialties")
@@ -17,7 +18,7 @@ object TrainerListings : Table("catalogue.trainer_listing") {
 
 /** Gyms where sessions can take place. */
 object Gyms : Table("catalogue.gym") {
-    val id = uuid("id")
+    val id = javaUUID("id")
     val name = text("name")
     val street = text("street")
     val city = text("city")
@@ -27,22 +28,22 @@ object Gyms : Table("catalogue.gym") {
     val timeZone = text("time_zone")
     val openingHours = jsonb("opening_hours").nullable()
     val isPublic = bool("is_public")
-    val createdBy = uuid("created_by").nullable()
+    val createdBy = javaUUID("created_by").nullable()
     val createdAt = tstz("created_at")
     override val primaryKey = PrimaryKey(id)
 }
 
 /** Which gyms a trainer works at. */
 object TrainerGyms : Table("catalogue.trainer_gym") {
-    val trainerId = uuid("trainer_id")
-    val gymId = uuid("gym_id")
+    val trainerId = javaUUID("trainer_id")
+    val gymId = javaUUID("gym_id")
     override val primaryKey = PrimaryKey(trainerId, gymId)
 }
 
 /** Price list: service x duration; sessions snapshot the price. */
 object Offers : Table("catalogue.offer") {
-    val id = uuid("id")
-    val trainerId = uuid("trainer_id")
+    val id = javaUUID("id")
+    val trainerId = javaUUID("trainer_id")
     val kind = text("kind")
     val name = text("name")
     val durationMinutes = integer("duration_minutes")
@@ -59,8 +60,8 @@ object Offers : Table("catalogue.offer") {
 
 /** Per-client price for an offer. */
 object ClientPriceOverrides : Table("catalogue.client_price_override") {
-    val relationshipId = uuid("relationship_id")
-    val offerId = uuid("offer_id")
+    val relationshipId = javaUUID("relationship_id")
+    val offerId = javaUUID("offer_id")
     val priceMinor = long("price_minor")
     val currency = char("currency", 3)
     override val primaryKey = PrimaryKey(relationshipId, offerId)
@@ -68,8 +69,8 @@ object ClientPriceOverrides : Table("catalogue.client_price_override") {
 
 /** Immutable cancellation policy version; saving the editor inserts a new one. */
 object PolicyVersions : Table("catalogue.policy_version") {
-    val id = uuid("id")
-    val trainerId = uuid("trainer_id")
+    val id = javaUUID("id")
+    val trainerId = javaUUID("trainer_id")
     val version = integer("version")
     val noShowPercent = integer("no_show_percent")
     val graceMinutes = integer("grace_minutes")
@@ -84,7 +85,7 @@ object PolicyVersions : Table("catalogue.policy_version") {
 
 /** Immutable fee tier (hours before start -> fee percent) of a policy version. */
 object PolicyTiers : Table("catalogue.policy_tier") {
-    val policyVersionId = uuid("policy_version_id")
+    val policyVersionId = javaUUID("policy_version_id")
     val hoursBefore = integer("hours_before")
     val feePercent = integer("fee_percent")
     override val primaryKey = PrimaryKey(policyVersionId, hoursBefore)
@@ -92,9 +93,9 @@ object PolicyTiers : Table("catalogue.policy_tier") {
 
 /** Per-client override: exempt the client or apply another policy version. */
 object ClientPolicyOverrides : Table("catalogue.client_policy_override") {
-    val relationshipId = uuid("relationship_id")
+    val relationshipId = javaUUID("relationship_id")
     val mode = text("mode")
-    val policyVersionId = uuid("policy_version_id").nullable()
+    val policyVersionId = javaUUID("policy_version_id").nullable()
     val updatedAt = tstz("updated_at")
     override val primaryKey = PrimaryKey(relationshipId)
 }

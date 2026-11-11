@@ -1,5 +1,7 @@
 package com.trainingapp.server.platform
 
+import org.jetbrains.exposed.v1.core.or
+import org.jetbrains.exposed.v1.core.and
 import java.security.SecureRandom
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec

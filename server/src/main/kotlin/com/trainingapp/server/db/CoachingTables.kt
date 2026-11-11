@@ -1,13 +1,14 @@
 package com.trainingapp.server.db
 
 import com.trainingapp.server.platform.tstz
-import org.jetbrains.exposed.sql.Table
-import org.jetbrains.exposed.sql.javatime.date
+import org.jetbrains.exposed.v1.core.Table
+import org.jetbrains.exposed.v1.core.java.javaUUID
+import org.jetbrains.exposed.v1.javatime.date
 
 /** Append-only consent history; a withdrawal is a new row. */
 object ConsentRecords : Table("coaching.consent_record") {
-    val id = uuid("id")
-    val userId = uuid("user_id")
+    val id = javaUUID("id")
+    val userId = javaUUID("user_id")
     val purpose = text("purpose")
     val documentVersion = text("document_version")
     val action = text("action")
@@ -17,8 +18,8 @@ object ConsentRecords : Table("coaching.consent_record") {
 
 /** Health questionnaire, one row per submitted version; answers are field-encrypted. */
 object HealthQuestionnaires : Table("coaching.health_questionnaire") {
-    val id = uuid("id")
-    val clientId = uuid("client_id")
+    val id = javaUUID("id")
+    val clientId = javaUUID("client_id")
     val version = integer("version")
     val formVersion = text("form_version")
     val answersEncrypted = binary("answers_encrypted")
@@ -29,8 +30,8 @@ object HealthQuestionnaires : Table("coaching.health_questionnaire") {
 
 /** Goals set within a trainer-client relationship. */
 object ClientGoals : Table("coaching.client_goal") {
-    val id = uuid("id")
-    val relationshipId = uuid("relationship_id")
+    val id = javaUUID("id")
+    val relationshipId = javaUUID("relationship_id")
     val text = text("text")
     val targetDate = date("target_date").nullable()
     val achievedAt = tstz("achieved_at").nullable()
@@ -40,9 +41,9 @@ object ClientGoals : Table("coaching.client_goal") {
 
 /** Private trainer notes, visible to the authoring trainer only. */
 object CoachingNotes : Table("coaching.coaching_note") {
-    val id = uuid("id")
-    val relationshipId = uuid("relationship_id")
-    val authorId = uuid("author_id")
+    val id = javaUUID("id")
+    val relationshipId = javaUUID("relationship_id")
+    val authorId = javaUUID("author_id")
     val body = text("body")
     val createdAt = tstz("created_at")
     val updatedAt = tstz("updated_at")

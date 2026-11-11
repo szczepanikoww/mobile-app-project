@@ -1,5 +1,13 @@
 package com.trainingapp.server.home
 
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.neq
+import org.jetbrains.exposed.v1.core.greater
+import org.jetbrains.exposed.v1.core.greaterEq
+import org.jetbrains.exposed.v1.core.less
+import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.greaterEq
 import com.trainingapp.contract.api.RescheduleStatus
 import com.trainingapp.contract.api.SessionStatus
 import com.trainingapp.contract.api.TrainerHomeDto
@@ -17,10 +25,10 @@ import com.trainingapp.server.platform.Db
 import com.trainingapp.server.platform.ServerClock
 import com.trainingapp.server.platform.toOffset
 import com.trainingapp.server.scheduling.SessionReads
-import org.jetbrains.exposed.sql.JoinType
-import org.jetbrains.exposed.sql.SortOrder
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.v1.core.JoinType
+import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import java.time.DayOfWeek
 import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters

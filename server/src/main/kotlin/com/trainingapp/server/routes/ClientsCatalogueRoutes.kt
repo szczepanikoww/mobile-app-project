@@ -1,5 +1,6 @@
 package com.trainingapp.server.routes
 
+import org.jetbrains.exposed.v1.core.and
 import com.trainingapp.contract.api.ClientPolicyOverrideDto
 import com.trainingapp.contract.api.CreateInviteRequest
 import com.trainingapp.contract.api.SaveNoteRequest

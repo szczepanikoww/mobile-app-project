@@ -1,5 +1,10 @@
 package com.trainingapp.server.identity
 
+import org.jetbrains.exposed.v1.core.greater
+import org.jetbrains.exposed.v1.core.greaterEq
+import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.or
+import org.jetbrains.exposed.v1.core.greaterEq
 import com.trainingapp.contract.api.AccessScope
 import com.trainingapp.contract.api.AssignedPlanDto
 import com.trainingapp.contract.api.ClientDetailDto
@@ -36,25 +41,26 @@ import com.trainingapp.server.platform.toInstantK
 import com.trainingapp.server.platform.toOffset
 import com.trainingapp.server.platform.toUuid
 import com.trainingapp.server.scheduling.SessionReads
-import org.jetbrains.exposed.sql.JoinType
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.SortOrder
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.isNull
-import org.jetbrains.exposed.sql.Table
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.update
-import org.jetbrains.exposed.sql.upsert
-import org.jetbrains.exposed.sql.deleteWhere
+import org.jetbrains.exposed.v1.core.JoinType
+import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.Table
+import org.jetbrains.exposed.v1.core.java.javaUUID
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
+import org.jetbrains.exposed.v1.jdbc.upsert
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import java.security.SecureRandom
 import java.util.UUID
 import kotlin.time.Duration.Companion.days
 
 /** `coaching.client_information` (V2): one encrypted JSON document per client. */
 private object ClientInformationTable : Table("coaching.client_information") {
-    val clientId = uuid("client_id")
+    val clientId = javaUUID("client_id")
     val payloadEncrypted = binary("payload_encrypted")
     val keyId = text("key_id")
     val updatedAt = tstz("updated_at")

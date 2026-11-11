@@ -1,13 +1,14 @@
 package com.trainingapp.server.db
 
 import com.trainingapp.server.platform.tstz
-import org.jetbrains.exposed.sql.Table
-import org.jetbrains.exposed.sql.javatime.date
+import org.jetbrains.exposed.v1.core.Table
+import org.jetbrains.exposed.v1.core.java.javaUUID
+import org.jetbrains.exposed.v1.javatime.date
 
 /** Exercise library entry (global or trainer-owned). */
 object Exercises : Table("training.exercise") {
-    val id = uuid("id")
-    val ownerTrainerId = uuid("owner_trainer_id").nullable()
+    val id = javaUUID("id")
+    val ownerTrainerId = javaUUID("owner_trainer_id").nullable()
     val sourceName = text("source")
     val sourceId = text("source_id").nullable()
     val trackingType = text("tracking_type")
@@ -16,7 +17,7 @@ object Exercises : Table("training.exercise") {
     val secondaryMuscles = array<String>("secondary_muscles")
     val featured = bool("featured")
     val status = text("status")
-    val demoMediaId = uuid("demo_media_id").nullable()
+    val demoMediaId = javaUUID("demo_media_id").nullable()
     val revision = integer("revision")
     val createdAt = tstz("created_at")
     val updatedAt = tstz("updated_at")
@@ -25,7 +26,7 @@ object Exercises : Table("training.exercise") {
 
 /** Localised exercise names and search aliases. */
 object ExerciseNames : Table("training.exercise_name") {
-    val exerciseId = uuid("exercise_id")
+    val exerciseId = javaUUID("exercise_id")
     val locale = text("locale")
     val name = text("name")
     val isAlias = bool("is_alias")
@@ -35,7 +36,7 @@ object ExerciseNames : Table("training.exercise_name") {
 
 /** Localised step-by-step instructions of an exercise. */
 object ExerciseInstructions : Table("training.exercise_instruction") {
-    val exerciseId = uuid("exercise_id")
+    val exerciseId = javaUUID("exercise_id")
     val locale = text("locale")
     val steps = array<String>("steps")
     override val primaryKey = PrimaryKey(exerciseId, locale)
@@ -43,16 +44,16 @@ object ExerciseInstructions : Table("training.exercise_instruction") {
 
 /** Ordered images of an exercise. */
 object ExerciseImages : Table("training.exercise_image") {
-    val exerciseId = uuid("exercise_id")
+    val exerciseId = javaUUID("exercise_id")
     val position = short("position")
-    val mediaId = uuid("media_id")
+    val mediaId = javaUUID("media_id")
     override val primaryKey = PrimaryKey(exerciseId, position)
 }
 
 /** Plan template (mutable header; content lives in immutable versions). */
 object PlanTemplates : Table("training.plan_template") {
-    val id = uuid("id")
-    val ownerTrainerId = uuid("owner_trainer_id")
+    val id = javaUUID("id")
+    val ownerTrainerId = javaUUID("owner_trainer_id")
     val name = text("name")
     val latestVersion = integer("latest_version")
     val archivedAt = tstz("archived_at").nullable()
@@ -63,21 +64,21 @@ object PlanTemplates : Table("training.plan_template") {
 
 /** Immutable published version of a plan template. */
 object PlanVersions : Table("training.plan_version") {
-    val id = uuid("id")
-    val templateId = uuid("template_id")
+    val id = javaUUID("id")
+    val templateId = javaUUID("template_id")
     val number = integer("number")
     val basedOnVersion = integer("based_on_version").nullable()
     val name = text("name")
     val tags = array<String>("tags")
-    val createdBy = uuid("created_by")
+    val createdBy = javaUUID("created_by")
     val createdAt = tstz("created_at")
-    val operationId = uuid("operation_id")
+    val operationId = javaUUID("operation_id")
     override val primaryKey = PrimaryKey(id)
 }
 
 /** Immutable day of a plan version; id is unique only within the version. */
 object PlanDays : Table("training.plan_day") {
-    val planVersionId = uuid("plan_version_id")
+    val planVersionId = javaUUID("plan_version_id")
     val id = text("id")
     val position = short("position")
     val name = text("name")
@@ -86,11 +87,11 @@ object PlanDays : Table("training.plan_day") {
 
 /** Immutable planned exercise within a plan day. */
 object PlannedExercises : Table("training.planned_exercise") {
-    val planVersionId = uuid("plan_version_id")
+    val planVersionId = javaUUID("plan_version_id")
     val id = text("id")
     val dayId = text("day_id")
     val position = short("position")
-    val exerciseId = uuid("exercise_id")
+    val exerciseId = javaUUID("exercise_id")
     val supersetGroup = text("superset_group").nullable()
     val restSeconds = integer("rest_seconds").nullable()
     val rpeEnabled = bool("rpe_enabled")
@@ -102,7 +103,7 @@ object PlannedExercises : Table("training.planned_exercise") {
 
 /** Immutable planned set within a planned exercise. */
 object PlannedSets : Table("training.planned_set") {
-    val planVersionId = uuid("plan_version_id")
+    val planVersionId = javaUUID("plan_version_id")
     val id = text("id")
     val plannedExerciseId = text("planned_exercise_id")
     val position = short("position")
@@ -119,27 +120,27 @@ object PlannedSets : Table("training.planned_set") {
 
 /** A plan version assigned to a client; at most one ACTIVE per client. */
 object AssignedPlans : Table("training.assigned_plan") {
-    val id = uuid("id")
-    val relationshipId = uuid("relationship_id")
-    val clientId = uuid("client_id")
-    val planVersionId = uuid("plan_version_id")
-    val sessionId = uuid("session_id").nullable()
+    val id = javaUUID("id")
+    val relationshipId = javaUUID("relationship_id")
+    val clientId = javaUUID("client_id")
+    val planVersionId = javaUUID("plan_version_id")
+    val sessionId = javaUUID("session_id").nullable()
     val status = text("status")
     val startsOn = date("starts_on").nullable()
     val endsOn = date("ends_on").nullable()
-    val assignedBy = uuid("assigned_by")
+    val assignedBy = javaUUID("assigned_by")
     val assignedAt = tstz("assigned_at")
-    val operationId = uuid("operation_id")
+    val operationId = javaUUID("operation_id")
     override val primaryKey = PrimaryKey(id)
 }
 
 /** A workout the client did; id is generated on the phone (offline logger). */
 object WorkoutLogs : Table("training.workout_log") {
-    val id = uuid("id")
-    val clientId = uuid("client_id")
-    val sessionId = uuid("session_id").nullable()
-    val assignedPlanId = uuid("assigned_plan_id").nullable()
-    val planVersionId = uuid("plan_version_id").nullable()
+    val id = javaUUID("id")
+    val clientId = javaUUID("client_id")
+    val sessionId = javaUUID("session_id").nullable()
+    val assignedPlanId = javaUUID("assigned_plan_id").nullable()
+    val planVersionId = javaUUID("plan_version_id").nullable()
     val planDayId = text("plan_day_id").nullable()
     val name = text("name")
     val state = text("state")
@@ -156,10 +157,10 @@ object WorkoutLogs : Table("training.workout_log") {
 
 /** One exercise inside a workout log. */
 object WorkoutExercises : Table("training.workout_exercise") {
-    val id = uuid("id")
-    val workoutLogId = uuid("workout_log_id")
+    val id = javaUUID("id")
+    val workoutLogId = javaUUID("workout_log_id")
     val position = short("position")
-    val exerciseId = uuid("exercise_id")
+    val exerciseId = javaUUID("exercise_id")
     val plannedExerciseId = text("planned_exercise_id").nullable()
     val supersetGroup = text("superset_group").nullable()
     val note = text("note").nullable()
@@ -170,10 +171,10 @@ object WorkoutExercises : Table("training.workout_exercise") {
 
 /** One logged set; client-generated id makes retries idempotent. */
 object SetLogs : Table("training.set_log") {
-    val id = uuid("id")
-    val workoutExerciseId = uuid("workout_exercise_id")
-    val workoutLogId = uuid("workout_log_id")
-    val exerciseId = uuid("exercise_id")
+    val id = javaUUID("id")
+    val workoutExerciseId = javaUUID("workout_exercise_id")
+    val workoutLogId = javaUUID("workout_log_id")
+    val exerciseId = javaUUID("exercise_id")
     val position = short("position")
     val type = text("type")
     val plannedSetId = text("planned_set_id").nullable()
@@ -183,7 +184,7 @@ object SetLogs : Table("training.set_log") {
     val durationSeconds = integer("duration_seconds").nullable()
     val distanceMeters = integer("distance_meters").nullable()
     val completedAt = tstz("completed_at").nullable()
-    val techniqueMediaId = uuid("technique_media_id").nullable()
+    val techniqueMediaId = javaUUID("technique_media_id").nullable()
     val revision = integer("revision")
     val updatedAt = tstz("updated_at")
     val deletedAt = tstz("deleted_at").nullable()
@@ -192,8 +193,8 @@ object SetLogs : Table("training.set_log") {
 
 /** Private body measurements in thousandths of the kind's unit. */
 object BodyMeasurements : Table("training.body_measurement") {
-    val id = uuid("id")
-    val clientId = uuid("client_id")
+    val id = javaUUID("id")
+    val clientId = javaUUID("client_id")
     val kind = text("kind")
     val valueThousandths = long("value_thousandths")
     val measuredAt = tstz("measured_at")
@@ -204,9 +205,9 @@ object BodyMeasurements : Table("training.body_measurement") {
 
 /** Read-only view: best working set per client and exercise (derived personal records). */
 object PersonalRecordView : Table("training.personal_record") {
-    val clientId = uuid("client_id")
-    val exerciseId = uuid("exercise_id")
-    val setLogId = uuid("set_log_id")
+    val clientId = javaUUID("client_id")
+    val exerciseId = javaUUID("exercise_id")
+    val setLogId = javaUUID("set_log_id")
     val weightGrams = integer("weight_grams").nullable()
     val reps = integer("reps").nullable()
     val completedAt = tstz("completed_at").nullable()

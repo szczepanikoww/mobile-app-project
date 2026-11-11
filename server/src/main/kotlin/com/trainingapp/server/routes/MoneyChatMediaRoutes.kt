@@ -1,5 +1,6 @@
 package com.trainingapp.server.routes
 
+import org.jetbrains.exposed.v1.core.and
 import com.trainingapp.contract.api.FinancePeriod
 import com.trainingapp.contract.api.MarkReadRequest
 import com.trainingapp.contract.api.RecordCashPaymentRequest
@@ -10,7 +11,7 @@ import com.trainingapp.server.auth.CallerResolver
 import com.trainingapp.server.auth.trainer
 import com.trainingapp.server.billing.TrainerFinance
 import com.trainingapp.server.home.TrainerHome
-import com.trainingapp.server.media.MediaService
+import com.trainingapp.server.media.TrainerMediaService
 import com.trainingapp.server.messaging.TrainerChat
 import com.trainingapp.server.platform.AppConfig
 import com.trainingapp.server.platform.Db
@@ -36,7 +37,7 @@ fun Route.moneyChatMediaRoutes(db: Db, clock: ServerClock, callers: CallerResolv
     val home = TrainerHome(db, clock)
     val finance = TrainerFinance(db, clock)
     val chat = TrainerChat(db, clock)
-    val media = MediaService(db, clock, config, audit)
+    val media = TrainerMediaService(db, clock, config, audit)
 
     get("/home") { call.respond(home.home(call.trainer(callers).userId)) }
 
@@ -85,7 +86,7 @@ fun Route.moneyChatMediaRoutes(db: Db, clock: ServerClock, callers: CallerResolv
 /** Unauthenticated, signed-link media bytes (`/media/{id}/content`). Mount at the root. */
 fun Route.mediaContentRoutes(db: Db, clock: ServerClock, config: AppConfig) {
     // The audit log is only used by the authenticated status call.
-    val media = MediaService(db, clock, config, AuditLog(db.dataSource))
+    val media = TrainerMediaService(db, clock, config, AuditLog(db.dataSource))
 
     put("/media/{id}/content") {
         media.receiveUpload(call.parameters["id"] ?: invalid("Missing id"), call.request.queryParameters["token"], call.receiveStream())

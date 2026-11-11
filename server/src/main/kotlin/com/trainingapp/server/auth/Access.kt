@@ -1,15 +1,17 @@
 package com.trainingapp.server.auth
 
+import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.or
 import com.trainingapp.contract.api.AccessScope
 import com.trainingapp.server.db.AccessGrants
 import com.trainingapp.server.db.TrainerClients
 import com.trainingapp.server.platform.ApiException
 import com.trainingapp.server.platform.ErrorCode
 import com.trainingapp.server.platform.notFound
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.slf4j.LoggerFactory
 import java.sql.Timestamp
 import java.util.UUID

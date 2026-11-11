@@ -133,6 +133,7 @@ class LocalMediaRepository(
         when (status.state) {
             RemoteMediaState.READY -> setState(row.id, MediaState.READY, 1f, status.playbackUrl)
             RemoteMediaState.FAILED -> setState(row.id, MediaState.FAILED, 0f, null)
+            // UPLOADING: the server has not received the whole file yet; the next upload resumes it.
             RemoteMediaState.UPLOADING, RemoteMediaState.PROCESSING -> Unit
         }
     }

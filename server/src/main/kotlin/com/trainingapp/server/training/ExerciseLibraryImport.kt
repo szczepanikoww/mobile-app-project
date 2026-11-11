@@ -12,12 +12,13 @@ import com.trainingapp.server.platform.Db
 import com.trainingapp.server.platform.ServerClock
 import com.trainingapp.server.platform.toOffset
 import kotlinx.serialization.builtins.ListSerializer
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.update
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
 import java.util.UUID
 import kotlin.time.Instant
 
@@ -35,6 +36,16 @@ object ExerciseLibraryImport {
         if (!empty) return
         val json = ExerciseLibraryImport::class.java.classLoader.getResourceAsStream(RESOURCE)
             ?.use { it.readBytes().toString(Charsets.UTF_8) } ?: return
+        importFromJson(db, json, clock.now())
+    }
+
+    /** Imports when the database holds fewer global exercises than the bundled file (e.g. after a small demo seed); existing rows keep their ids. */
+    suspend fun importIfIncomplete(db: Db, clock: ServerClock) {
+        val json = ExerciseLibraryImport::class.java.classLoader.getResourceAsStream(RESOURCE)
+            ?.use { it.readBytes().toString(Charsets.UTF_8) } ?: return
+        val total = ApiJson.decodeFromString(ListSerializer(ExerciseDto.serializer()), json).count { it.sourceId != null }
+        val have = db.tx { Exercises.selectAll().where { Exercises.ownerTrainerId.isNull() }.count() }
+        if (have >= total) return
         importFromJson(db, json, clock.now())
     }
 

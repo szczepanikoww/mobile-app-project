@@ -1,5 +1,13 @@
 package com.trainingapp.server.scheduling
 
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.greater
+import org.jetbrains.exposed.v1.core.greaterEq
+import org.jetbrains.exposed.v1.core.less
+import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.or
+import org.jetbrains.exposed.v1.core.greaterEq
 import com.trainingapp.contract.api.BlockKind
 import com.trainingapp.contract.api.CalendarBlockDto
 import com.trainingapp.contract.api.ClientSummaryDto
@@ -24,11 +32,11 @@ import com.trainingapp.server.db.TrainerClients
 import com.trainingapp.server.platform.initialsOf
 import com.trainingapp.server.platform.toInstantK
 import com.trainingapp.server.platform.toOffset
-import org.jetbrains.exposed.sql.JoinType
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.SortOrder
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.v1.core.JoinType
+import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import java.util.UUID
 import kotlin.time.Instant
 

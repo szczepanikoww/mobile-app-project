@@ -1,5 +1,6 @@
 package com.trainingapp.server.auth
 
+import org.jetbrains.exposed.v1.core.eq
 import com.trainingapp.server.db.AppUsers
 import com.trainingapp.server.db.ClientProfiles
 import com.trainingapp.server.db.TrainerProfiles
@@ -8,7 +9,7 @@ import com.trainingapp.server.platform.Db
 import com.trainingapp.server.platform.ErrorCode
 import com.trainingapp.server.platform.denied
 import io.ktor.server.application.ApplicationCall
-import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import java.util.UUID
 
 /** The signed-in user as our database knows them. Roles come from profile rows, never from the token. */

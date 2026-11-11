@@ -1,225 +1,234 @@
 package com.trainingapp.server.media
 
-import com.trainingapp.contract.api.AccessScope
-import com.trainingapp.contract.api.UploadSessionDto
 import com.trainingapp.contract.media.CreateUploadSessionRequest
 import com.trainingapp.contract.media.MediaKind
 import com.trainingapp.contract.media.MediaLimits
 import com.trainingapp.contract.media.MediaStatusDto
 import com.trainingapp.contract.media.RemoteMediaState
-import com.trainingapp.server.auth.Access
-import com.trainingapp.server.auth.AuditLog
-import com.trainingapp.server.db.MediaAssets
-import com.trainingapp.server.db.TrainerClients
-import com.trainingapp.server.platform.AppConfig
-import com.trainingapp.server.platform.Db
-import com.trainingapp.server.platform.ServerClock
-import com.trainingapp.server.platform.conflict
-import com.trainingapp.server.platform.denied
-import com.trainingapp.server.platform.invalid
-import com.trainingapp.server.platform.notFound
-import com.trainingapp.server.platform.toOffset
-import com.trainingapp.server.platform.toUuid
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.update
+import com.trainingapp.contract.media.UploadSessionDto
+import com.trainingapp.server.common.ApiException
+import com.trainingapp.server.common.DeniedSubject
+import com.trainingapp.server.common.ErrorCode
+import com.trainingapp.server.common.conflict
+import com.trainingapp.server.common.dbNow
+import com.trainingapp.server.common.forbidden
+import com.trainingapp.server.common.invalid
+import com.trainingapp.server.common.notFound
+import com.trainingapp.server.common.toOffset
+import com.trainingapp.server.config.MediaConfig
+import com.trainingapp.server.db.Db
+import com.trainingapp.server.db.SqlState
+import com.trainingapp.server.db.attempt
+import com.trainingapp.server.identity.CurrentUser
+import com.trainingapp.server.identity.IdentityService
+import com.trainingapp.server.platform.JobQueue
+import com.trainingapp.server.platform.JobQueue.schedule
+import com.trainingapp.server.platform.Outbox.emit
+import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.isNotNull
+import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.less
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
+import java.io.File
 import java.io.InputStream
-import java.security.MessageDigest
-import java.util.Base64
-import java.util.UUID
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
-import kotlin.time.Duration.Companion.minutes
-
-/** What the processing step learned about an uploaded file. */
-sealed interface ProcessingResult {
-    data class Ready(val durationMs: Long? = null, val width: Int? = null, val height: Int? = null) : ProcessingResult
-    data class Failed(val reason: String) : ProcessingResult
-}
-
-/** Checks an uploaded file (type, duration, thumbnail). A real implementation replaces [LocalProcessor]. */
-fun interface MediaProcessor {
-    fun process(storageKey: String, contentType: String, sizeBytes: Long): ProcessingResult
-}
-
-/** Local development: accepts every file; duration and size of the picture are unknown. */
-val LocalProcessor = MediaProcessor { _, _, _ -> ProcessingResult.Ready() }
-
-class MediaContent(val contentType: String, val sizeBytes: Long, val stream: InputStream)
+import kotlin.uuid.Uuid
 
 /**
- * The one media pipeline: UPLOADING, PROCESSING, READY or FAILED. Bytes go through short-lived signed links, so the
- * storage stays private; a file is never playable before READY.
+ * The Media module (architecture §9.3, plan §8.5): upload authorisation, resumable upload, processing state and
+ * short-lived signed playback links. Unfinished media is never presented as playable.
  */
 class MediaService(
     private val db: Db,
-    private val clock: ServerClock,
-    private val config: AppConfig,
-    private val audit: AuditLog,
-    private val storage: MediaStorage = LocalMediaStorage(config.mediaDir),
-    private val processor: MediaProcessor = LocalProcessor,
+    private val identity: IdentityService,
+    private val storage: ObjectStorage,
+    private val config: MediaConfig,
 ) {
-    private val upload = "upload"
-    private val play = "play"
-
-    // ------------------------------------------------------------------ signed links
-
-    private fun sign(mediaId: UUID, purpose: String, expires: Long): String {
-        val mac = Mac.getInstance("HmacSHA256")
-        mac.init(SecretKeySpec(config.auth.jwtSecret.toByteArray(Charsets.UTF_8), "HmacSHA256"))
-        val sig = mac.doFinal("$mediaId:$purpose:$expires".toByteArray(Charsets.UTF_8))
-        return "$expires.${Base64.getUrlEncoder().withoutPadding().encodeToString(sig)}"
+    companion object {
+        val TECHNIQUE_VIDEO_RETENTION = 90.days
+        val STALE_UPLOAD = 24.hours
+        val VIDEO_TYPES = setOf("video/mp4", "video/quicktime", "video/webm")
     }
 
-    private fun url(mediaId: UUID, purpose: String, validFor: kotlin.time.Duration): String {
-        val expires = (clock.now() + validFor).epochSeconds
-        return "${config.publicBaseUrl}/media/$mediaId/content?token=${sign(mediaId, purpose, expires)}"
-    }
-
-    private fun verify(mediaId: UUID, purpose: String, token: String?) {
-        val parts = token?.split('.') ?: denied("Invalid link")
-        val expires = parts.takeIf { it.size == 2 }?.get(0)?.toLongOrNull() ?: denied("Invalid link")
-        val expected = sign(mediaId, purpose, expires)
-        if (!MessageDigest.isEqual(expected.toByteArray(), token.toByteArray())) denied("Invalid link")
-        if (expires <= clock.now().epochSeconds) denied("Link expired")
-    }
-
-    // ------------------------------------------------------------------ trainer API
-
-    /** Idempotent by the client-generated media id. Trainers upload exercise demos only. */
-    suspend fun createUploadSession(trainerId: UUID, request: CreateUploadSessionRequest): UploadSessionDto {
-        val mediaId = request.mediaId.toUuid("mediaId")
-        if (request.kind == MediaKind.TECHNIQUE_VIDEO) denied("Technique videos are uploaded by clients")
-        if (request.sizeBytes <= 0 || request.sizeBytes > MediaLimits.maxSizeBytes(request.kind)) invalid("File size not allowed")
-        if (!request.contentType.startsWith("video/")) invalid("Unsupported content type")
-        val validFor = 1.hours
+    /** Idempotent by the phone's media id: a retry returns the same upload URL and the server's current offset. */
+    suspend fun createUploadSession(user: CurrentUser, request: CreateUploadSessionRequest): UploadSessionDto {
+        val id = runCatching { Uuid.parse(request.mediaId) }.getOrNull() ?: throw invalid("mediaId")
+        if (request.contentType !in VIDEO_TYPES) throw invalid("contentType")
+        if (request.sizeBytes <= 0 || request.sizeBytes > MediaLimits.maxSizeBytes(request.kind)) throw invalid("sizeBytes")
+        val relationshipId = request.relationshipId?.let { runCatching { Uuid.parse(it) }.getOrNull() ?: throw invalid("relationshipId") }
         return db.tx {
-            val existing = MediaAssets.selectAll().where { MediaAssets.id eq mediaId }.singleOrNull()
-            if (existing != null && existing[MediaAssets.ownerUserId] != trainerId) conflict("Media id already used")
-            if (existing == null) {
+            MediaAssets.selectAll().where { MediaAssets.id eq id }.singleOrNull()?.let { existing ->
+                if (existing[MediaAssets.ownerUserId] != user.id) throw conflict(message = "media id taken")
+                return@tx uploadSession(existing)
+            }
+            when (request.kind) {
+                MediaKind.TECHNIQUE_VIDEO -> {
+                    // Private kinds need a relationship of which the caller is the client (DB check as a backstop).
+                    val rel = relationshipId?.let { with(identity) { relationship(it) } } ?: throw invalid("relationshipId")
+                    if (rel.clientId != user.id) throw notFound("relationship", DeniedSubject("relationship", rel.id, rel.id))
+                    if (!rel.isActive) throw conflict(message = "relationship is not active")
+                }
+                MediaKind.EXERCISE_DEMO -> if (!user.isTrainer) throw forbidden("trainer role required")
+            }
+            val now = dbNow()
+            attempt(SqlState.UNIQUE_VIOLATION) {
                 MediaAssets.insert {
-                    it[id] = mediaId
-                    it[ownerUserId] = trainerId
+                    it[MediaAssets.id] = id
+                    it[ownerUserId] = user.id
+                    it[MediaAssets.relationshipId] = if (request.kind == MediaKind.TECHNIQUE_VIDEO) relationshipId else null
                     it[kind] = request.kind.name
-                    it[state] = RemoteMediaState.UPLOADING.name
+                    it[state] = MediaState.UPLOADING
                     it[contentType] = request.contentType
                     it[sizeBytes] = request.sizeBytes
-                    it[storageKey] = "media/$mediaId"
-                    it[createdAt] = clock.now().toOffset()
+                    it[storageKey] = "media/$id"
+                    it[retainUntil] = if (request.kind == MediaKind.TECHNIQUE_VIDEO) (now + TECHNIQUE_VIDEO_RETENTION).toOffset() else null
                 }
             }
-            UploadSessionDto(mediaId.toString(), url(mediaId, upload, validFor), clock.now() + validFor)
+            uploadSession(MediaAssets.selectAll().where { MediaAssets.id eq id }.single())
         }
     }
 
-    private sealed interface Lookup {
-        data class Allowed(val row: ResultRow) : Lookup
-        data class Denied(val relationshipId: UUID) : Lookup
-        data object Missing : Lookup
+    /** tus `HEAD`: how many bytes the server has. */
+    suspend fun uploadOffset(user: CurrentUser, id: Uuid): Pair<Long, Long> = db.tx {
+        val row = owned(user, id)
+        (storage.size(row[MediaAssets.storageKey]) ?: 0L) to row[MediaAssets.sizeBytes]
     }
-
-    /** Owner, or the trainer of the media's relationship with the technique-video grant (denials are audited). */
-    suspend fun status(trainerId: UUID, mediaIdText: String): MediaStatusDto {
-        val mediaId = mediaIdText.toUuid("mediaId")
-        val found = db.tx {
-            val row = MediaAssets.selectAll().where { (MediaAssets.id eq mediaId) and MediaAssets.deletedAt.isNull() }.singleOrNull()
-                ?: return@tx Lookup.Missing
-            val relationshipId = row[MediaAssets.relationshipId]
-            when {
-                row[MediaAssets.ownerUserId] == trainerId -> Lookup.Allowed(row)
-                relationshipId == null -> Lookup.Missing
-                TrainerClients.selectAll().where { (TrainerClients.id eq relationshipId) and (TrainerClients.trainerId eq trainerId) }.empty() -> Lookup.Missing
-                Access.hasScope(relationshipId, AccessScope.TECHNIQUE_VIDEOS) -> Lookup.Allowed(row)
-                else -> Lookup.Denied(relationshipId)
-            }
-        }
-        when (found) {
-            Lookup.Missing -> notFound("Media not found")
-            is Lookup.Denied -> {
-                audit.record(trainerId, "media.read", "media", mediaId, found.relationshipId, allowed = false)
-                denied("No access to this media")
-            }
-            is Lookup.Allowed -> {
-                val row = found.row
-                if (row[MediaAssets.ownerUserId] != trainerId) {
-                    audit.record(trainerId, "media.read", "media", mediaId, row[MediaAssets.relationshipId], allowed = true)
-                }
-                val state = RemoteMediaState.valueOf(row[MediaAssets.state])
-                return MediaStatusDto(
-                    mediaId = mediaId.toString(),
-                    state = state,
-                    playbackUrl = if (state == RemoteMediaState.READY) url(mediaId, play, 15.minutes) else null,
-                )
-            }
-        }
-    }
-
-    // ------------------------------------------------------------------ signed content endpoints
 
     /**
-     * Stores the uploaded bytes (outside any transaction), then runs the processing step. Too large: FAILED with
-     * TOO_LARGE. The declared size is the limit, so a client cannot exceed what it announced.
+     * tus `PATCH`: appends from [offset], which must equal the stored size (`409` otherwise, so the client asks for the
+     * offset again). When the file is complete it moves to PROCESSING and the worker checks it.
      */
-    suspend fun receiveUpload(mediaIdText: String, token: String?, input: InputStream) {
-        val mediaId = mediaIdText.toUuid("mediaId")
-        verify(mediaId, upload, token)
-        val row = db.tx { MediaAssets.selectAll().where { MediaAssets.id eq mediaId }.singleOrNull() } ?: notFound("Media not found")
-        if (row[MediaAssets.state] != RemoteMediaState.UPLOADING.name) conflict("Upload already received")
+    suspend fun appendChunk(user: CurrentUser, id: Uuid, offset: Long, body: InputStream): Long {
+        val row = db.tx { owned(user, id) }
+        if (row[MediaAssets.state] != MediaState.UPLOADING) throw conflict(message = "upload already complete")
         val key = row[MediaAssets.storageKey]
-        val written = try {
-            withContext(Dispatchers.IO) { storage.write(key, input, row[MediaAssets.sizeBytes]) }
-        } catch (e: TooLargeException) {
-            fail(mediaId, "TOO_LARGE")
-            invalid("File too large")
+        val size = row[MediaAssets.sizeBytes]
+        val current = storage.size(key) ?: 0L
+        if (offset != current) throw ApiException(409, ErrorCode.CONFLICT, "offset mismatch")
+        val newSize = try {
+            storage.append(key, offset, body, size)
+        } catch (e: IllegalArgumentException) {
+            throw invalid("sizeBytes")
+        } catch (e: IllegalStateException) {
+            throw ApiException(409, ErrorCode.CONFLICT, "offset mismatch")
         }
-        if (written == 0L) {
-            fail(mediaId, "MISSING_OBJECT")
-            invalid("Empty upload")
-        }
-        val claimed = db.tx {
-            MediaAssets.update({ (MediaAssets.id eq mediaId) and (MediaAssets.state eq RemoteMediaState.UPLOADING.name) }) {
-                it[state] = RemoteMediaState.PROCESSING.name
-                it[sizeBytes] = written
-            }
-        }
-        if (claimed == 0) conflict("Upload already received")
-        val result = withContext(Dispatchers.IO) { processor.process(key, row[MediaAssets.contentType], written) }
-        when (result) {
-            is ProcessingResult.Failed -> fail(mediaId, result.reason)
-            is ProcessingResult.Ready -> db.tx {
-                MediaAssets.update({ (MediaAssets.id eq mediaId) and (MediaAssets.state eq RemoteMediaState.PROCESSING.name) }) {
-                    it[state] = RemoteMediaState.READY.name
-                    it[readyAt] = clock.now().toOffset()
-                    it[durationMs] = result.durationMs
-                    it[width] = result.width
-                    it[height] = result.height
+        if (newSize == size) {
+            db.tx {
+                val changed = MediaAssets.update({ (MediaAssets.id eq id) and (MediaAssets.state eq MediaState.UPLOADING) }) { it[state] = MediaState.PROCESSING }
+                if (changed > 0) {
+                    schedule(JobQueue.MEDIA_PROCESS, "media-process:$id", dbNow(), mapOf("mediaId" to id))
+                    emit("media", id, "media.processing", mapOf("ownerId" to user.id, "relationshipId" to row[MediaAssets.relationshipId]))
                 }
             }
         }
+        return newSize
     }
 
-    private suspend fun fail(mediaId: UUID, reason: String) = db.tx {
-        MediaAssets.update({ (MediaAssets.id eq mediaId) and (MediaAssets.state inList listOf("UPLOADING", "PROCESSING")) }) {
-            it[state] = RemoteMediaState.FAILED.name
-            it[failureReason] = reason
+    /** Owner or the other party of the relationship; demo videos for any signed-in user. READY → signed link. */
+    suspend fun status(user: CurrentUser, id: Uuid): MediaStatusDto = db.tx {
+        val row = MediaAssets.selectAll().where { (MediaAssets.id eq id) and MediaAssets.deletedAt.isNull() }.singleOrNull() ?: throw notFound("media")
+        val allowed = row[MediaAssets.ownerUserId] == user.id || row[MediaAssets.kind] == "EXERCISE_DEMO" ||
+            row[MediaAssets.relationshipId]?.let { relId -> with(identity) { relationship(relId) }?.let { it.clientId == user.id || it.trainerId == user.id } } == true
+        if (!allowed) throw notFound("media", DeniedSubject("media", id, row[MediaAssets.relationshipId]))
+        val state = RemoteMediaState.valueOf(row[MediaAssets.state])
+        MediaStatusDto(id.toString(), state, playbackUrl = if (state == RemoteMediaState.READY) signedUrl(id, dbNow().epochSeconds + config.playbackTtlSeconds) else null)
+    }
+
+    /** Resolves a signed playback link (no token: the player fetches it directly). Null when invalid or expired. */
+    suspend fun playbackFile(id: Uuid, expires: Long, signature: String): Pair<File, String>? {
+        if (expires < System.currentTimeMillis() / 1000 || !java.security.MessageDigest.isEqual(sign(id, expires).encodeToByteArray(), signature.encodeToByteArray())) return null
+        val row = db.tx { MediaAssets.selectAll().where { (MediaAssets.id eq id) and (MediaAssets.state eq MediaState.READY) and MediaAssets.deletedAt.isNull() }.singleOrNull() }
+            ?: return null
+        return storage.file(row[MediaAssets.storageKey])?.let { it to row[MediaAssets.contentType] }
+    }
+
+    // ----- Worker -----
+
+    /** Checks a complete upload: object present with the declared size, video container, ≤ 60 s for MP4. */
+    suspend fun process(id: Uuid) {
+        val row = db.tx { MediaAssets.selectAll().where { MediaAssets.id eq id }.singleOrNull() } ?: return
+        if (row[MediaAssets.state] != MediaState.PROCESSING) return
+        val key = row[MediaAssets.storageKey]
+        val file = storage.file(key)
+        var duration: Long? = null
+        val failure = when {
+            file == null || file.length() != row[MediaAssets.sizeBytes] -> "MISSING_OBJECT"
+            row[MediaAssets.contentType] !in VIDEO_TYPES -> "UNSUPPORTED_TYPE"
+            row[MediaAssets.contentType] != "video/webm" -> {
+                duration = runCatching { Mp4Duration.durationMs(file) }.getOrNull()
+                when {
+                    duration == null -> "UNSUPPORTED_TYPE"
+                    duration > MediaLimits.maxDurationMs(MediaKind.valueOf(row[MediaAssets.kind])) -> "TOO_LONG"
+                    else -> null
+                }
+            }
+            else -> null
+        }
+        db.tx {
+            val now = dbNow()
+            MediaAssets.update({ (MediaAssets.id eq id) and (MediaAssets.state eq MediaState.PROCESSING) }) {
+                if (failure == null) {
+                    it[state] = MediaState.READY
+                    it[readyAt] = now.toOffset()
+                    it[durationMs] = duration
+                } else {
+                    it[state] = MediaState.FAILED
+                    it[failureReason] = failure
+                }
+            }
+            emit("media", id, if (failure == null) "media.ready" else "media.failed", mapOf("ownerId" to row[MediaAssets.ownerUserId], "relationshipId" to row[MediaAssets.relationshipId]))
         }
     }
 
-    /** The bytes of a READY file for a valid "play" link. The caller closes the stream. */
-    suspend fun openContent(mediaIdText: String, token: String?): MediaContent {
-        val mediaId = mediaIdText.toUuid("mediaId")
-        verify(mediaId, play, token)
-        val row = db.tx {
-            MediaAssets.selectAll()
-                .where { (MediaAssets.id eq mediaId) and (MediaAssets.state eq RemoteMediaState.READY.name) and MediaAssets.deletedAt.isNull() }
-                .singleOrNull()
-        } ?: notFound("Media not found")
-        val stream = withContext(Dispatchers.IO) { storage.read(row[MediaAssets.storageKey]) } ?: notFound("Media not found")
-        return MediaContent(row[MediaAssets.contentType], row[MediaAssets.sizeBytes], stream)
+    /** Uploads abandoned for 24 h fail; technique videos past `retain_until` are deleted from storage. */
+    suspend fun maintenance() {
+        val expired = db.tx {
+            val now = dbNow()
+            MediaAssets.update({ (MediaAssets.state eq MediaState.UPLOADING) and (MediaAssets.createdAt less (now - STALE_UPLOAD).toOffset()) }) {
+                it[state] = MediaState.FAILED
+                it[failureReason] = "MISSING_OBJECT"
+            }
+            MediaAssets.selectAll().where {
+                MediaAssets.deletedAt.isNull() and MediaAssets.retainUntil.isNotNull() and (MediaAssets.retainUntil less now.toOffset())
+            }.limit(100).map { it[MediaAssets.id] to it[MediaAssets.storageKey] }
+        }
+        for ((id, key) in expired) {
+            storage.delete(key)
+            db.tx { MediaAssets.update({ MediaAssets.id eq id }) { it[deletedAt] = dbNow().toOffset() } }
+        }
+    }
+
+    // ----- Internals -----
+
+    private fun org.jetbrains.exposed.v1.jdbc.JdbcTransaction.owned(user: CurrentUser, id: Uuid): ResultRow {
+        val row = MediaAssets.selectAll().where { MediaAssets.id eq id }.singleOrNull() ?: throw notFound("media")
+        if (row[MediaAssets.ownerUserId] != user.id) throw notFound("media", DeniedSubject("media", id, row[MediaAssets.relationshipId]))
+        return row
+    }
+
+    private fun uploadSession(row: ResultRow): UploadSessionDto {
+        val id = row[MediaAssets.id]
+        return UploadSessionDto(
+            mediaId = id.toString(),
+            uploadUrl = "${config.publicBaseUrl}/v1/media/uploads/$id",
+            offset = storage.size(row[MediaAssets.storageKey]) ?: 0L,
+            sizeBytes = row[MediaAssets.sizeBytes],
+            state = RemoteMediaState.valueOf(row[MediaAssets.state]),
+        )
+    }
+
+    private fun signedUrl(id: Uuid, expires: Long) = "${config.publicBaseUrl}/v1/media/$id/content?exp=$expires&sig=${sign(id, expires)}"
+
+    private fun sign(id: Uuid, expires: Long): String {
+        val mac = Mac.getInstance("HmacSHA256")
+        mac.init(SecretKeySpec(config.signingKey.encodeToByteArray(), "HmacSHA256"))
+        return mac.doFinal("$id:$expires".encodeToByteArray()).joinToString("") { "%02x".format(it) }
     }
 }

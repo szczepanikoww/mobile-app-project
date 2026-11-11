@@ -71,8 +71,8 @@ class FinanceChatMediaTest {
         // A retry with the same operation id returns the same payment and records nothing new.
         val retry = trainer.post("$base/payments/cash") { setBody(request) }.body<PaymentDto>()
         assertEquals(payment.id, retry.id)
-        assertEquals(1L, TestDatabase.count("SELECT count(*) FROM billing.payment WHERE operation_id = '$operationId'"))
-        assertEquals(1L, TestDatabase.count("SELECT count(*) FROM billing.allocation WHERE payment_id = '${payment.id}'"))
+        assertEquals(1L, TrainerTestDatabase.count("SELECT count(*) FROM billing.payment WHERE operation_id = '$operationId'"))
+        assertEquals(1L, TrainerTestDatabase.count("SELECT count(*) FROM billing.allocation WHERE payment_id = '${payment.id}'"))
 
         val summary = trainer.get("$base/finance?period=MONTH").body<FinanceSummaryDto>()
         assertEquals(FinancePeriod.MONTH, summary.period)
@@ -91,7 +91,7 @@ class FinanceChatMediaTest {
         assertEquals(HttpStatusCode.UnprocessableEntity, euro.status)
         val foreign = signedIn("demo-other-trainer").post("$base/payments/cash") { setBody(RecordCashPaymentRequest(Seed.REL_1, Money.pln(10), uuid())) }
         assertEquals(HttpStatusCode.NotFound, foreign.status)
-        assertEquals(0L, TestDatabase.count("SELECT count(*) FROM billing.payment"))
+        assertEquals(0L, TrainerTestDatabase.count("SELECT count(*) FROM billing.payment"))
         assertEquals(HttpStatusCode.UnprocessableEntity, trainer.get("$base/finance?period=DECADE").status)
     }
 
@@ -122,7 +122,7 @@ class FinanceChatMediaTest {
 
         val resend = trainer.post(path) { setBody(SendMessageRequest(firstId, "Cześć, do zobaczenia jutro")) }.body<MessageDto>()
         assertEquals(1L, resend.seq)
-        assertEquals(1L, TestDatabase.count("SELECT count(*) FROM messaging.message WHERE id = '$firstId'"))
+        assertEquals(1L, TrainerTestDatabase.count("SELECT count(*) FROM messaging.message WHERE id = '$firstId'"))
 
         val second = trainer.post(path) { setBody(SendMessageRequest(uuid(), "Weź ręcznik")) }.body<MessageDto>()
         assertEquals(2L, second.seq)
@@ -228,7 +228,7 @@ class FinanceChatMediaTest {
         }
         assertEquals(HttpStatusCode.Forbidden, response.status)
         assertEquals("DENIED", response.body<ApiError>().code)
-        assertEquals(0L, TestDatabase.count("SELECT count(*) FROM media.media_asset WHERE id = '$mediaId'"))
+        assertEquals(0L, TrainerTestDatabase.count("SELECT count(*) FROM media.media_asset WHERE id = '$mediaId'"))
         val badType = trainer.post("$base/media/upload-sessions") {
             setBody(CreateUploadSessionRequest(uuid(), MediaKind.EXERCISE_DEMO, 100, "text/plain"))
         }

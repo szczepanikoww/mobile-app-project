@@ -1,17 +1,21 @@
 # Trainer backend (`:server`)
 
-Status: implemented on branch `trainer-backend`, 2026-11-11. Every trainer screen of the app can use it (§8) except notifications; the client views still use demo data. Follows [initial-architecture.md](../initial-architecture.md) §5–§11 and [database-design.md](../database-design.md).
+Status: implemented on branch `trainer-backend`, 2026-11-11, and merged with the client/guest backend into one server. Every trainer screen of the app can use it (§8) except notifications; the client views still use demo data. Follows [initial-architecture.md](../initial-architecture.md) §5–§11 and [database-design.md](../database-design.md).
 
 ## 1. Run locally
+
+**One server, two APIs.** A single process (`:server:run`, port 8080) serves the client/guest API under `/v1/...` (+ `GET /health`) and the trainer API under `/api/v1/...`. The database and the client API are configured by `ServerConfig` (`TRAINER_PROFILE`, `DB_URL`, `DB_APP_USER`/`DB_APP_PASSWORD`, `DB_OWNER_USER`/`DB_OWNER_PASSWORD`, `AUTH_MODE`, ...; see [server/README.md](../../server/README.md)). The trainer API reads its own `AppConfig` only for the values in §2.
 
 Requirements: JDK 17 (not only a JRE) and Docker Desktop.
 
 ```sh
-docker compose up -d                      # PostgreSQL 16 on localhost:5432 (db/user trainer, password trainer-dev)
-./gradlew -Ptrainer.ui=false :server:run  # http://localhost:8080
+docker compose -f server/docker-compose.yml up -d   # PostgreSQL 16 on localhost:5432, db trainer, roles trainer_owner (Flyway) and trainer_app (API)
+./gradlew -Ptrainer.ui=false :server:run             # http://localhost:8080
 ```
 
-On start the server runs the Flyway migrations (history table `public.flyway_schema_history`, because V1 creates the module schemas itself) (`V1` = `docs/database/schema-draft.sql`, `V2` = client information), loads the synthetic demo seed (`db/dev/R__demo_seed.sql`, only while `AUTH_MODE=dev`) and imports the global exercise library once.
+Reset the database with `docker compose -f server/docker-compose.yml down -v`. The old root `docker-compose.yml` no longer exists.
+
+On start the server runs the Flyway migrations (history table `public.flyway_schema_history`, because V1 creates the module schemas itself): `V1` initial schema (`docs/database/schema-draft.sql`), `V2__catalogue_public_fields` (client API), `V3__client_information`, and the repeatable `R__grants`. When the database has no users it seeds the demo data with the Kotlin `DemoSeed`, and it imports the global exercise library if it is incomplete. The SQL demo seed `server/src/test/resources/db/dev/R__demo_seed.sql` is used only by the trainer API tests.
 
 Sign in as a demo account and call the API:
 
@@ -20,9 +24,9 @@ curl -s -X POST localhost:8080/api/v1/dev/token -H 'Content-Type: application/js
 curl -s localhost:8080/api/v1/trainer/dashboard -H "Authorization: Bearer <token>"
 ```
 
-Demo subjects: `demo-trainer`, `demo-client-1`, `demo-client-2`, `demo-trainer-client` (both roles), `demo-other-trainer` (no relationship with the others). All are fictional.
+Demo subjects (`DemoSeed`): `demo-trainer` (Michał Kowalczyk, also holds the client role), `demo-client` (Katarzyna Nowak), `demo-trainer-only`, and the public trainers `tr-*`. All are fictional. The client API accepts `Authorization: Bearer dev.<subject>`; the trainer API needs the JWT from `/api/v1/dev/token`. In the app, log in with `trener@example.com` (any password of at least 8 characters): it maps to `demo-trainer`.
 
-Tests (Testcontainers starts its own PostgreSQL, Docker must be running):
+Tests run both suites (the client/guest tests use embedded PostgreSQL; the trainer API tests use Testcontainers, so Docker must be running):
 
 ```sh
 ./gradlew -Ptrainer.ui=false :server:test
@@ -33,15 +37,14 @@ Tests (Testcontainers starts its own PostgreSQL, Docker must be running):
 | Variable | Default (local only) | Purpose |
 |---|---|---|
 | `PORT` | 8080 | HTTP port |
-| `DB_URL` / `DB_USER` / `DB_PASSWORD` | local docker compose | PostgreSQL (RDS on AWS) |
-| `AUTH_MODE` | `dev` | `dev`: the server issues demo tokens. Anything else disables `/dev/token` and the seed. |
+| `DB_URL`, `DB_APP_USER`, `DB_OWNER_USER`, ... | local docker compose | PostgreSQL (RDS on AWS); read by `ServerConfig`, shared with the client API |
+| `AUTH_MODE` | `dev` | `dev`: the server issues demo tokens. Anything else disables `/dev/token`. (`ServerConfig`) |
 | `JWT_SECRET` / `JWT_ISSUER` / `JWT_AUDIENCE` | dev values | Token verification; also signs media links |
 | `DATA_KEY_ID` / `DATA_KEY` | dev key | AES-256 key (base64, 32 bytes) for private columns |
-| `DEV_SEED` | true in dev mode | Synthetic demo data |
 | `MEDIA_DIR` / `PUBLIC_BASE_URL` | `build/media` / `http://localhost:8080` | Local media storage and link base |
 | `RUN_WORKER` | true | Request expiry and outbox publishing |
 
-Moving to AWS changes only these values (RDS URL, secrets from Secrets Manager, S3 storage implementation, IdP verifier). Production must set every secret.
+The trainer API's own `DB_USER`, `DB_PASSWORD` and `DEV_SEED` are no longer used at runtime. Moving to AWS changes only these values (RDS URL, secrets from Secrets Manager, S3 storage implementation, IdP verifier). Production must set every secret.
 
 ## 3. Structure
 
@@ -103,7 +106,7 @@ Conventions: a "client id" is the trainer–client **relationship id** (as in th
 ## 7. Not done yet
 
 - Trainer notifications in the app stay on demo data (no table in the schema).
-- Client-side endpoints (booking requests, client cancellation with quotes, wallet, workout sync) — the client backend.
+- Wiring the client views to the server's `/v1` client API (booking requests, client cancellation with quotes, wallet, workout sync).
 - Real identity provider, Stripe test mode, invoices, push notifications (FCM), WebSocket chat, S3 storage and video processing (the local processor marks uploads READY at once), HTTP range requests for video seeking.
 - Trainer notifications list (no table in the schema), payouts, iCal feed.
 
@@ -112,16 +115,16 @@ Conventions: a "client id" is the trainer–client **relationship id** (as in th
 The app talks to the server only when it is given an address; without one it keeps the in-memory demo data, so nobody needs a running backend.
 
 ```sh
-docker compose up -d && ./gradlew -Ptrainer.ui=false :server:run          # server on :8080
-./gradlew :androidApp:installDebug -Ptrainer.apiUrl=http://10.0.2.2:8080   # emulator (10.0.2.2 = the computer)
-./gradlew :desktopApp:run -Ptrainer.apiUrl=http://localhost:8080           # desktop
+docker compose -f server/docker-compose.yml up -d && ./gradlew -Ptrainer.ui=false :server:run   # server on :8080
+./gradlew :androidApp:installDebug -Ptrainer.backend=local   # emulator reaches the computer at 10.0.2.2:8080
+./gradlew :desktopApp:run -Ptrainer.backend=local            # desktop, localhost:8080
 ```
 
-- `AppPlatform.trainerApiUrl` carries the address (Android `BuildConfig.TRAINER_API_URL`, desktop `-Dtrainer.apiUrl` or `TRAINER_API_URL`). Debug Android builds allow plain HTTP only to `10.0.2.2`, `localhost` and `127.0.0.1`; release builds require HTTPS.
+- One switch, `-Ptrainer.backend=local` (or a full `http(s)://` URL; default `demo`), connects the guest/client and trainer sources. `AppPlatform.trainerApiUrl` derives from `backend.baseUrl`; the former `-Ptrainer.apiUrl` / `TRAINER_API_URL` app switch is gone. Debug Android builds allow plain HTTP only to `10.0.2.2`, `localhost` and `127.0.0.1`; release builds require HTTPS.
 - `pl.trainer.data.remote` (in `:shared`): `TrainerApiClient` (Ktor; a dev token for the signed-in trainer, `demo-trainer` by default, renewed once on 401), mappers from `:contract` DTOs to the app models, `RemoteTrainerRepository` and `RemotePolicyRepository`. Server errors map to the app's `Failure` values (409 → `Conflict`, `QUOTE_EXPIRED` → `QuoteExpired`, 422 → `InvalidInput`, 401/403 → `Denied`, no connection → `Offline`).
 - The calendar opens on the server's date (`TrainerDashboard.today`) instead of the fixed demo date.
 - Client information is read-only for the trainer when connected (TB1): the edit button is hidden and saving is refused.
 - Also on the server when connected: home (`RemoteTrainerHomeRepository`), finance, profile with availability and the hourly rate (changing the rate creates a new single-session offer and archives the old one), chat (`RemoteTrainerChatsRepository`), plan publishing, exercise edits and exercise demo video uploads (`com.trainingapp.app.remote`). Each keeps its last successful answer in memory and shows it as offline when the server is unreachable.
 - Known gaps: profile settings, phone, location and payout figures have no endpoint and stay in memory; finance has no payout or goal data; home shows unread messages as a total only; a client's technique video still goes through the demo media source (the trainer API accepts exercise demo videos only), so in connected mode a video recorded in the client view does not reach the trainer's chat.
-- The client views stay on the demo server; policies of other trainers fall back to it.
-- Tests: `RemoteTrainerRepositoryTest`, `RemoteFeatureRepositoriesTest`, `RemoteTrainerChatsRepositoryTest`, `RemoteTrainingSourcesTest` (scripted server, run always) and `LiveTrainerApiTest` (only with `TRAINER_API_URL` set; it rejects the seeded booking request, so use a development database).
+- The client views still use the in-app demo sources (the server's `/v1` client API exists but is not wired to them yet, except the public catalogue); policies of other trainers fall back to the demo source.
+- Tests: `RemoteTrainerRepositoryTest`, `RemoteFeatureRepositoriesTest`, `RemoteTrainerChatsRepositoryTest`, `RemoteTrainingSourcesTest` (scripted server, run always) and `LiveTrainerApiTest` (only with env `TRAINER_API_URL=http://localhost:8080` set; it rejects the seeded booking request, so use a development database).

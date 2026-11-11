@@ -1,5 +1,11 @@
 package com.trainingapp.server.messaging
 
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.neq
+import org.jetbrains.exposed.v1.core.greater
+import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.between
 import com.trainingapp.contract.api.ConversationDto
 import com.trainingapp.contract.api.MarkReadRequest
 import com.trainingapp.contract.api.MessageDto
@@ -16,25 +22,25 @@ import com.trainingapp.server.db.SetLogs
 import com.trainingapp.server.db.TrainerClients
 import com.trainingapp.server.db.WorkoutLogs
 import com.trainingapp.server.platform.Db
-import com.trainingapp.server.platform.Outbox
+import com.trainingapp.server.platform.TrainerOutbox
 import com.trainingapp.server.platform.ServerClock
 import com.trainingapp.server.platform.conflict
 import com.trainingapp.server.platform.invalid
 import com.trainingapp.server.platform.toInstantK
 import com.trainingapp.server.platform.toOffset
 import com.trainingapp.server.platform.toUuid
-import org.jetbrains.exposed.sql.Op
-import org.jetbrains.exposed.sql.JoinType
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.SortOrder
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.insertIgnore
-import org.jetbrains.exposed.sql.or
-import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.update
+import org.jetbrains.exposed.v1.core.Op
+import org.jetbrains.exposed.v1.core.JoinType
+import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.insertIgnore
+import org.jetbrains.exposed.v1.core.or
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
 import java.util.UUID
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.plus
+import org.jetbrains.exposed.v1.core.plus
 
 /**
  * One-to-one chat between the trainer and each client. Ids named `clientId` are relationship ids. Message text is
@@ -145,7 +151,7 @@ class TrainerChat(private val db: Db, private val clock: ServerClock) {
                 it[mediaId] = media
             }
         }
-        Outbox.emit("message.sent", "message", messageId, mapOf("relationshipId" to relationshipId), now)
+        TrainerOutbox.emit("message.sent", "message", messageId, mapOf("relationshipId" to relationshipId), now)
         toDto(Messages.selectAll().where { Messages.id eq messageId }.toList(), trainerId).first()
     }
 

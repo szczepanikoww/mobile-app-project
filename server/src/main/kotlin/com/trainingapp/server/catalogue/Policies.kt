@@ -1,5 +1,7 @@
 package com.trainingapp.server.catalogue
 
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.or
 import com.trainingapp.contract.api.CashFeeMode
 import com.trainingapp.contract.api.ClientPolicyMode
 import com.trainingapp.contract.api.ClientPolicyOverrideDto
@@ -21,10 +23,10 @@ import com.trainingapp.server.platform.newId
 import com.trainingapp.server.platform.notFound
 import com.trainingapp.server.platform.toInstantK
 import com.trainingapp.server.platform.toOffset
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.SortOrder
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import java.util.UUID
 import kotlin.time.Instant
 

@@ -1,5 +1,9 @@
 package com.trainingapp.server.scheduling
 
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.or
 import com.trainingapp.contract.api.AcceptRequest
 import com.trainingapp.contract.api.CheckInDto
 import com.trainingapp.contract.api.ChargeKind
@@ -33,7 +37,7 @@ import com.trainingapp.server.db.Sessions
 import com.trainingapp.server.db.TrainerClients
 import com.trainingapp.server.db.TrainerProfiles
 import com.trainingapp.server.platform.Db
-import com.trainingapp.server.platform.Outbox
+import com.trainingapp.server.platform.TrainerOutbox
 import com.trainingapp.server.platform.ServerClock
 import com.trainingapp.server.platform.conflict
 import com.trainingapp.server.platform.invalid
@@ -42,12 +46,12 @@ import com.trainingapp.server.platform.notFound
 import com.trainingapp.server.platform.toInstantK
 import com.trainingapp.server.platform.toOffset
 import com.trainingapp.server.platform.toUuid
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.SortOrder
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.update
+import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
 import java.util.UUID
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
@@ -168,7 +172,7 @@ class TrainerSessions(private val db: Db, private val clock: ServerClock) {
         }
         if (request.paymentKind == PaymentKind.PACKAGE) Ledger.reserveCredit(relationshipId, id, now)
         event(id, 1, "CONFIRMED", trainerId, now)
-        Outbox.emit("session.confirmed", "session", id, mapOf("relationshipId" to relationshipId), now)
+        TrainerOutbox.emit("session.confirmed", "session", id, mapOf("relationshipId" to relationshipId), now)
         SessionResultDto(SessionReads.session(id)!!, now)
     }
 
@@ -198,7 +202,7 @@ class TrainerSessions(private val db: Db, private val clock: ServerClock) {
                 }
                 if (row[Sessions.paymentKind] == PaymentKind.PACKAGE.name) Ledger.reserveCredit(row[Sessions.relationshipId], sessionId, now)
                 event(sessionId, revision, "CONFIRMED", trainerId, now)
-                Outbox.emit("session.confirmed", "session", sessionId, mapOf("relationshipId" to row[Sessions.relationshipId]), now)
+                TrainerOutbox.emit("session.confirmed", "session", sessionId, mapOf("relationshipId" to row[Sessions.relationshipId]), now)
             }
             open != null && open[RescheduleRequests.proposerRole] == ProposerRole.CLIENT.name &&
                 open[RescheduleRequests.status] == RescheduleStatus.PENDING.name -> {
@@ -229,7 +233,7 @@ class TrainerSessions(private val db: Db, private val clock: ServerClock) {
                 } else if (request.waiver != null) {
                     invalid("This reschedule has no fee to waive")
                 }
-                Outbox.emit("session.moved", "session", sessionId, mapOf("relationshipId" to row[Sessions.relationshipId]), now)
+                TrainerOutbox.emit("session.moved", "session", sessionId, mapOf("relationshipId" to row[Sessions.relationshipId]), now)
                 revision
             }
             else -> conflict("Nothing to accept")
@@ -253,12 +257,12 @@ class TrainerSessions(private val db: Db, private val clock: ServerClock) {
                 }
                 closeOpenReschedule(sessionId, RescheduleStatus.WITHDRAWN, trainerId, now)
                 event(sessionId, revision, "REJECTED", trainerId, now)
-                Outbox.emit("session.rejected", "session", sessionId, mapOf("relationshipId" to row[Sessions.relationshipId]), now)
+                TrainerOutbox.emit("session.rejected", "session", sessionId, mapOf("relationshipId" to row[Sessions.relationshipId]), now)
             }
             open != null && open[RescheduleRequests.proposerRole] == ProposerRole.CLIENT.name &&
                 open[RescheduleRequests.status] == RescheduleStatus.PENDING.name -> {
                 closeOpenReschedule(sessionId, RescheduleStatus.REJECTED, trainerId, now)
-                Outbox.emit("reschedule.rejected", "session", sessionId, mapOf("relationshipId" to row[Sessions.relationshipId]), now)
+                TrainerOutbox.emit("reschedule.rejected", "session", sessionId, mapOf("relationshipId" to row[Sessions.relationshipId]), now)
             }
             open != null && open[RescheduleRequests.proposerRole] == ProposerRole.TRAINER.name -> {
                 // The trainer withdraws their own proposal.
@@ -310,7 +314,7 @@ class TrainerSessions(private val db: Db, private val clock: ServerClock) {
                 it[RescheduleRequests.operationId] = operationId
             }
         }
-        Outbox.emit("reschedule.proposed", "session", sessionId, mapOf("relationshipId" to row[Sessions.relationshipId]), now)
+        TrainerOutbox.emit("reschedule.proposed", "session", sessionId, mapOf("relationshipId" to row[Sessions.relationshipId]), now)
         SessionResultDto(SessionReads.session(sessionId)!!, now)
     }
 
@@ -342,7 +346,7 @@ class TrainerSessions(private val db: Db, private val clock: ServerClock) {
             if (row[Sessions.paymentKind] == PaymentKind.PACKAGE.name) Ledger.releaseCredit(sessionId, now)
             Ledger.refundSession(sessionId, now)
             event(sessionId, revision, "CANCELLED", trainerId, now)
-            Outbox.emit("session.cancelled", "session", sessionId, mapOf("relationshipId" to row[Sessions.relationshipId]), now)
+            TrainerOutbox.emit("session.cancelled", "session", sessionId, mapOf("relationshipId" to row[Sessions.relationshipId]), now)
             SessionResultDto(SessionReads.session(sessionId)!!, now)
         }
     }
@@ -379,7 +383,7 @@ class TrainerSessions(private val db: Db, private val clock: ServerClock) {
             }
         }
         event(sessionId, revision, "CHECKED_IN", trainerId, now)
-        Outbox.emit("session.completed", "session", sessionId, mapOf("relationshipId" to relationshipId), now)
+        TrainerOutbox.emit("session.completed", "session", sessionId, mapOf("relationshipId" to relationshipId), now)
         SessionResultDto(SessionReads.session(sessionId)!!, now)
     }
 
@@ -420,7 +424,7 @@ class TrainerSessions(private val db: Db, private val clock: ServerClock) {
             Ledger.consumeCredit(sessionId, units, now)
         }
         event(sessionId, revision, "NO_SHOW", trainerId, now)
-        Outbox.emit("session.no_show", "session", sessionId, mapOf("relationshipId" to relationshipId), now)
+        TrainerOutbox.emit("session.no_show", "session", sessionId, mapOf("relationshipId" to relationshipId), now)
         SessionResultDto(SessionReads.session(sessionId)!!, now)
     }
 

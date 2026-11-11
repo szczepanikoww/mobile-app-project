@@ -1,5 +1,6 @@
 package com.trainingapp.server.scheduling
 
+import org.jetbrains.exposed.v1.core.isNull
 import com.trainingapp.contract.api.AvailabilityDto
 import com.trainingapp.contract.api.AvailabilityRuleDto
 import com.trainingapp.contract.api.CalendarBlockDto
@@ -20,13 +21,13 @@ import com.trainingapp.server.platform.notFound
 import com.trainingapp.server.platform.toInstantK
 import com.trainingapp.server.platform.toOffset
 import com.trainingapp.server.platform.toUuid
-import org.jetbrains.exposed.sql.SortOrder
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.update
+import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -59,7 +60,7 @@ class TrainerCalendar(private val db: Db, private val clock: ServerClock) {
 
     /** The newest non-deleted note per relationship, written by this trainer (notes are visible to the author only). */
     private fun latestNotes(trainerId: UUID): Map<String, String> =
-        CoachingNotes.join(TrainerClients, org.jetbrains.exposed.sql.JoinType.INNER, CoachingNotes.relationshipId, TrainerClients.id)
+        CoachingNotes.join(TrainerClients, org.jetbrains.exposed.v1.core.JoinType.INNER, CoachingNotes.relationshipId, TrainerClients.id)
             .selectAll()
             .where { (TrainerClients.trainerId eq trainerId) and (CoachingNotes.authorId eq trainerId) and CoachingNotes.deletedAt.isNull() }
             .orderBy(CoachingNotes.updatedAt, SortOrder.DESC)

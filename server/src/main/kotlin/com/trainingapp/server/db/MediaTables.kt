@@ -1,13 +1,14 @@
 package com.trainingapp.server.db
 
 import com.trainingapp.server.platform.tstz
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.v1.core.Table
+import org.jetbrains.exposed.v1.core.java.javaUUID
 
 /** One pipeline for demo videos, technique videos, chat attachments and exercise images. */
 object MediaAssets : Table("media.media_asset") {
-    val id = uuid("id")
-    val ownerUserId = uuid("owner_user_id")
-    val relationshipId = uuid("relationship_id").nullable()
+    val id = javaUUID("id")
+    val ownerUserId = javaUUID("owner_user_id")
+    val relationshipId = javaUUID("relationship_id").nullable()
     val kind = text("kind")
     val state = text("state")
     val contentType = text("content_type")

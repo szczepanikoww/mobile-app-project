@@ -51,7 +51,7 @@ class TestClock(var current: Instant = Clock.System.now().toMicros()) : ServerCl
 }
 
 /** One PostgreSQL 16 container for the test run; each test gets freshly migrated and seeded schemas. */
-object TestDatabase {
+object TrainerTestDatabase {
     private val container: PostgreSQLContainer by lazy {
         PostgreSQLContainer("postgres:16-alpine").also { it.start() }
     }
@@ -109,7 +109,7 @@ fun testConfig() = AppConfig(
     runWorker = false,
 )
 
-class ApiTest(val services: Services, val clock: TestClock, private val builder: ApplicationTestBuilder) {
+class TrainerApiTest(val services: TrainerServices, val clock: TestClock, private val builder: ApplicationTestBuilder) {
     fun client(): HttpClient = builder.createClient {
         install(ContentNegotiation) { json(ApiJson) }
         defaultRequest { contentType(ContentType.Application.Json) }
@@ -128,14 +128,14 @@ class ApiTest(val services: Services, val clock: TestClock, private val builder:
     }
 }
 
-fun apiTest(block: suspend ApiTest.() -> Unit) {
-    val db = TestDatabase.fresh()
+fun apiTest(block: suspend TrainerApiTest.() -> Unit) {
+    val db = TrainerTestDatabase.fresh()
     // The seed's confirmed session sits at "tomorrow 08:00"; free it so time-relative tests never collide with it.
-    TestDatabase.exec("UPDATE scheduling.session SET status = 'CANCELLED_BY_TRAINER', closed_at = now() WHERE id = '${Seed.CONFIRMED_SESSION}'")
+    TrainerTestDatabase.exec("UPDATE scheduling.session SET status = 'CANCELLED_BY_TRAINER', closed_at = now() WHERE id = '${Seed.CONFIRMED_SESSION}'")
     val clock = TestClock()
-    val services = Services(testConfig(), db, clock)
+    val services = TrainerServices(testConfig(), db, clock)
     testApplication {
-        application { module(services) }
-        ApiTest(services, clock, this).block()
+        application { trainerApiModule(services) }
+        TrainerApiTest(services, clock, this).block()
     }
 }
