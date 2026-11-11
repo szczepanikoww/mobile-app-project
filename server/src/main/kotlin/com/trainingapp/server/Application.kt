@@ -10,6 +10,9 @@ import com.trainingapp.server.platform.Db
 import com.trainingapp.server.platform.ServerClock
 import com.trainingapp.server.platform.installErrors
 import com.trainingapp.server.routes.commonRoutes
+import com.trainingapp.server.routes.mediaContentRoutes
+import com.trainingapp.server.training.ExerciseLibraryImport
+import kotlinx.coroutines.runBlocking
 import com.trainingapp.server.routes.trainerRoutes
 import com.trainingapp.server.scheduling.TrainerCalendar
 import com.trainingapp.server.scheduling.TrainerSessions
@@ -28,6 +31,8 @@ import org.slf4j.event.Level
 fun main() {
     val config = AppConfig.fromEnv()
     val services = Services.create(config, Db.connect(config), ServerClock.System)
+    // The global exercise library (free-exercise-db) is loaded once into an empty database.
+    runBlocking { ExerciseLibraryImport.importIfEmpty(services.db, services.clock) }
     embeddedServer(Netty, port = config.port, host = "0.0.0.0") { module(services) }.start(wait = true)
 }
 
@@ -61,6 +66,7 @@ fun Application.module(services: Services) {
     routing {
         commonRoutes(services)
         trainerRoutes(services)
+        mediaContentRoutes(services.db, services.clock, services.config)
     }
     if (services.config.runWorker) {
         val job = services.worker.start()

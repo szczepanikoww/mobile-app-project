@@ -133,7 +133,7 @@ class LocalMediaRepository(
         when (status.state) {
             RemoteMediaState.READY -> setState(row.id, MediaState.READY, 1f, status.playbackUrl)
             RemoteMediaState.FAILED -> setState(row.id, MediaState.FAILED, 0f, null)
-            RemoteMediaState.PROCESSING -> Unit
+            RemoteMediaState.UPLOADING, RemoteMediaState.PROCESSING -> Unit
         }
     }
 
