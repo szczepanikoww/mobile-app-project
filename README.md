@@ -65,10 +65,15 @@ The [shared design/integration decision](docs/design-standardization.md) records
 
 PR merge order: merge calendar/trainee PR #1 before workout PR #2. Workout-plan contains the calendar integration so the combined Android app has one host; its diff against main shrinks when #1 is merged. Both branches preserve main’s existing home, finance, chat, notification and profile screens. The Android `TrainingApplication` still initializes the workout repository/SQLite driver; video FileProvider and network permissions are retained.
 
+## Backend (trainer API)
+
+The Ktor server in `:server` serves the trainer API on PostgreSQL. Run it with `docker compose up -d` and `./gradlew -Ptrainer.ui=false :server:run`; test it with `./gradlew -Ptrainer.ui=false :server:test` (Docker required). The app is not connected to it yet. See [trainer backend](docs/features/trainer-backend.md).
+
 ## Modules
 
 | Module | Contents | Targets |
 |---|---|---|
+| `:server` | Ktor + Exposed + Flyway backend: trainer API, PostgreSQL schema, dev seed ([docs](docs/features/trainer-backend.md)). | JVM |
 | `:shared` | Canonical trainer theme/navigation and calendar/trainee feature. | Android, desktop |
 | `:contract` | DTOs and rules shared with the server: exercise and plan DTOs, enums, `PlanValidator`, `ExerciseValidator`, `SearchText`, `Money`, cancellation policy rules and `FeeCalculator`. | JVM (Android uses it too) |
 | `:shared:domain` | Models, plan-draft reducers, set-input parsing, search, use cases, locale formats. | JVM |
