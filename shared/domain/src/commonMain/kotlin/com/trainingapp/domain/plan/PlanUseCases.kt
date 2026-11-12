@@ -13,6 +13,17 @@ import kotlinx.coroutines.flow.first
 
 class GetPlanLibrary(private val repository: PlanRepository) {
     operator fun invoke(): Flow<List<PlanLibraryItem>> = repository.observeLibrary()
+
+    /** Best effort: failures leave the cached library as it is. */
+    suspend fun refresh() {
+        try {
+            repository.refresh()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // The cached library stays usable.
+        }
+    }
 }
 
 /** Opens the working copy for the editor. Nothing is written until the trainer changes something. */

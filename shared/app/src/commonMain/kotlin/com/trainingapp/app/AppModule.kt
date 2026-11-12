@@ -23,6 +23,10 @@ import com.trainingapp.app.remote.client.WorkoutSyncer
 import com.trainingapp.data.workout.LocalWorkoutSyncStore
 import kotlinx.datetime.TimeZone
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flatMapLatest
 import pl.trainer.data.remote.client.ClientApi
 import pl.trainer.data.remote.client.PublicPolicyRepository
 import pl.trainer.data.remote.client.RemoteClientScheduleRepository
@@ -330,7 +334,12 @@ fun remoteModule(backend: BackendConfig, io: CoroutineDispatcher = Dispatchers.D
         ApiClient(baseUrl, language = { get<AppLanguage>().current() }, token = { auth.value.session.value?.userId?.let { "dev.$it" } })
     }
     single<AuthRepository> {
-        RemoteAuthRepository(apiFor = { token -> ApiClient(baseUrl, language = { get<AppLanguage>().current() }, token = token) })
+        // The signed-in account survives an app restart (no token is stored: dev tokens derive from the subject).
+        val saved = kotlinx.coroutines.runBlocking { get<LocalWorkoutSyncStore>().kv(AppKv, SessionKey) }?.let(::decodeSession)
+        RemoteAuthRepository(
+            apiFor = { token -> ApiClient(baseUrl, language = { get<AppLanguage>().current() }, token = token) },
+            initialSession = saved,
+        )
     }
     single<GuestCatalogRepository> { RemoteGuestCatalogRepository(get()) }
 
@@ -386,8 +395,62 @@ fun remoteModule(backend: BackendConfig, io: CoroutineDispatcher = Dispatchers.D
 private val ClientUpdates = named("clientUpdates")
 
 /** Starts pushing the client's workout logs and measurements to the server (on reconnect and every few minutes). */
+private const val AppKv = "app"
+private const val SessionKey = "auth.session"
+
+/** Saves the signed-in account (subject, name, roles, active role) whenever it changes; nothing secret. */
+private fun startSessionPersistence(koin: org.koin.core.Koin) {
+    val auth = koin.get<AuthRepository>()
+    val store = koin.get<LocalWorkoutSyncStore>()
+    koin.get<CoroutineScope>(AppScope).launch {
+        auth.session.collect { store.putKv(AppKv, SessionKey, it?.let(::encodeSession).orEmpty()) }
+    }
+}
+
+private fun encodeSession(s: AuthSession): String =
+    listOf(s.userId, s.displayName, s.roles.joinToString(",") { it.name }, s.activeRole.name).joinToString("	")
+
+private fun decodeSession(value: String): AuthSession? = runCatching {
+    val (userId, name, roles, active) = value.split('	')
+    AuthSession(userId, name, roles.split(',').filter { it.isNotBlank() }.map { Role.valueOf(it) }.toSet(), Role.valueOf(active))
+}.getOrNull()
+
+/**
+ * The trainer's answers (confirmations, proposals, charges) reach the client's sessions and wallet without a push
+ * channel yet, so while a client is signed in and online the open screens reload quietly every few seconds.
+ */
+private fun startClientRefresh(koin: org.koin.core.Koin) {
+    val auth = koin.get<AuthRepository>()
+    val online = koin.get<NetworkMonitor>().isOnline
+    val updates = koin.get<MutableStateFlow<Long>>(ClientUpdates)
+    koin.get<CoroutineScope>(AppScope).launch {
+        while (true) {
+            kotlinx.coroutines.delay(15_000)
+            if (online.value && auth.session.value?.roles?.contains(Role.Client) == true) updates.value++
+        }
+    }
+}
+
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class, kotlinx.coroutines.FlowPreview::class)
 private fun startWorkoutSync(koin: org.koin.core.Koin) {
-    koin.get<WorkoutSyncer>().startPeriodicSync(koin.get<CoroutineScope>(AppScope), koin.get<NetworkMonitor>().isOnline)
+    val syncer = koin.get<WorkoutSyncer>()
+    val scope = koin.get<CoroutineScope>(AppScope)
+    val online = koin.get<NetworkMonitor>().isOnline
+    syncer.startPeriodicSync(scope, online)
+    // Also right after a client signs in and shortly after a workout is saved or changed, not only every few minutes.
+    val auth = koin.get<AuthRepository>()
+    val workouts = koin.get<WorkoutRepository>()
+    val client = koin.get<CurrentClient>()
+    scope.launch {
+        auth.session
+            .flatMapLatest { session ->
+                if (session == null || Role.Client !in session.roles) kotlinx.coroutines.flow.emptyFlow()
+                else workouts.observeHistory(client.clientId).map { logs -> logs.map { it.id to it.syncState } }
+            }
+            .distinctUntilChanged()
+            .debounce(1_500)
+            .collect { if (online.value) runCatching { syncer.syncOnce() } }
+    }
 }
 
 /** Keeps the client's trainer relationship (chat, technique videos) in step with the signed-in session. */
@@ -407,5 +470,5 @@ fun initKoin(platform: AppPlatform, platformDeclaration: KoinAppDeclaration = {}
     if (platform.backend.isRemote) modules(remoteModule(platform.backend, platform.ioDispatcher))
 }.also {
     // Synthetic history only for the demo; with a server the history comes from the client's workout logs there.
-    if (!platform.backend.isRemote) seedDemoClient(it.koin) else { startWorkoutSync(it.koin); startClientContextSync(it.koin) }
+    if (!platform.backend.isRemote) seedDemoClient(it.koin) else { startWorkoutSync(it.koin); startClientContextSync(it.koin); startClientRefresh(it.koin); startSessionPersistence(it.koin) }
 }

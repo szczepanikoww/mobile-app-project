@@ -1,5 +1,9 @@
 package com.trainingapp.app
 
+import org.koin.compose.getKoin
+import pl.trainer.data.remote.TrainerApiClient
+import com.trainingapp.app.resources.assign_done
+import com.trainingapp.app.remote.RemotePlanAssigner
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -92,6 +96,10 @@ fun App(
         val auth: AuthRepository = koinInject()
         val scope = rememberCoroutineScope()
         var showAssignInfo by rememberSaveable { mutableStateOf(false) }
+        var assignPlan by remember { mutableStateOf<PlanToAssign?>(null) }
+        var assignedMessage by remember { mutableStateOf<Pair<String, String>?>(null) }
+        // The assignment API is the trainer API; without a server the dialog explains that it is not connected.
+        val planAssigner: RemotePlanAssigner? = getKoin().getOrNull<TrainerApiClient>()?.let { remember(it) { RemotePlanAssigner(it) } }
         val startDestination = remember { startDestinationFor(initialSession ?: auth.session.value) }
 
         // After sign-in, sign-out or a role switch the whole back stack is replaced, so Back never returns to Auth,
@@ -133,8 +141,9 @@ fun App(
             }
             workoutBuilderGraph(
                 navController = navController,
-                // Integration point: the assignment flow belongs to the relationship-scoped assignment API, which is not connected yet.
-                onAssignToClient = { _, _ -> showAssignInfo = true },
+                onAssignToClient = { templateId, version ->
+                    if (planAssigner != null) assignPlan = PlanToAssign(templateId, version) else showAssignInfo = true
+                },
             )
             guestGraph(
                 navController = navController,
@@ -190,6 +199,24 @@ fun App(
             }
         }
 
+        val pendingAssign = assignPlan
+        if (pendingAssign != null && planAssigner != null) {
+            PlanAssignDialog(
+                plan = pendingAssign,
+                clients = koinInject(),
+                assigner = planAssigner,
+                onDismiss = { assignPlan = null },
+                onAssigned = { planName, clientName -> assignPlan = null; assignedMessage = planName to clientName },
+            )
+        }
+        assignedMessage?.let { (planName, clientName) ->
+            AlertDialog(
+                onDismissRequest = { assignedMessage = null },
+                title = { Text(stringResource(Res.string.assign_title)) },
+                text = { Text(stringResource(Res.string.assign_done, planName, clientName), style = AppTheme.type.body) },
+                confirmButton = { AppTextButton(stringResource(Res.string.understood), onClick = { assignedMessage = null }) },
+            )
+        }
         if (showAssignInfo) {
             AlertDialog(
                 onDismissRequest = { showAssignInfo = false },

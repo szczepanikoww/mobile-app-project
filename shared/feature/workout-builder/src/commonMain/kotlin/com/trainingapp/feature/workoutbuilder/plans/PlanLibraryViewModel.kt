@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 sealed interface PlanLibraryUiState {
     data object Loading : PlanLibraryUiState
@@ -36,10 +37,14 @@ sealed interface PlanLibraryUiState {
 }
 
 class PlanLibraryViewModel(
-    getLibrary: GetPlanLibrary,
+    private val getLibrary: GetPlanLibrary,
     exerciseRepository: ExerciseRepository,
     network: NetworkMonitor,
 ) : ViewModel() {
+
+    init {
+        refresh()
+    }
 
     private val reload = MutableStateFlow(0)
     private val query = MutableStateFlow("")
@@ -79,5 +84,11 @@ class PlanLibraryViewModel(
 
     fun retry() {
         reload.value++
+        refresh()
+    }
+
+    /** Pulls the server's plans into the local library; the list updates itself when something new arrives. */
+    private fun refresh() {
+        viewModelScope.launch { getLibrary.refresh() }
     }
 }
