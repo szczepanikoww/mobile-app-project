@@ -13,6 +13,9 @@ import kotlin.uuid.Uuid
 /** What the provider returned for a new payment. [clientSecret] goes to the app's payment sheet. */
 data class ProviderIntent(val ref: String, val clientSecret: String?)
 
+/** A refund at the provider: [status] is `SUCCEEDED`, `PENDING` or `FAILED`. */
+data class ProviderRefund(val ref: String, val status: String)
+
 /**
  * A verified webhook, reduced to what billing needs. [type] is normalized: `payment.succeeded`, `payment.failed`, or
  * anything else (stored, not applied). [paymentRef] is null for events that are not about a payment intent.
@@ -43,6 +46,12 @@ interface PaymentProvider {
      * be marked FAILED; false when it succeeded or is still being processed, so it stays PENDING.
      */
     fun cancel(ref: String): Boolean
+
+    /** Returns [amountMinor] of the payment [paymentRef]; [idempotencyKey] is the refund's operation id. */
+    fun refund(paymentRef: String, amountMinor: Long, idempotencyKey: Uuid): ProviderRefund
+
+    /** The refund's current state, for refunds that were still pending. */
+    fun refundStatus(ref: String): ProviderRefund
 
     /** Verifies a webhook's signature over the raw body and parses it. Null when the signature is not valid. */
     fun parseWebhook(body: String, header: (String) -> String?): WebhookEvent?
@@ -77,6 +86,10 @@ class FakePaymentProvider(private val webhookSecret: String) : PaymentProvider {
     override fun fetchStatus(ref: String): String = if (ref in failing) "FAILED" else "SUCCEEDED"
 
     override fun cancel(ref: String): Boolean = false
+
+    override fun refund(paymentRef: String, amountMinor: Long, idempotencyKey: Uuid) = ProviderRefund("fake_re_$idempotencyKey", "SUCCEEDED")
+
+    override fun refundStatus(ref: String) = ProviderRefund(ref, "SUCCEEDED")
 
     /** Test hook: the next confirmation of [ref] fails. */
     fun failNext(ref: String) { failing += ref }

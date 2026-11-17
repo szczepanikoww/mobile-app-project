@@ -134,8 +134,11 @@ class ClientIntegrationTest {
         clickOnUi(onAllNodesWithText("Poproś o sesję")[0])
         waitForText("Wolne terminy")
         waitForText("Akceptuję zasady odwołań", substring = true)
-        onNodeWithText("Wyślij prośbę").assertIsNotEnabled()
+        // Paying now online is the default (P1); cash keeps the plain request.
+        onNodeWithText("Dalej: zapłać", substring = true).assertIsNotEnabled()
         capture("client-booking-sheet-pl")
+        clickOnUi(onNodeWithText("Gotówką na miejscu"))
+        onNodeWithText("Wyślij prośbę").assertIsNotEnabled()
     }
 
     @Test

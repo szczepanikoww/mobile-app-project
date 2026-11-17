@@ -246,7 +246,7 @@ internal fun ClientSessionCard(session: ClientSession, submitting: Boolean, acti
                         modifier = Modifier.weight(1f),
                     )
                 }
-                ClientSessionState.AwaitingTrainer, ClientSessionState.RescheduleRequested ->
+                ClientSessionState.AwaitingTrainer, ClientSessionState.AwaitingPayment, ClientSessionState.RescheduleRequested ->
                     AppTextButton(stringResource(Res.string.withdraw_request), onClick = { actions.onWithdraw(session) }, enabled = !submitting)
                 else -> Unit
             }

@@ -78,14 +78,17 @@ object SessionReads {
     /** The trainer's sessions starting in [from, to), every status. */
     fun sessions(trainerId: UUID, from: Instant, to: Instant): List<SessionDto> =
         Sessions.selectAll()
-            .where { (Sessions.trainerId eq trainerId) and (Sessions.startsAt greaterEq from.toOffset()) and (Sessions.startsAt less to.toOffset()) }
+            .where {
+                (Sessions.trainerId eq trainerId) and (Sessions.startsAt greaterEq from.toOffset()) and (Sessions.startsAt less to.toOffset()) and
+                    (Sessions.awaitingPayment eq false)
+            }
             .orderBy(Sessions.startsAt, SortOrder.ASC)
             .map { toDto(it) }
 
     /** Sessions with an open request in any range: a booking request or an open reschedule proposal. */
     fun openRequestSessions(trainerId: UUID): List<SessionDto> {
         val requested = Sessions.selectAll()
-            .where { (Sessions.trainerId eq trainerId) and (Sessions.status eq SessionStatus.REQUESTED.name) }
+            .where { (Sessions.trainerId eq trainerId) and (Sessions.status eq SessionStatus.REQUESTED.name) and (Sessions.awaitingPayment eq false) }
             .map { toDto(it) }
         val rescheduled = Sessions.join(RescheduleRequests, JoinType.INNER, Sessions.id, RescheduleRequests.sessionId)
             .selectAll()

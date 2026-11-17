@@ -164,4 +164,20 @@
     <string name="error_invalid">Check the selected details.</string>
     <string name="error_load">Could not load the data.</string>
     <string name="error_save">Could not send. Try again.</string>
+    <string name="state_awaiting_payment">Awaiting payment</string>
+    <string name="awaiting_payment_info">The trainer gets the request once the payment is confirmed. An unpaid request expires after 30 minutes.</string>
+    <string name="booking_payment_heading">Payment</string>
+    <string name="booking_pay_now">Pay now online</string>
+    <string name="booking_pay_cash">Cash at the session</string>
+    <string name="booking_pay_now_info">Card, BLIK or Przelewy24. The trainer gets the request once it is paid. If it is not accepted, you get your money back.</string>
+    <string name="continue_to_payment">Continue: pay %1$s</string>
+    <string name="payment_title_booking">Pay for the session</string>
+    <string name="booking_payment_note">The trainer gets the request once the payment is confirmed. If it is not accepted, you get your money back.</string>
+    <string name="message_booking_payment_pending">Payment in progress · the trainer gets the request once it is confirmed</string>
+    <string name="message_booking_not_paid">The request was not sent · nothing was charged</string>
+    <string name="refund_done">refunded %1$s</string>
+    <string name="refund_pending">refund of %1$s in progress</string>
+    <string name="settle_prepaid_full">The %1$s you paid will be refunded in full.</string>
+    <string name="settle_prepaid_partial">We keep %1$s of what you paid and refund %2$s.</string>
+    <string name="settle_prepaid_none">The %1$s fee is covered by what you paid. Nothing is refunded.</string>
 </resources>

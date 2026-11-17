@@ -22,7 +22,10 @@ import com.trainingapp.contract.schedule.RescheduleRequestDto
 import com.trainingapp.contract.schedule.SessionDto
 import com.trainingapp.contract.schedule.SessionPaymentDto
 import com.trainingapp.contract.schedule.SlotDto
+import com.trainingapp.server.billing.Allocations
 import com.trainingapp.server.billing.BillingService
+import com.trainingapp.server.billing.Payments
+import com.trainingapp.server.billing.Prepaid
 import com.trainingapp.server.catalogue.CatalogueService
 import com.trainingapp.server.catalogue.PolicyRecord
 import com.trainingapp.server.common.ApiException
@@ -86,6 +89,9 @@ class SchedulingService(
     companion object {
         /** R4: a booking request expires at the slot start or after 48 h, whichever comes first. */
         val REQUEST_TTL = 48.hours
+        /** How long a prepaid request waits for its payment before it is closed (P1). */
+        val PREPAY_WINDOW = 30.minutes
+        val PREPAY_RECHECK = 5.minutes
         val DEFAULT_WINDOW_PAST = 30.days
         val DEFAULT_WINDOW_FUTURE = 90.days
         val REMINDER_BEFORE = 24.hours
@@ -199,6 +205,8 @@ class SchedulingService(
             PaymentKindDto.ONLINE -> "ONLINE"
             null -> if (with(billing) { hasFreeCredit(relationship.id) }) "PACKAGE" else "ONLINE"
         }
+        if (request.payNow && paymentKind != "ONLINE") throw invalid("payNow")
+        val prepaid = request.payNow && price.minor > 0
         val (gymId, placeNote) = resolvePlace(trainerId, request.place)
         val buffer = with(identity) { sessionBufferMinutes(trainerId) }.minutes
         val id = Ids.v7()
@@ -225,6 +233,7 @@ class SchedulingService(
                 it[createdBy] = client.id
                 it[Sessions.operationId] = operationId
                 it[requestedAt] = now.toOffset()
+                it[awaitingPayment] = prepaid
             }
         }
         // A concurrent retry with the same key committed first: return its session.
@@ -232,7 +241,13 @@ class SchedulingService(
         event(id, 1, "REQUESTED", client.id)
         val expiresAt = minOf(request.start, now + REQUEST_TTL)
         schedule(JobQueue.REQUEST_EXPIRY, "request-expiry:$id", expiresAt, mapOf("sessionId" to id))
-        emit("session", id, "session.requested", mapOf("trainerId" to trainerId, "clientId" to client.id))
+        if (prepaid) {
+            // Paid now (P1): the trainer is told when the payment is confirmed (Prepaid.onPaymentSucceeded).
+            with(Prepaid) { chargeBooking(id, relationship.id, price, now) }
+            schedule(JobQueue.PREPAY_EXPIRY, "prepay-expiry:$id", minOf(request.start, now + PREPAY_WINDOW), mapOf("sessionId" to id))
+        } else {
+            emit("session", id, "session.requested", mapOf("trainerId" to trainerId, "clientId" to client.id))
+        }
         toDto(load(id))
     }
 
@@ -248,6 +263,8 @@ class SchedulingService(
                 }
                 event(session.id, session.revision + 1, "CANCELLED", client.id)
                 cancel("request-expiry:${session.id}")
+                cancel("prepay-expiry:${session.id}")
+                with(Prepaid) { settle(session.id, Prepaid.NOT_ACCEPTED, client.id, now) }
                 emit("session", session.id, "session.withdrawn", mapOf("trainerId" to session.trainerId, "clientId" to client.id))
             }
             else -> {
@@ -384,6 +401,7 @@ class SchedulingService(
         closeOpenReschedule(session.id, client.id, now)
         val exempt = effectivePolicy(session).exempt
         with(billing) { decideClientCancel(session, quote, exempt, operationId, now) }
+        with(Prepaid) { settle(session.id, Prepaid.CLIENT_CANCELLED, client.id, now) }
         cancelPrefix("reminder:${session.id}:")
         emit("session", session.id, "session.cancelled", mapOf("trainerId" to session.trainerId, "clientId" to client.id))
         toDto(load(session.id))
@@ -398,6 +416,7 @@ class SchedulingService(
         with(identity) { lockTrainer(trainerId) }
         val session = trainerSessionForUpdate(trainerId, sessionId)
         if (session.status != DbSessionStatus.REQUESTED) throw conflict(message = "not a booking request")
+        if (session.awaitingPayment) throw conflict(message = "the request is not paid yet")
         val now = dbNow()
         if (!isWithinAvailability(trainerId, session.startsAt, session.endsAt)) throw ApiException(409, ErrorCode.SLOT_TAKEN, "outside availability")
         val buffer = with(identity) { sessionBufferMinutes(trainerId) }.minutes
@@ -431,6 +450,7 @@ class SchedulingService(
         }
         event(session.id, session.revision + 1, "REJECTED", trainerId)
         cancel("request-expiry:${session.id}")
+        with(Prepaid) { settle(session.id, Prepaid.NOT_ACCEPTED, trainerId, now) }
         emit("session", session.id, "session.rejected", mapOf("trainerId" to trainerId, "clientId" to session.clientId))
         toDto(load(session.id))
     }
@@ -487,6 +507,7 @@ class SchedulingService(
         event(session.id, session.revision + 1, "CANCELLED", trainerId)
         closeOpenReschedule(session.id, trainerId, now)
         with(billing) { decideTrainerCancel(session, trainerId, operationId, now) }
+        with(Prepaid) { settle(session.id, Prepaid.TRAINER_CANCELLED, trainerId, now) }
         cancel("request-expiry:${session.id}")
         cancelPrefix("reminder:${session.id}:")
         emit("session", session.id, "session.cancelled", mapOf("trainerId" to trainerId, "clientId" to session.clientId))
@@ -529,6 +550,7 @@ class SchedulingService(
         val quote = FeeQuote(null, percent, fee, false)
         val quoteId = with(billing) { insertQuote(session, session.revision + 1, "NO_SHOW", effective.policy.id, now, quote, now) }
         with(billing) { decideNoShow(session, quoteId, effective.policy.id, percent, MoneyDto(fee.minor, fee.currency), trainerId, Ids.derived(session.id, "no-show"), now) }
+        with(Prepaid) { settle(session.id, Prepaid.NO_SHOW, trainerId, now) }
         cancelPrefix("reminder:${session.id}:")
         emit("session", session.id, "session.no_show", mapOf("trainerId" to trainerId, "clientId" to session.clientId))
         toDto(load(session.id))
@@ -549,7 +571,36 @@ class SchedulingService(
             it[closedAt] = now.toOffset()
         }
         event(session.id, session.revision + 1, "EXPIRED", null)
+        with(Prepaid) { settle(session.id, Prepaid.NOT_ACCEPTED, session.createdBy, now) }
         emit("session", session.id, "session.expired", mapOf("trainerId" to session.trainerId, "clientId" to session.clientId))
+    }
+
+    /**
+     * `prepay-expiry` / `prepay-abandoned`: a prepaid request that is still not paid is closed: withdrawn when the
+     * client closed the payment sheet, expired when the payment window passed. A payment still in progress (e.g. BLIK
+     * waiting for the bank) keeps it open; the window job checks again later.
+     */
+    suspend fun expireUnpaid(sessionId: Uuid, abandoned: Boolean) = db.tx {
+        val session = Sessions.selectAll().where { Sessions.id eq sessionId }.forUpdate(ForUpdateOption.ForUpdate).singleOrNull()
+            ?.let(SessionRecord::from) ?: return@tx
+        if (session.status != DbSessionStatus.REQUESTED || !session.awaitingPayment) return@tx
+        val now = dbNow()
+        val chargeId = with(Prepaid) { sessionCharge(session.id) }
+        val inProgress = chargeId != null && (Allocations innerJoin Payments).selectAll()
+            .where { (Allocations.chargeId eq chargeId) and (Payments.status eq "PENDING") }.any()
+        if (inProgress) {
+            if (!abandoned) schedule(JobQueue.PREPAY_EXPIRY, "prepay-expiry:${session.id}:${now.epochSeconds}", now + PREPAY_RECHECK, mapOf("sessionId" to session.id))
+            return@tx
+        }
+        bump(session, now) {
+            it[status] = if (abandoned) DbSessionStatus.CANCELLED_BY_CLIENT else DbSessionStatus.EXPIRED
+            it[closedAt] = now.toOffset()
+        }
+        event(session.id, session.revision + 1, if (abandoned) "CANCELLED" else "EXPIRED", null)
+        cancel("request-expiry:${session.id}")
+        cancel("prepay-expiry:${session.id}")
+        with(Prepaid) { settle(session.id, Prepaid.NOT_ACCEPTED, session.createdBy, now) }
+        emit("session", session.id, "session.withdrawn", mapOf("clientId" to session.clientId))
     }
 
     suspend fun expireReschedule(requestId: Uuid) = db.tx {
@@ -826,7 +877,15 @@ class SchedulingService(
                 payment = when (s.paymentKind) {
                     "PACKAGE" -> usage[s.relationshipId].let { SessionPaymentDto(PaymentKindDto.PACKAGE, it?.first, it?.second) }
                     "CASH" -> SessionPaymentDto(PaymentKindDto.CASH)
-                    else -> SessionPaymentDto(PaymentKindDto.ONLINE)
+                    else -> {
+                        val charge = with(Prepaid) { sessionCharge(s.id) }
+                        SessionPaymentDto(
+                            PaymentKindDto.ONLINE,
+                            awaitingPayment = s.awaitingPayment,
+                            prepaymentChargeId = if (s.awaitingPayment) charge?.toString() else null,
+                            prepaid = !s.awaitingPayment && charge != null && with(Prepaid) { isPaid(charge) },
+                        )
+                    }
                 },
                 policyVersionId = s.policyVersionId.toString(),
                 price = s.price,

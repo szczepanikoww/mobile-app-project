@@ -29,6 +29,7 @@ import pl.trainer.domain.ClientScheduleRepository
 import pl.trainer.domain.ClientSession
 import pl.trainer.domain.ClientSessionState
 import pl.trainer.domain.Failure
+import pl.trainer.domain.PaymentKind
 import pl.trainer.domain.RescheduleFeePreview
 import pl.trainer.domain.RescheduleRequest
 import pl.trainer.domain.TrainerException
@@ -37,6 +38,9 @@ import kotlin.time.Duration.Companion.days
 
 /** The zone sessions are shown in; each session also carries its own zone. */
 val ClientZone: TimeZone = TimeZone.of("Europe/Warsaw")
+
+/** The charge of a request booked with "pay now", and its session. */
+data class Prepayment(val chargeId: String, val sessionId: String)
 
 enum class ScheduleMessage { RequestSent, RescheduleSent, ProposalAccepted, ProposalDeclined, RequestWithdrawn, SessionCancelled }
 
@@ -52,6 +56,8 @@ data class BookingSheetState(
     val place: String? = null,
     /** Never pre-ticked: the client explicitly accepts the trainer's current policy version (architecture 3.2). */
     val policyAccepted: Boolean = false,
+    /** Pay online now (P1, the default) or in cash at the session. No packages for now. */
+    val payNow: Boolean = true,
     val failure: Failure? = null,
 ) {
     val canSend: Boolean get() = options != null && slot != null && !place.isNullOrBlank() && policyAccepted
@@ -96,6 +102,8 @@ data class ScheduleUiState(
     val cancellation: CancellationSheetState? = null,
     /** A read-only policy version opened from the details or the booking sheet. */
     val policy: CancellationPolicy? = null,
+    /** A request just booked with "pay now": the shell opens the wallet's payment for it (one-shot). */
+    val prepayment: Prepayment? = null,
 ) {
     /** "Today" by the server's clock, in the client's zone. */
     val today: LocalDate? get() = schedule?.serverNow?.toLocalDateTime(ClientZone)?.date
@@ -306,6 +314,26 @@ class ClientScheduleViewModel(
 
     fun bookingPolicyAccepted(accepted: Boolean) = mutableState.update { it.copy(booking = it.booking?.copy(policyAccepted = accepted)) }
 
+    fun bookingPayNow(payNow: Boolean) = mutableState.update { it.copy(booking = it.booking?.copy(payNow = payNow)) }
+
+    fun consumePrepayment() = mutableState.update { it.copy(prepayment = null) }
+
+    /** The client closed the payment of a "pay now" request before paying: the request is withdrawn, silently. */
+    fun withdrawUnpaid(sessionId: String) {
+        val session = state.value.session(sessionId) ?: return
+        if (session.state != ClientSessionState.AwaitingPayment) return
+        viewModelScope.launch {
+            try {
+                repository.withdrawRequest(session.id, session.revision)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // The server closes an unpaid request after its payment window anyway.
+            }
+            refresh(silent = true)
+        }
+    }
+
     fun sendBooking() {
         val sheet = state.value.booking ?: return
         val options = sheet.options ?: return
@@ -320,8 +348,18 @@ class ClientScheduleViewModel(
                 loadBookingOptions(options.trainer.id)
             }
         }) {
-            repository.requestBooking(BookingRequest(options.trainer.id, slot.start, slot.end, place, options.policy.versionId))
-            mutableState.update { it.copy(booking = null, message = ScheduleMessage.RequestSent) }
+            val kind = if (sheet.payNow) PaymentKind.Online else PaymentKind.Cash
+            val created = repository.requestBooking(
+                BookingRequest(options.trainer.id, slot.start, slot.end, place, options.policy.versionId, paymentKind = kind, payNow = sheet.payNow),
+            )
+            val chargeId = created.session.payment?.prepaymentChargeId
+            mutableState.update {
+                if (chargeId != null) {
+                    it.copy(booking = null, prepayment = Prepayment(chargeId, created.id))
+                } else {
+                    it.copy(booking = null, message = ScheduleMessage.RequestSent)
+                }
+            }
             refresh(silent = true)
         }
     }

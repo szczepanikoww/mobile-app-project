@@ -21,6 +21,8 @@ data class TrainerRef(val id: String, val name: String, val initials: String)
 enum class ClientSessionState {
     /** A booking request the trainer has not answered ("Czeka na trenera"). */
     AwaitingTrainer,
+    /** Paid when booked, payment not confirmed yet: not sent to the trainer ("Czeka na płatność"). */
+    AwaitingPayment,
     Confirmed,
     /** The trainer proposed another time; the original time is still the confirmed one ("Propozycja zmiany"). */
     ProposalFromTrainer,
@@ -37,7 +39,7 @@ fun Session.clientState(): ClientSessionState = when {
     proposal?.author == ProposalAuthor.Trainer && status == SessionStatus.Confirmed -> ClientSessionState.ProposalFromTrainer
     proposal?.author == ProposalAuthor.Client && status == SessionStatus.Confirmed -> ClientSessionState.RescheduleRequested
     else -> when (status) {
-        SessionStatus.Requested -> ClientSessionState.AwaitingTrainer
+        SessionStatus.Requested -> if (payment?.awaitingPayment == true) ClientSessionState.AwaitingPayment else ClientSessionState.AwaitingTrainer
         SessionStatus.Confirmed -> ClientSessionState.Confirmed
         SessionStatus.Completed -> ClientSessionState.Completed
         SessionStatus.Rejected -> ClientSessionState.Rejected
@@ -57,7 +59,9 @@ data class ClientSession(val session: Session, val trainer: TrainerRef) {
     val agendaStart: Instant get() = session.proposal?.start ?: session.start
     val canCancel: Boolean get() = session.status == SessionStatus.Confirmed
     val canReschedule: Boolean get() = session.status == SessionStatus.Confirmed && session.proposal == null
-    val canWithdraw: Boolean get() = state == ClientSessionState.AwaitingTrainer || state == ClientSessionState.RescheduleRequested
+    val canWithdraw: Boolean
+        get() = state == ClientSessionState.AwaitingTrainer || state == ClientSessionState.AwaitingPayment ||
+            state == ClientSessionState.RescheduleRequested
 }
 
 data class ClientSchedule(
@@ -86,6 +90,10 @@ data class BookingRequest(
     val place: String,
     /** Must be the trainer's current version: the server refuses an outdated consent with [Failure.Conflict]. */
     val acceptedPolicyVersionId: String,
+    /** Null: the server's default. */
+    val paymentKind: PaymentKind? = null,
+    /** With [PaymentKind.Online]: paid now; the request reaches the trainer when the payment is confirmed (P1). */
+    val payNow: Boolean = false,
 )
 
 data class RescheduleRequest(val sessionId: String, val revision: Int, val start: Instant, val end: Instant)
@@ -198,6 +206,10 @@ data class Payment(
     val method: PaymentMethod,
     val state: PaymentState,
     val at: Instant,
+    /** Returned to the client, confirmed by the provider. */
+    val refunded: Money? = null,
+    /** A refund the provider has not confirmed yet. */
+    val refundPending: Money? = null,
 )
 
 data class Wallet(

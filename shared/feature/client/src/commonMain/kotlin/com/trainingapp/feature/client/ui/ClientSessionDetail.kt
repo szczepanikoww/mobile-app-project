@@ -56,6 +56,8 @@ data class ClientSessionDetailActions(
     val onChat: (() -> Unit)?,
     /** The Android calendar insert intent (G5, D6); null on desktop. */
     val onAddToCalendar: ((ClientSession) -> Unit)?,
+    /** Pays a request booked with "pay now" whose payment was not finished. */
+    val onPayBooking: (ClientSession) -> Unit = {},
 )
 
 /**
@@ -105,6 +107,19 @@ fun ClientSessionDetailContent(
                 val proposal = s.proposal
                 if (proposal != null) {
                     InlineMessage(stringResource(Res.string.reschedule_requested_info, shortDateTime(proposal.start, session.zone)))
+                }
+                SecondaryButton(stringResource(Res.string.withdraw_request), onClick = { actions.onWithdraw(session) }, enabled = !submitting)
+            }
+            ClientSessionState.AwaitingPayment -> Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+                InlineMessage(stringResource(Res.string.awaiting_payment_info), tone = MessageTone.Warning)
+                s.price?.let { price ->
+                    PrimaryButton(
+                        stringResource(Res.string.pay_amount, money(price)),
+                        onClick = { actions.onPayBooking(session) },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !submitting,
+                        icon = Icons.Outlined.Payments,
+                    )
                 }
                 SecondaryButton(stringResource(Res.string.withdraw_request), onClick = { actions.onWithdraw(session) }, enabled = !submitting)
             }

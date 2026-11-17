@@ -129,7 +129,7 @@ class RemoteClientScheduleRepository(
 
     /** The answer is a booking *request*: the session stays [pl.trainer.domain.ClientSessionState.AwaitingTrainer]. */
     override suspend fun requestBooking(request: BookingRequest): ClientSession = writing {
-        val key = "book|${request.trainerId}|${request.start}|${request.end}|${request.place}|${request.acceptedPolicyVersionId}"
+        val key = "book|${request.trainerId}|${request.start}|${request.end}|${request.place}|${request.acceptedPolicyVersionId}|${request.paymentKind}|${request.payNow}"
         operation(key) { operationId ->
             val body = BookingRequestDto(
                 trainerId = request.trainerId,
@@ -138,6 +138,13 @@ class RemoteClientScheduleRepository(
                 place = request.place,
                 acceptedPolicyVersionId = request.acceptedPolicyVersionId,
                 operationId = operationId,
+                paymentKind = when (request.paymentKind) {
+                    pl.trainer.domain.PaymentKind.Online -> com.trainingapp.contract.schedule.PaymentKindDto.ONLINE
+                    pl.trainer.domain.PaymentKind.Cash -> com.trainingapp.contract.schedule.PaymentKindDto.CASH
+                    pl.trainer.domain.PaymentKind.Package -> com.trainingapp.contract.schedule.PaymentKindDto.PACKAGE
+                    null -> null
+                },
+                payNow = request.payNow,
             )
             post("v1/client/booking-requests", body, BookingRequestDto.serializer(), operationId)
         }

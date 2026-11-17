@@ -58,7 +58,7 @@ class Worker(
     fun start(scope: CoroutineScope): Job = scope.launch {
         var lastMaintenance = 0L
         while (isActive) {
-            val worked = runCatching { drainOutbox() + runDueJobs() }.onFailure { log.error("worker loop failed: {}", it.javaClass.simpleName) }.getOrDefault(0)
+            val worked = runCatching { drainOutbox() + runDueJobs() + billing.processRefunds() }.onFailure { log.error("worker loop failed: {}", it.javaClass.simpleName) }.getOrDefault(0)
             if (System.currentTimeMillis() - lastMaintenance > 10.minutes.inWholeMilliseconds) {
                 runCatching { media.maintenance() }.onFailure { log.error("media maintenance failed: {}", it.javaClass.simpleName) }
                 lastMaintenance = System.currentTimeMillis()
@@ -161,6 +161,8 @@ class Worker(
             }
             JobQueue.FAKE_PAYMENT_CONFIRM -> billing.confirmFakePayment(id("paymentId"))
             JobQueue.PAYMENT_RECONCILE -> billing.reconcile(id("paymentId"))
+            JobQueue.PREPAY_EXPIRY -> scheduling.expireUnpaid(id("sessionId"), abandoned = false)
+            JobQueue.PREPAY_ABANDONED -> scheduling.expireUnpaid(id("sessionId"), abandoned = true)
             JobQueue.MEDIA_PROCESS -> media.process(id("mediaId"))
             else -> log.warn("unknown job kind {}", kind)
         }

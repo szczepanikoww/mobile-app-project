@@ -6,6 +6,7 @@ import com.stripe.exception.StripeException
 import com.stripe.net.RequestOptions
 import com.stripe.net.Webhook
 import com.stripe.param.PaymentIntentCreateParams
+import com.stripe.param.RefundCreateParams
 import com.stripe.param.PaymentIntentCreateParams.AllowedPaymentMethodType
 import com.trainingapp.contract.wallet.PaymentMethodDto
 import com.trainingapp.server.common.ApiException
@@ -67,6 +68,15 @@ class StripePaymentProvider(
         }
     }
 
+    override fun refund(paymentRef: String, amountMinor: Long, idempotencyKey: Uuid): ProviderRefund {
+        val params = RefundCreateParams.builder().setPaymentIntent(paymentRef).setAmount(amountMinor).build()
+        val refund = call { client.v1().refunds().create(params, options(idempotencyKey.toString())) }
+        return ProviderRefund(refund.id, refundStatusOf(refund.status))
+    }
+
+    override fun refundStatus(ref: String): ProviderRefund =
+        call { client.v1().refunds().retrieve(ref) }.let { ProviderRefund(it.id, refundStatusOf(it.status)) }
+
     override fun parseWebhook(body: String, header: (String) -> String?): WebhookEvent? {
         val signature = header("Stripe-Signature") ?: return null
         try {
@@ -98,6 +108,12 @@ class StripePaymentProvider(
             "BLIK" -> AllowedPaymentMethodType.BLIK
             "PRZELEWY24" -> AllowedPaymentMethodType.P24
             else -> throw ApiException(422, ErrorCode.VALIDATION, "method not available with Stripe")
+        }
+
+        fun refundStatusOf(stripeStatus: String?): String = when (stripeStatus) {
+            "succeeded" -> "SUCCEEDED"
+            "failed", "canceled" -> "FAILED"
+            else -> "PENDING"
         }
 
         /** Stripe's intent status in our terms. Everything unfinished (including a declined attempt) stays PENDING. */

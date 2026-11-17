@@ -55,6 +55,8 @@ object TestDatabase {
                 username = APP_ROLE
                 password = APP_PASSWORD
                 maximumPoolSize = 8
+                // Each test opens its own pool: keep idle connections low so many tests fit max_connections.
+                minimumIdle = 1
                 isAutoCommit = false
             },
         )

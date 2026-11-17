@@ -77,7 +77,17 @@ data class Session(
 enum class PaymentKind { Package, Online, Cash }
 
 /** [packageUsed] of [packageTotal] when paid from a package ("Pakiet: 6 z 8"). */
-data class SessionPayment(val kind: PaymentKind, val packageUsed: Int? = null, val packageTotal: Int? = null)
+data class SessionPayment(
+    val kind: PaymentKind,
+    val packageUsed: Int? = null,
+    val packageTotal: Int? = null,
+    /** Paid when booked, but the payment is not confirmed yet: the trainer does not see the request until it is. */
+    val awaitingPayment: Boolean = false,
+    /** The wallet charge to pay while [awaitingPayment]. */
+    val prepaymentChargeId: String? = null,
+    /** Paid in advance: a cancellation fee is kept from it and the rest is refunded. */
+    val prepaid: Boolean = false,
+)
 
 /**
  * What the server says about attendance for one session: computed with the server's clock and the grace period of

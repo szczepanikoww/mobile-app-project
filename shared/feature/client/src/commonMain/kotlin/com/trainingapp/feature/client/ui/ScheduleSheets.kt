@@ -16,6 +16,9 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Text
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.material3.RadioButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -105,6 +108,7 @@ data class BookingSheetActions(
     val onShowPolicy: (CancellationPolicy) -> Unit,
     val onSend: () -> Unit,
     val onDismiss: () -> Unit,
+    val onPayNow: (Boolean) -> Unit = {},
 )
 
 /**
@@ -166,11 +170,30 @@ fun BookingRequestSheet(state: BookingSheetState, trainers: List<TrainerRef>, su
                     Text(stringResource(Res.string.accept_policy, options.trainer.name), style = AppTheme.type.body, color = AppTheme.colors.text, modifier = Modifier.weight(1f))
                 }
                 AppTextButton(stringResource(Res.string.show_policy), onClick = { actions.onShowPolicy(options.policy) })
+                Text(stringResource(Res.string.booking_payment_heading), style = AppTheme.type.label, color = AppTheme.colors.textSecondary)
+                Column(Modifier.selectableGroup()) {
+                    listOf(true to Res.string.booking_pay_now, false to Res.string.booking_pay_cash).forEach { (payNow, label) ->
+                        Row(
+                            Modifier.fillMaxWidth()
+                                .heightIn(min = Sizes.minTouchTarget)
+                                .selectable(selected = state.payNow == payNow, role = Role.RadioButton, onClick = { actions.onPayNow(payNow) }),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.s),
+                        ) {
+                            RadioButton(selected = state.payNow == payNow, onClick = null)
+                            Text(stringResource(label), style = AppTheme.type.body, color = AppTheme.colors.text)
+                        }
+                    }
+                }
                 if (offline) InlineMessage(stringResource(Res.string.offline_action), tone = MessageTone.Offline)
                 state.failure?.let { InlineMessage(failureMessage(it), tone = MessageTone.Error) }
-                Text(stringResource(Res.string.request_not_booking), style = AppTheme.type.compactBody, color = AppTheme.colors.textSecondary)
+                Text(
+                    stringResource(if (state.payNow) Res.string.booking_pay_now_info else Res.string.request_not_booking),
+                    style = AppTheme.type.compactBody,
+                    color = AppTheme.colors.textSecondary,
+                )
                 PrimaryButton(
-                    stringResource(Res.string.send_request),
+                    if (state.payNow) stringResource(Res.string.continue_to_payment, money(options.price)) else stringResource(Res.string.send_request),
                     onClick = actions.onSend,
                     modifier = Modifier.fillMaxWidth(),
                     enabled = state.canSend,
@@ -256,7 +279,20 @@ fun CancellationSheet(state: CancellationSheetState, submitting: Boolean, action
                     fee.late && !fee.free -> InlineMessage(stringResource(Res.string.quote_late, "${fee.policyPercent}%", money(fee.amount)), tone = MessageTone.Warning)
                     else -> InlineMessage(stringResource(Res.string.quote_free), tone = MessageTone.Success)
                 }
-                if (!fee.free) {
+                val prepaid = session.session.payment?.prepaid == true
+                val price = session.session.price
+                if (prepaid && price != null) {
+                    val back = com.trainingapp.contract.money.Money((price.minor - (if (fee.free) 0 else fee.amount.minor)).coerceAtLeast(0), price.currency)
+                    Text(
+                        when {
+                            fee.free || fee.amount.minor == 0L -> stringResource(Res.string.settle_prepaid_full, money(price))
+                            back.minor > 0 -> stringResource(Res.string.settle_prepaid_partial, money(fee.amount), money(back))
+                            else -> stringResource(Res.string.settle_prepaid_none, money(fee.amount))
+                        },
+                        style = AppTheme.type.body,
+                        color = AppTheme.colors.text,
+                    )
+                } else if (!fee.free) {
                     Text(
                         when (quote.chargeKind) {
                             ChargeKind.Online -> stringResource(Res.string.settle_online, money(fee.amount))

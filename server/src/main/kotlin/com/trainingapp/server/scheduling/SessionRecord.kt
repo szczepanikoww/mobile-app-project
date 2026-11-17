@@ -27,6 +27,9 @@ data class SessionRecord(
     val revision: Int,
     val requestedAt: Instant,
     val operationId: Uuid,
+    val createdBy: Uuid,
+    /** A prepaid request whose payment is not confirmed yet (V4). */
+    val awaitingPayment: Boolean = false,
 ) {
     companion object {
         fun from(row: ResultRow) = SessionRecord(
@@ -48,6 +51,8 @@ data class SessionRecord(
             revision = row[Sessions.revision],
             requestedAt = row[Sessions.requestedAt].toKotlin(),
             operationId = row[Sessions.operationId],
+            createdBy = row[Sessions.createdBy],
+            awaitingPayment = row[Sessions.awaitingPayment],
         )
     }
 }

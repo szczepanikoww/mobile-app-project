@@ -190,6 +190,50 @@ class WalletCheckoutTest {
     }
 
     @Test
+    fun aBookingsPaymentOpensForItsChargeAndAClosedStripeSheetReportsNothingCharged() = runTest {
+        val wallet = StripeLikeWallet()
+        val model = model(wallet)
+        runCurrent()
+        model.payCharge("c1", bookingSessionId = "s1")
+        runCurrent()
+        assertEquals("s1", model.state.value.payment?.bookingSessionId)
+        model.pay()
+        runCurrent()
+        model.onCheckoutResult(CheckoutResult.Canceled)
+        runCurrent()
+        val state = model.state.value
+        assertNull(state.payment) // the server withdraws the request; booking again starts over
+        assertTrue(state.bookingNotPaid)
+        assertEquals(listOf("p0"), wallet.cancelled)
+    }
+
+    @Test
+    fun aCompletedBookingPaymentSaysTheTrainerGetsTheRequestAfterConfirmation() = runTest {
+        val model = model(StripeLikeWallet())
+        runCurrent()
+        model.payCharge("c1", bookingSessionId = "s1")
+        runCurrent()
+        model.pay()
+        runCurrent()
+        model.onCheckoutResult(CheckoutResult.Completed)
+        assertTrue(model.state.value.paymentSubmitted)
+        assertTrue(model.state.value.bookingPaymentSubmitted)
+    }
+
+    @Test
+    fun closingABookingsPaymentBeforePayingWithdrawsTheRequest() = runTest {
+        val model = model(StripeLikeWallet())
+        runCurrent()
+        model.payCharge("c1", bookingSessionId = "s1")
+        runCurrent()
+        model.closePayment()
+        assertEquals("s1", model.state.value.abandonedBooking)
+        assertTrue(model.state.value.bookingNotPaid)
+        model.consumeAbandonedBooking()
+        assertNull(model.state.value.abandonedBooking)
+    }
+
+    @Test
     fun aPaymentTheProviderIsAlreadyProcessingStaysPending() = runTest {
         val wallet = StripeLikeWallet().apply { cancelAnswer = PaymentState.Pending }
         val model = startCheckout(wallet)

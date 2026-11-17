@@ -25,6 +25,8 @@ import com.trainingapp.contract.policy.FeeCalculator
 import com.trainingapp.server.auth.Access
 import com.trainingapp.server.billing.FeeAction
 import com.trainingapp.server.billing.Ledger
+import com.trainingapp.server.billing.Prepaid
+import kotlin.uuid.toKotlinUuid
 import com.trainingapp.server.catalogue.Policies
 import com.trainingapp.server.catalogue.toContract
 import com.trainingapp.server.db.Attendances
@@ -193,6 +195,7 @@ class TrainerSessions(private val db: Db, private val clock: ServerClock) {
                 val start = row[Sessions.startsAt].toInstantK()
                 if (start <= now) conflict("Request has expired")
                 if (request.waiver != null) invalid("A booking request has no fee to waive")
+                if (row[Sessions.awaitingPayment]) conflict("The request is not paid yet")
                 val revision = row[Sessions.revision] + 1
                 Sessions.update({ Sessions.id eq sessionId }) {
                     it[status] = SessionStatus.CONFIRMED.name
@@ -256,6 +259,7 @@ class TrainerSessions(private val db: Db, private val clock: ServerClock) {
                     it[closedAt] = now.toOffset()
                 }
                 closeOpenReschedule(sessionId, RescheduleStatus.WITHDRAWN, trainerId, now)
+                with(Prepaid) { settle(sessionId.toKotlinUuid(), Prepaid.NOT_ACCEPTED, trainerId.toKotlinUuid(), now) }
                 event(sessionId, revision, "REJECTED", trainerId, now)
                 TrainerOutbox.emit("session.rejected", "session", sessionId, mapOf("relationshipId" to row[Sessions.relationshipId]), now)
             }
@@ -344,7 +348,7 @@ class TrainerSessions(private val db: Db, private val clock: ServerClock) {
                 reason = null, decidedBy = trainerId, settlement = Settlement.CASH, now = now,
             )
             if (row[Sessions.paymentKind] == PaymentKind.PACKAGE.name) Ledger.releaseCredit(sessionId, now)
-            Ledger.refundSession(sessionId, now)
+            with(Prepaid) { settle(sessionId.toKotlinUuid(), Prepaid.TRAINER_CANCELLED, trainerId.toKotlinUuid(), now) }
             event(sessionId, revision, "CANCELLED", trainerId, now)
             TrainerOutbox.emit("session.cancelled", "session", sessionId, mapOf("relationshipId" to row[Sessions.relationshipId]), now)
             SessionResultDto(SessionReads.session(sessionId)!!, now)
@@ -423,6 +427,7 @@ class TrainerSessions(private val db: Db, private val clock: ServerClock) {
             val units = if (exempt || !usesCredit) 0 else policy.noShowPercent * Ledger.UNITS_PER_SESSION / 100
             Ledger.consumeCredit(sessionId, units, now)
         }
+        with(Prepaid) { settle(sessionId.toKotlinUuid(), Prepaid.NO_SHOW, trainerId.toKotlinUuid(), now) }
         event(sessionId, revision, "NO_SHOW", trainerId, now)
         TrainerOutbox.emit("session.no_show", "session", sessionId, mapOf("relationshipId" to relationshipId), now)
         SessionResultDto(SessionReads.session(sessionId)!!, now)

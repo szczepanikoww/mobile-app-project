@@ -5,6 +5,7 @@ import androidx.compose.material.icons.outlined.DoneAll
 import androidx.compose.material.icons.outlined.EventAvailable
 import androidx.compose.material.icons.outlined.EventBusy
 import androidx.compose.material.icons.outlined.HourglassEmpty
+import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material.icons.outlined.PersonOff
 import androidx.compose.material.icons.outlined.TimerOff
 import androidx.compose.material.icons.outlined.Update
@@ -52,6 +53,7 @@ private data class StateStyle(val label: StringResource, val tone: StatusTone, v
 
 private fun ClientSessionState.style(): StateStyle = when (this) {
     ClientSessionState.AwaitingTrainer -> StateStyle(Res.string.state_awaiting_trainer, StatusTone.Warning, Icons.Outlined.HourglassEmpty)
+    ClientSessionState.AwaitingPayment -> StateStyle(Res.string.state_awaiting_payment, StatusTone.Warning, Icons.Outlined.Payments)
     ClientSessionState.Confirmed -> StateStyle(Res.string.state_confirmed, StatusTone.Success, Icons.Outlined.EventAvailable)
     ClientSessionState.ProposalFromTrainer -> StateStyle(Res.string.state_proposal, StatusTone.Accent, Icons.Outlined.Update)
     ClientSessionState.RescheduleRequested -> StateStyle(Res.string.state_reschedule_requested, StatusTone.Warning, Icons.Outlined.Update)

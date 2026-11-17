@@ -29,6 +29,7 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 import org.slf4j.LoggerFactory
 import kotlin.time.Duration.Companion.seconds
+import kotlin.uuid.toKotlinUuid
 
 /**
  * Background work in the API process (architecture §5: same codebase, can run as a separate worker later).
@@ -67,6 +68,9 @@ class Worker(private val db: Db, private val clock: ServerClock) {
                 it[closedAt] = now.toOffset()
             }
             event(id, revision, "EXPIRED", null, now)
+            with(com.trainingapp.server.billing.Prepaid) {
+                settle(id.toKotlinUuid(), com.trainingapp.server.billing.Prepaid.NOT_ACCEPTED, row[Sessions.createdBy].toKotlinUuid(), now)
+            }
             TrainerOutbox.emit("session.expired", "session", id, mapOf("relationshipId" to row[Sessions.relationshipId]), now)
         }
         // Proposals whose proposed (or countered) time, or the session itself, has started.

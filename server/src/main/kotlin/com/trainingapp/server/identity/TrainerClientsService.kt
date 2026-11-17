@@ -93,7 +93,8 @@ class TrainerClientsService(
         val upcoming = Sessions.selectAll()
             .where {
                 (Sessions.relationshipId eq relationshipId) and (Sessions.startsAt greaterEq now) and
-                    (Sessions.status inList listOf(SessionStatus.REQUESTED.name, SessionStatus.CONFIRMED.name))
+                    (Sessions.status inList listOf(SessionStatus.REQUESTED.name, SessionStatus.CONFIRMED.name)) and
+                    (Sessions.awaitingPayment eq false)
             }
             .orderBy(Sessions.startsAt, SortOrder.ASC).limit(20).map { SessionReads.toDto(it) }
         ClientDetailDto(

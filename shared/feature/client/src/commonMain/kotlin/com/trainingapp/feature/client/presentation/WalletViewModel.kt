@@ -30,6 +30,8 @@ data class PaymentSheetState(
     val failure: Failure? = null,
     /** The provider's sheet could not take the payment; nothing was charged. */
     val checkoutFailed: Boolean = false,
+    /** Set when this pays for a request booked with "pay now" (P1). */
+    val bookingSessionId: String? = null,
 )
 
 /** A started payment waiting for the provider's own sheet (Stripe). [presented] keeps it from opening twice. */
@@ -46,6 +48,12 @@ data class WalletUiState(
     val paymentSubmitted: Boolean = false,
     /** Set while the provider's sheet should be shown or is open. */
     val checkout: CheckoutState? = null,
+    /** The submitted payment was for a booking: the request reaches the trainer once it is confirmed. */
+    val bookingPaymentSubmitted: Boolean = false,
+    /** A booking's payment was not completed: nothing was charged and the request is withdrawn (one-shot message). */
+    val bookingNotPaid: Boolean = false,
+    /** The client closed a booking's payment before starting it: the shell withdraws that request (one-shot). */
+    val abandonedBooking: String? = null,
 ) {
     /** The methods to offer: the provider's, in the app's order. */
     val paymentMethods: List<PaymentMethod> get() = wallet?.paymentMethods ?: PaymentMethod.payableInApp
@@ -94,11 +102,29 @@ class WalletViewModel(
         }
     }
 
-    fun openPayment(charge: Charge) {
+    /** Opens the payment of [chargeId] (a "pay now" booking) once the wallet has it. */
+    fun payCharge(chargeId: String, bookingSessionId: String? = null) {
+        viewModelScope.launch {
+            val wallet = try {
+                repository.load()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                null
+            }
+            if (wallet != null) mutableState.update { it.copy(wallet = wallet, loading = false) }
+            val charge = (wallet ?: state.value.wallet)?.charges?.find { it.id == chargeId } ?: return@launch
+            openPayment(charge, bookingSessionId)
+        }
+    }
+
+    fun openPayment(charge: Charge, bookingSessionId: String? = null) {
         if (!charge.payableInApp) return
         val methods = state.value.paymentMethods
         val method = PaymentMethod.Blik.takeIf { it in methods } ?: methods.firstOrNull() ?: PaymentMethod.Blik
-        mutableState.update { it.copy(payment = PaymentSheetState(charge, method, idempotencyKey = ids.newId()), paymentSubmitted = false) }
+        mutableState.update {
+            it.copy(payment = PaymentSheetState(charge, method, idempotencyKey = ids.newId(), bookingSessionId = bookingSessionId), paymentSubmitted = false)
+        }
     }
 
     fun paymentMethod(method: PaymentMethod) =
@@ -117,7 +143,9 @@ class WalletViewModel(
                     mutableState.update { it.copy(checkout = CheckoutState(checkout, sheet.charge.id)) }
                     return@launch
                 }
-                mutableState.update { it.copy(submitting = false, payment = null, paymentSubmitted = true) }
+                mutableState.update {
+                    it.copy(submitting = false, payment = null, paymentSubmitted = true, bookingPaymentSubmitted = sheet.bookingSessionId != null)
+                }
                 refresh(silent = true)
             } catch (e: CancellationException) {
                 throw e
@@ -137,8 +165,9 @@ class WalletViewModel(
      */
     fun onCheckoutResult(result: CheckoutResult) {
         val current = state.value.checkout ?: return
+        val forBooking = state.value.payment?.bookingSessionId != null
         if (result == CheckoutResult.Completed) {
-            mutableState.update { it.copy(submitting = false, payment = null, checkout = null, paymentSubmitted = true) }
+            mutableState.update { it.copy(submitting = false, payment = null, checkout = null, paymentSubmitted = true, bookingPaymentSubmitted = forBooking) }
             refresh(silent = true)
             return
         }
@@ -152,7 +181,10 @@ class WalletViewModel(
             }
             if (after?.state == PaymentState.Pending) {
                 // The provider is already processing it (e.g. BLIK confirmed in the bank app): wait for the server.
-                mutableState.update { it.copy(submitting = false, payment = null, checkout = null, paymentSubmitted = true) }
+                mutableState.update { it.copy(submitting = false, payment = null, checkout = null, paymentSubmitted = true, bookingPaymentSubmitted = forBooking) }
+            } else if (forBooking) {
+                // The server withdraws the unpaid request; the client books again if they want to.
+                mutableState.update { it.copy(submitting = false, payment = null, checkout = null, bookingNotPaid = true) }
             } else {
                 mutableState.update {
                     it.copy(
@@ -168,8 +200,13 @@ class WalletViewModel(
 
     fun closePayment() {
         if (state.value.submitting) return
-        mutableState.update { it.copy(payment = null) }
+        val booking = state.value.payment?.bookingSessionId
+        mutableState.update { it.copy(payment = null, abandonedBooking = booking, bookingNotPaid = booking != null) }
     }
 
-    fun dismissSubmitted() = mutableState.update { it.copy(paymentSubmitted = false) }
+    fun consumeAbandonedBooking() = mutableState.update { it.copy(abandonedBooking = null) }
+
+    fun dismissBookingNotPaid() = mutableState.update { it.copy(bookingNotPaid = false) }
+
+    fun dismissSubmitted() = mutableState.update { it.copy(paymentSubmitted = false, bookingPaymentSubmitted = false) }
 }

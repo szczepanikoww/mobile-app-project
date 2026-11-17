@@ -142,6 +142,24 @@ class RemoteClientRepositoriesTest {
     }
 
     @Test
+    fun aPayNowBookingSendsTheKindAndAwaitsPayment() = runTest {
+        val api = FakeApi()
+        val request = BookingRequest(
+            "t-1", Instant.parse("2026-11-12T08:00:00Z"), Instant.parse("2026-11-12T09:00:00Z"), "Studio", "pol-1",
+            paymentKind = pl.trainer.domain.PaymentKind.Online, payNow = true,
+        )
+        api.answers["POST v1/client/booking-requests"] = session("s-pay", "REQUESTED", 1)
+            .replace("\"payment\":{\"kind\":\"PACKAGE\",\"packageUsed\":2,\"packageTotal\":8}", "\"payment\":{\"kind\":\"ONLINE\",\"awaitingPayment\":true,\"prepaymentChargeId\":\"ch-9\"}")
+        val created = repo(api).requestBooking(request)
+        val body = api.calls.last { it.path == "v1/client/booking-requests" }.body!!
+        assertTrue(body.contains("\"paymentKind\":\"ONLINE\""))
+        assertTrue(body.contains("\"payNow\":true"))
+        assertEquals(ClientSessionState.AwaitingPayment, created.state)
+        assertEquals("ch-9", created.session.payment?.prepaymentChargeId)
+        assertTrue(created.canWithdraw)
+    }
+
+    @Test
     fun bookingErrorsMapToFailures() = runTest {
         val api = FakeApi()
         val request = BookingRequest("t-1", Instant.parse("2026-11-12T08:00:00Z"), Instant.parse("2026-11-12T09:00:00Z"), "Studio", "pol-0")

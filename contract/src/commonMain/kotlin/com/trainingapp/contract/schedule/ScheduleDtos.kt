@@ -40,7 +40,17 @@ data class ProposalDto(
 )
 
 @Serializable
-data class SessionPaymentDto(val kind: PaymentKindDto, val packageUsed: Int? = null, val packageTotal: Int? = null)
+data class SessionPaymentDto(
+    val kind: PaymentKindDto,
+    val packageUsed: Int? = null,
+    val packageTotal: Int? = null,
+    /** A prepaid online request whose payment is not confirmed yet: the trainer does not see it until then. */
+    val awaitingPayment: Boolean = false,
+    /** The charge to pay for [awaitingPayment] (wallet `POST /v1/client/charges/{id}/payments`). */
+    val prepaymentChargeId: String? = null,
+    /** Paid in advance: a cancellation fee is kept from it and the rest is refunded (no separate charge). */
+    val prepaid: Boolean = false,
+)
 
 @Serializable
 data class SessionDto(
@@ -112,6 +122,11 @@ data class BookingRequestDto(
     val operationId: String? = null,
     /** Null: a package with free credits when the client has one, otherwise an online payment. */
     val paymentKind: PaymentKindDto? = null,
+    /**
+     * With [PaymentKindDto.ONLINE]: the session is paid now (decision P1). The answer carries the charge to pay; the
+     * request reaches the trainer when the payment is confirmed and is withdrawn when it is not paid.
+     */
+    val payNow: Boolean = false,
 )
 
 @Serializable

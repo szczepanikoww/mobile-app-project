@@ -35,6 +35,7 @@ import com.trainingapp.server.scheduling.SessionRecord
 import com.trainingapp.server.scheduling.Sessions
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
@@ -76,6 +77,9 @@ class BillingService(
         val ONLINE_SESSION_DUE = 7.days
 
         const val UNITS_PER_SESSION = 100
+
+        private val log = org.slf4j.LoggerFactory.getLogger(BillingService::class.java)
+        private const val REFUND_RECHECK_MILLIS = 15_000L
 
         /** How long the client has to finish the provider's sheet before [reconcile] cancels the intent. */
         val UNFINISHED_AFTER = 15.minutes
@@ -374,7 +378,9 @@ class BillingService(
         val payments = paymentRows.map { row ->
             val pid = row[Payments.id]
             val firstCharge = Allocations.selectAll().where { Allocations.paymentId eq pid }.orderBy(Allocations.createdAt).firstOrNull()?.get(Allocations.chargeId)
-            val refunded = Refunds.selectAll().where { (Refunds.paymentId eq pid) and (Refunds.status eq "SUCCEEDED") }.sumOf { it[Refunds.amountMinor] }
+            val refundRows = Refunds.selectAll().where { Refunds.paymentId eq pid }.toList()
+            val refunded = refundRows.filter { it[Refunds.status] == "SUCCEEDED" }.sumOf { it[Refunds.amountMinor] }
+            val refundPending = refundRows.filter { it[Refunds.status] == "PENDING" }.sumOf { it[Refunds.amountMinor] }
             PaymentDto(
                 id = pid.toString(),
                 chargeId = firstCharge?.toString(),
@@ -389,6 +395,8 @@ class BillingService(
                     else -> PaymentStateDto.PENDING
                 },
                 at = (row[Payments.settledAt] ?: row[Payments.createdAt]).toKotlin(),
+                refunded = MoneyDto(refunded, row[Payments.currency]).takeIf { refunded > 0 },
+                refundPending = MoneyDto(refundPending, row[Payments.currency]).takeIf { refundPending > 0 },
             )
         }
         WalletDto(packages, charges, payments, now, paymentProvider.methods)
@@ -523,8 +531,69 @@ class BillingService(
             it[Payments.status] = status
             if (status == "SUCCEEDED") it[settledAt] = now.toOffset()
         }
-        emit("payment", paymentId, "payment.${status.lowercase()}", mapOf("relationshipId" to row[Payments.relationshipId]))
+        val clientId = with(identity) { relationship(row[Payments.relationshipId]) }?.clientId
+        emit("payment", paymentId, "payment.${status.lowercase()}", mapOf("relationshipId" to row[Payments.relationshipId], "clientId" to clientId))
+        when (status) {
+            "SUCCEEDED" -> with(Prepaid) { onPaymentSucceeded(paymentId, now) }
+            "FAILED" -> releaseUnpaidBookings(paymentId, now)
+        }
         return true
+    }
+
+    /**
+     * A prepayment that was cancelled (sheet closed, intent cancelled) withdraws its booking request soon after, unless
+     * the client has started another payment for it by then ([com.trainingapp.server.scheduling.SchedulingService.expireUnpaid]).
+     */
+    private fun JdbcTransaction.releaseUnpaidBookings(paymentId: Uuid, now: Instant) {
+        val chargeIds = Allocations.selectAll().where { Allocations.paymentId eq paymentId }.map { it[Allocations.chargeId] }
+        if (chargeIds.isEmpty()) return
+        Charges.selectAll().where { (Charges.id inList chargeIds) and (Charges.kind eq "SESSION") }.mapNotNull { it[Charges.sessionId] }
+            .filter { sid -> Sessions.selectAll().where { (Sessions.id eq sid) and (Sessions.awaitingPayment eq true) }.any() }
+            .forEach { sid -> schedule(JobQueue.PREPAY_ABANDONED, "prepay-abandoned:$sid:$paymentId", now, mapOf("sessionId" to sid)) }
+    }
+
+    private val refundChecked = java.util.concurrent.ConcurrentHashMap<Uuid, Long>()
+
+    /**
+     * Worker step: sends PENDING refunds to the provider (once, with the refund's operation id as idempotency key) and
+     * re-checks those the provider is still processing. Refunds of payments by another provider (cash) are left to
+     * the trainer. Returns how many refunds changed.
+     */
+    suspend fun processRefunds(batch: Int = 20): Int {
+        data class Due(val id: Uuid, val paymentId: Uuid, val paymentRef: String?, val amount: Long, val operationId: Uuid, val refundRef: String?, val relationshipId: Uuid)
+        val due = db.tx {
+            Refunds.join(Payments, JoinType.INNER, Refunds.paymentId, Payments.id).selectAll()
+                .where { (Refunds.status eq "PENDING") and (Payments.provider eq paymentProvider.name) }
+                .orderBy(Refunds.createdAt, SortOrder.ASC).limit(batch)
+                .map { Due(it[Refunds.id], it[Payments.id], it[Payments.providerRef], it[Refunds.amountMinor], it[Refunds.operationId], it[Refunds.providerRef], it[Payments.relationshipId]) }
+        }
+        var changed = 0
+        for (refund in due) {
+            val paymentRef = refund.paymentRef ?: continue
+            val lastCheck = refundChecked[refund.id] ?: 0L
+            if (refund.refundRef != null && System.currentTimeMillis() - lastCheck < REFUND_RECHECK_MILLIS) continue
+            val result = try {
+                if (refund.refundRef == null) paymentProvider.refund(paymentRef, refund.amount, refund.operationId) else paymentProvider.refundStatus(refund.refundRef)
+            } catch (e: Exception) {
+                log.warn("refund {} not sent: {}", refund.id, e.javaClass.simpleName)
+                continue
+            }
+            refundChecked[refund.id] = System.currentTimeMillis()
+            db.tx {
+                val updated = Refunds.update({ (Refunds.id eq refund.id) and (Refunds.status eq "PENDING") }) {
+                    it[providerRef] = result.ref
+                    if (result.status != "PENDING") it[status] = result.status
+                    if (result.status == "SUCCEEDED") it[settledAt] = dbNow().toOffset()
+                }
+                if (updated > 0 && result.status != "PENDING") {
+                    if (result.status == "FAILED") log.warn("refund {} failed at the provider", refund.id)
+                    val clientId = with(identity) { relationship(refund.relationshipId) }?.clientId
+                    emit("payment", refund.paymentId, "refund.${result.status.lowercase()}", mapOf("clientId" to clientId))
+                    changed++
+                }
+            }
+        }
+        return changed
     }
 
     /**

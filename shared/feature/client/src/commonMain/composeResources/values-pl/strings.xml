@@ -164,4 +164,20 @@
     <string name="error_invalid">Sprawdź wybrane dane.</string>
     <string name="error_load">Nie udało się wczytać danych.</string>
     <string name="error_save">Nie udało się wysłać. Spróbuj ponownie.</string>
+    <string name="state_awaiting_payment">Czeka na płatność</string>
+    <string name="awaiting_payment_info">Prośba trafi do trenera, gdy płatność zostanie potwierdzona. Nieopłacona prośba wygaśnie po 30 minutach.</string>
+    <string name="booking_payment_heading">Płatność</string>
+    <string name="booking_pay_now">Zapłać teraz online</string>
+    <string name="booking_pay_cash">Gotówką na miejscu</string>
+    <string name="booking_pay_now_info">Karta, BLIK lub Przelewy24. Prośba trafi do trenera po zapłacie. Jeśli jej nie przyjmie, pieniądze wrócą do Ciebie.</string>
+    <string name="continue_to_payment">Dalej: zapłać %1$s</string>
+    <string name="payment_title_booking">Zapłać za sesję</string>
+    <string name="booking_payment_note">Prośba trafi do trenera po potwierdzeniu płatności. Jeśli trener jej nie przyjmie, pieniądze wrócą do Ciebie.</string>
+    <string name="message_booking_payment_pending">Płatność w toku · prośba trafi do trenera po potwierdzeniu</string>
+    <string name="message_booking_not_paid">Prośba nie została wysłana · nic nie zostało pobrane</string>
+    <string name="refund_done">zwrócono %1$s</string>
+    <string name="refund_pending">zwrot %1$s w toku</string>
+    <string name="settle_prepaid_full">Zapłacone %1$s wróci do Ciebie w całości.</string>
+    <string name="settle_prepaid_partial">Z zapłaconej kwoty zatrzymamy %1$s, a %2$s wróci do Ciebie.</string>
+    <string name="settle_prepaid_none">Opłata %1$s zostanie pokryta z zapłaconej kwoty. Nic nie wróci.</string>
 </resources>

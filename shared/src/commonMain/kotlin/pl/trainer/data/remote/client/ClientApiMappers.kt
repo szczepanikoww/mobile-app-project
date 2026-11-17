@@ -96,7 +96,10 @@ internal fun SessionDto.toModel() = Session(
             requestedAt = it.requestedAt,
         )
     },
-    payment = SessionPayment(payment.kind.toModel(), payment.packageUsed, payment.packageTotal),
+    payment = SessionPayment(
+        payment.kind.toModel(), payment.packageUsed, payment.packageTotal,
+        awaitingPayment = payment.awaitingPayment, prepaymentChargeId = payment.prepaymentChargeId, prepaid = payment.prepaid,
+    ),
     policyVersionId = policyVersionId,
     price = price.toMoney(),
     trainerId = trainerId,
@@ -205,7 +208,10 @@ internal fun PaymentStateDto.toModel() = when (this) {
 }
 
 internal fun PaymentDto.toModel() =
-    Payment(id, chargeId, reason?.toModel(), trainer.toModel(), amount.toMoney(), method.toModel(), state.toModel(), at)
+    Payment(
+        id, chargeId, reason?.toModel(), trainer.toModel(), amount.toMoney(), method.toModel(), state.toModel(), at,
+        refunded = refunded?.toMoney(), refundPending = refundPending?.toMoney(),
+    )
 
 internal fun SessionPackageDto.toModel() = SessionPackage(
     id, name, trainer.toModel(), used, total, validUntil?.let { runCatching { LocalDate.parse(it) }.getOrNull() },

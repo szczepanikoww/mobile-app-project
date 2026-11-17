@@ -48,6 +48,12 @@ abstract class ApiTest(provider: PaymentProvider? = null) {
     protected val services = Services(db, config, paymentProvider = provider ?: fakeProvider)
     protected val fixtures = Fixtures(services)
 
+    /** JUnit creates one instance per test: its pool is closed afterwards so connections never pile up. */
+    @kotlin.test.AfterTest
+    fun closeDatabase() {
+        (db.dataSource as? com.zaxxer.hikari.HikariDataSource)?.close()
+    }
+
     protected fun api(block: suspend ApplicationTestBuilder.(HttpClient) -> Unit) = testApplication {
         application { trainerModule(services, startWorker = false) }
         val client = createClient { install(ContentNegotiation) { json(ApiJson) } }

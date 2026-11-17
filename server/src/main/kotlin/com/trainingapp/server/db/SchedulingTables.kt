@@ -58,6 +58,8 @@ object Sessions : Table("scheduling.session") {
     val requestedAt = tstz("requested_at")
     val confirmedAt = tstz("confirmed_at").nullable()
     val closedAt = tstz("closed_at").nullable()
+    /** A prepaid online request the trainer does not see until the payment is confirmed (V4). */
+    val awaitingPayment = bool("awaiting_payment").default(false)
     override val primaryKey = PrimaryKey(id)
 }
 

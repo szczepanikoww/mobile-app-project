@@ -130,10 +130,34 @@ fun ClientShell(
         }
     }
     val paymentPending = stringResource(Res.string.message_payment_pending)
+    val bookingPaymentPending = stringResource(Res.string.message_booking_payment_pending)
     LaunchedEffect(walletState.paymentSubmitted) {
         if (walletState.paymentSubmitted) {
+            val forBooking = walletState.bookingPaymentSubmitted
             wallet.dismissSubmitted()
-            snackbar.showSnackbar(paymentPending)
+            snackbar.showSnackbar(if (forBooking) bookingPaymentPending else paymentPending)
+            schedule.reload()
+        }
+    }
+    // A request booked with "pay now" goes straight to its payment (P1).
+    LaunchedEffect(scheduleState.prepayment) {
+        scheduleState.prepayment?.let { prepayment ->
+            schedule.consumePrepayment()
+            wallet.payCharge(prepayment.chargeId, prepayment.sessionId)
+        }
+    }
+    LaunchedEffect(walletState.abandonedBooking) {
+        walletState.abandonedBooking?.let { sessionId ->
+            wallet.consumeAbandonedBooking()
+            schedule.withdrawUnpaid(sessionId)
+        }
+    }
+    val bookingNotPaid = stringResource(Res.string.message_booking_not_paid)
+    LaunchedEffect(walletState.bookingNotPaid) {
+        if (walletState.bookingNotPaid) {
+            wallet.dismissBookingNotPaid()
+            schedule.reload()
+            snackbar.showSnackbar(bookingNotPaid)
         }
     }
     // A started Stripe payment is confirmed in the provider's sheet; its result goes back to the wallet.
@@ -156,6 +180,14 @@ fun ClientShell(
     }
 
     val openSession: (String) -> Unit = { shell.open(ClientRoute.SessionDetail(it)) }
+    // Payments and refunds settle on the server later (webhooks, refunds): opening the tab shows the current state.
+    LaunchedEffect(shellState.tab) {
+        when (shellState.tab) {
+            ClientTab.Wallet -> wallet.reload()
+            ClientTab.Calendar -> schedule.reload()
+            else -> Unit
+        }
+    }
     val openWallet: () -> Unit = { shell.select(ClientTab.Wallet) }
     val workoutLabel = stringResource(if (workoutState.inProgress) Res.string.resume_workout else Res.string.start_workout)
 
@@ -207,6 +239,9 @@ fun ClientShell(
                                     onShowPolicy = { schedule.showPolicy(it) },
                                     onChat = actions.onOpenChat,
                                     onAddToCalendar = actions.onAddToCalendar,
+                                    onPayBooking = { session ->
+                                        session.session.payment?.prepaymentChargeId?.let { wallet.payCharge(it, session.id) }
+                                    },
                                 ),
                             )
                         }
@@ -268,6 +303,7 @@ fun ClientShell(
                 onShowPolicy = { schedule.showPolicy(it) },
                 onSend = schedule::sendBooking,
                 onDismiss = schedule::closeBooking,
+                onPayNow = schedule::bookingPayNow,
             ),
         )
     }

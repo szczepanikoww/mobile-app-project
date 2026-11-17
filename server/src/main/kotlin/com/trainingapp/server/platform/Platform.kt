@@ -38,6 +38,8 @@ object JobQueue {
     const val REMINDER = "reminder"
     const val FAKE_PAYMENT_CONFIRM = "fake-payment-confirm"
     const val PAYMENT_RECONCILE = "payment-reconcile"
+    const val PREPAY_EXPIRY = "prepay-expiry"
+    const val PREPAY_ABANDONED = "prepay-abandoned"
     const val MEDIA_PROCESS = "media-process"
 
     /** Schedules a job once: a second call with the same [dedupeKey] is ignored. */

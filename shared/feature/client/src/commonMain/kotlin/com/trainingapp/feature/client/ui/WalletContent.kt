@@ -90,13 +90,7 @@ fun WalletContent(state: WalletUiState, onPay: (Charge) -> Unit, onRetry: () -> 
                     owed.forEach { ChargeCard(it, state.offline, onPay) }
                 }
             }
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-                SectionHeader(stringResource(Res.string.packages))
-                if (wallet.packages.isEmpty()) {
-                    Text(stringResource(Res.string.no_package), style = AppTheme.type.compactBody, color = AppTheme.colors.textSecondary)
-                }
-                wallet.packages.forEach { PackageCard(it) }
-            }
+            // No packages for now (single sessions only); PackageCard stays for when they return.
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
                 SectionHeader(stringResource(Res.string.payment_history))
                 val packageCredits = wallet.charges.filter { it.kind == ChargeKind.PackageCredit }
@@ -115,7 +109,9 @@ fun WalletContent(state: WalletUiState, onPay: (Charge) -> Unit, onRetry: () -> 
                             ListRow(
                                 title = stringResource(payment.reason?.let(::chargeReasonText) ?: Res.string.reason_session),
                                 supporting = DateFormats.date(payment.at.dateIn("Europe/Warsaw"), language(), "d MMM yyyy") + " · " +
-                                    stringResource(payment.method.label()),
+                                    stringResource(payment.method.label()) +
+                                    (payment.refunded?.let { " · " + stringResource(Res.string.refund_done, money(it)) } ?: "") +
+                                    (payment.refundPending?.let { " · " + stringResource(Res.string.refund_pending, money(it)) } ?: ""),
                                 badges = { StatusChip(stringResource(label), tone = tone) },
                                 trailing = { Text(money(payment.amount), style = AppTheme.type.bodyStrong, color = AppTheme.colors.text) },
                             )
@@ -215,7 +211,8 @@ fun PaymentSheet(
     onDismiss: () -> Unit,
 ) {
     val charge = state.charge
-    AppBottomSheet(onDismiss = onDismiss, title = stringResource(Res.string.payment_title)) {
+    val forBooking = state.bookingSessionId != null
+    AppBottomSheet(onDismiss = onDismiss, title = stringResource(if (forBooking) Res.string.payment_title_booking else Res.string.payment_title)) {
         Text(money(charge.amount), style = AppTheme.type.value, color = AppTheme.colors.text)
         Text(stringResource(chargeReasonText(charge.reason)) + " · " + charge.trainer.name, style = AppTheme.type.compactBody, color = AppTheme.colors.textSecondary)
         Text(stringResource(Res.string.payment_method), style = AppTheme.type.label, color = AppTheme.colors.textSecondary)
@@ -233,6 +230,7 @@ fun PaymentSheet(
                 }
             }
         }
+        if (forBooking) Text(stringResource(Res.string.booking_payment_note), style = AppTheme.type.compactBody, color = AppTheme.colors.textSecondary)
         InlineMessage(stringResource(Res.string.test_mode_note))
         if (offline) InlineMessage(stringResource(Res.string.payment_needs_connection), tone = MessageTone.Offline)
         state.failure?.let { InlineMessage(failureMessage(it), tone = MessageTone.Error) }

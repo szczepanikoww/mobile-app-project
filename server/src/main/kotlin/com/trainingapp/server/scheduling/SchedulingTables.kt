@@ -57,6 +57,8 @@ object Sessions : Table("scheduling.session") {
     val requestedAt = timestampWithTimeZone("requested_at")
     val confirmedAt = timestampWithTimeZone("confirmed_at").nullable()
     val closedAt = timestampWithTimeZone("closed_at").nullable()
+    /** A prepaid online request the trainer does not see until the payment is confirmed (V4). */
+    val awaitingPayment = bool("awaiting_payment").default(false)
     override val primaryKey = PrimaryKey(id)
 }
 

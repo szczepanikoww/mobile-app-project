@@ -388,7 +388,7 @@ Do not decide these silently while implementing.
 | R7 | Stripe Connect per trainer in the university phase? | No: one platform test account (`trainer_profile.payment_account_ref` stays null) |
 | R8 | Quote validity | 5 minutes |
 | R9 | DB5 across trainers: a client with two trainers still has one active plan? | Database-design asks to confirm; the plan follows the index as written |
-| R10 | When is a `SESSION` charge written, and its `due_at`? | At check-in (`COMPLETED`), so a cancellation never needs a reversing adjustment; online due 7 days after, cash due at the session. Fee charges due on creation. |
+| R10 | When is a `SESSION` charge written, and its `due_at`? | At check-in (`COMPLETED`), so a cancellation never needs a reversing adjustment; online due 7 days after, cash due at the session. Fee charges due on creation. **Superseded for online sessions booked with "pay now" by P1** ([stripe-payments.md](../features/stripe-payments.md)): charged at booking, settled and refunded per outcome. |
 | R11 | Schema gaps G-1…G-11 (§10) | Agree which become migrations and which UI fields are dropped instead |
 | — | Unchanged from architecture | G13 (renewal, pauses, extra-session price), D1 package purchase, D2 invoices (`invoice_ref` stays unused), guest D1/D2 (ratings, verified) stay unresolved; the API exposes only display data for them |
 

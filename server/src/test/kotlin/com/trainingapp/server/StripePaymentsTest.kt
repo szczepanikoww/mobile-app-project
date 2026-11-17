@@ -14,6 +14,7 @@ import com.trainingapp.contract.wallet.PaymentStateDto
 import com.trainingapp.contract.wallet.WalletDto
 import com.trainingapp.server.billing.PaymentProvider
 import com.trainingapp.server.billing.ProviderIntent
+import com.trainingapp.server.billing.ProviderRefund
 import com.trainingapp.server.billing.StripePaymentProvider
 import com.trainingapp.server.billing.WebhookEvent
 import com.trainingapp.server.common.Ids
@@ -57,6 +58,16 @@ class StripeLikeProvider : PaymentProvider {
         }
         return current == "canceled"
     }
+
+    /** Refunds sent to the provider: (payment ref, amount). */
+    val refunds = mutableListOf<Pair<String, Long>>()
+
+    override fun refund(paymentRef: String, amountMinor: Long, idempotencyKey: Uuid): ProviderRefund {
+        refunds += paymentRef to amountMinor
+        return ProviderRefund("re_$idempotencyKey", "SUCCEEDED")
+    }
+
+    override fun refundStatus(ref: String) = ProviderRefund(ref, "SUCCEEDED")
 
     override fun parseWebhook(body: String, header: (String) -> String?): WebhookEvent? = null
 }

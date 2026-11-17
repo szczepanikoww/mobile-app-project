@@ -64,6 +64,10 @@ data class PaymentDto(
     val method: PaymentMethodDto,
     val state: PaymentStateDto,
     val at: IsoInstant,
+    /** Returned to the client, confirmed by the provider. */
+    val refunded: MoneyDto? = null,
+    /** A refund the provider has not confirmed yet. */
+    val refundPending: MoneyDto? = null,
 )
 
 @Serializable

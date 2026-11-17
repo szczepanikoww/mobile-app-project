@@ -57,7 +57,10 @@ class TrainerHome(private val db: Db, private val clock: ServerClock) {
         val clients = SessionReads.clients(trainerId, includeEnded = false)
 
         val requestedCount = Sessions.selectAll()
-            .where { (Sessions.trainerId eq trainerId) and (Sessions.status eq SessionStatus.REQUESTED.name) and (Sessions.startsAt greater now.toOffset()) }
+            .where {
+                (Sessions.trainerId eq trainerId) and (Sessions.status eq SessionStatus.REQUESTED.name) and (Sessions.startsAt greater now.toOffset()) and
+                    (Sessions.awaitingPayment eq false)
+            }
             .count().toInt()
         val rescheduleCount = RescheduleRequests.join(Sessions, JoinType.INNER, RescheduleRequests.sessionId, Sessions.id)
             .selectAll()
@@ -69,7 +72,10 @@ class TrainerHome(private val db: Db, private val clock: ServerClock) {
         val (unread, videos) = unread(trainerId)
 
         val week = Sessions.selectAll()
-            .where { (Sessions.trainerId eq trainerId) and (Sessions.startsAt greaterEq weekStart.toOffset()) and (Sessions.startsAt less weekEnd.toOffset()) }
+            .where {
+                (Sessions.trainerId eq trainerId) and (Sessions.startsAt greaterEq weekStart.toOffset()) and (Sessions.startsAt less weekEnd.toOffset()) and
+                    (Sessions.awaitingPayment eq false)
+            }
             .map { it[Sessions.status] }
 
         TrainerHomeDto(
