@@ -1,7 +1,6 @@
 package com.trainingapp.server
 
 import com.trainingapp.server.billing.BillingService
-import com.trainingapp.server.billing.FakePaymentProvider
 import com.trainingapp.server.billing.PaymentProvider
 import com.trainingapp.server.catalogue.CatalogueService
 import com.trainingapp.server.common.ApiJson
@@ -61,7 +60,7 @@ import kotlin.time.Duration.Companion.seconds
 class Services(
     val db: Db,
     val config: ServerConfig,
-    val paymentProvider: PaymentProvider = FakePaymentProvider(config.payments.fakeWebhookSecret),
+    val paymentProvider: PaymentProvider = PaymentProvider.from(config.payments),
     storage: ObjectStorage = LocalDiskStorage(config.media.storageDir),
     push: PushSender = PushSender.Logging,
 ) {

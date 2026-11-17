@@ -200,10 +200,14 @@ private fun PackageCard(pack: SessionPackage) {
     }
 }
 
-/** The payment sheet (test mode in this phase). A submitted payment is pending until the server confirms it. */
+/**
+ * The payment sheet (test mode in this phase): amount and method. With Stripe the card or BLIK details are entered in
+ * Stripe's own sheet, opened after "Zapłać". A submitted payment is pending until the server confirms it.
+ */
 @Composable
 fun PaymentSheet(
     state: PaymentSheetState,
+    methods: List<PaymentMethod>,
     submitting: Boolean,
     offline: Boolean,
     onMethod: (PaymentMethod) -> Unit,
@@ -216,7 +220,7 @@ fun PaymentSheet(
         Text(stringResource(chargeReasonText(charge.reason)) + " · " + charge.trainer.name, style = AppTheme.type.compactBody, color = AppTheme.colors.textSecondary)
         Text(stringResource(Res.string.payment_method), style = AppTheme.type.label, color = AppTheme.colors.textSecondary)
         Column(Modifier.selectableGroup()) {
-            PaymentMethod.payableInApp.forEach { method ->
+            methods.forEach { method ->
                 Row(
                     Modifier.fillMaxWidth()
                         .heightIn(min = Sizes.minTouchTarget)
@@ -232,11 +236,12 @@ fun PaymentSheet(
         InlineMessage(stringResource(Res.string.test_mode_note))
         if (offline) InlineMessage(stringResource(Res.string.payment_needs_connection), tone = MessageTone.Offline)
         state.failure?.let { InlineMessage(failureMessage(it), tone = MessageTone.Error) }
+        if (state.checkoutFailed) InlineMessage(stringResource(Res.string.payment_checkout_failed), tone = MessageTone.Error)
         PrimaryButton(
             stringResource(Res.string.pay_amount, money(charge.amount)),
             onClick = onPay,
             modifier = Modifier.fillMaxWidth(),
-            enabled = !offline,
+            enabled = !offline && state.method in methods,
             loading = submitting,
         )
     }

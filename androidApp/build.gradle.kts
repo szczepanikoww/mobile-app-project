@@ -5,7 +5,8 @@ plugins {
 }
 android {
     namespace = "pl.trainerapp"
-    compileSdk = 35
+    // 36: required by the Stripe PaymentSheet dependencies (androidx.activity 1.12, core 1.17). targetSdk stays 35.
+    compileSdk = 36
     defaultConfig {
         applicationId = "pl.trainerapp"
         minSdk = 26
@@ -47,6 +48,8 @@ dependencies {
 
     implementation(project(":shared"))
     implementation(libs.activity.compose)
+    // Stripe PaymentSheet (test mode): card, BLIK and Przelewy24 are entered in Stripe's own UI.
+    implementation(libs.stripe.paymentsheet)
     implementation(libs.lifecycle.viewmodel.compose)
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.1")
     implementation("androidx.compose.ui:ui-tooling-preview:1.9.4")

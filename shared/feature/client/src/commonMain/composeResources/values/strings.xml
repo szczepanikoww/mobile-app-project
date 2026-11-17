@@ -154,6 +154,8 @@
     <string name="method_test">Test mode</string>
     <string name="method_cash">Cash</string>
     <string name="test_mode_note">Test mode: no money is charged.</string>
+    <string name="payment_checkout_failed">The payment was not completed and nothing was charged. You can try again.</string>
+    <string name="payment_merchant_name">TrainerApp (test mode)</string>
 
     <string name="error_unsent">Not sent. No connection – try again when you are back online.</string>
     <string name="error_conflict">The data changed in the meantime or the time is already taken. We refreshed it – check and try again.</string>

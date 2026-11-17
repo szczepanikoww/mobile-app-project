@@ -56,7 +56,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.JsonPrimitive
 import java.security.MessageDigest
 import java.time.LocalDate
 import kotlin.time.Instant
@@ -199,6 +199,10 @@ fun Route.clientRoutes(s: Services) = authenticate(AUTH_API) {
             val body = call.receive<PayRequestDto>()
             call.respond(HttpStatusCode.Created, s.billing.pay(call.currentClient(s.identity), call.pathUuid("id", "charge"), body.method, call.operationId()))
         }
+        // The provider's sheet was closed without paying (PayResponseDto).
+        post("/payments/{id}/cancel") {
+            call.respond(s.billing.abandon(call.currentClient(s.identity), call.pathUuid("id", "payment")))
+        }
 
         // Today, plans, workout sync, measurements (B1, A1–A3)
         get("/today") {
@@ -292,14 +296,13 @@ fun Route.webhookRoutes(s: Services) {
         val providerName = call.parameters["provider"]
         if (providerName != s.paymentProvider.name) throw notFound("provider")
         val body = call.receiveText()
-        if (!s.paymentProvider.verifySignature(body, call.request.headers["X-Signature"])) {
-            throw ApiException(401, ErrorCode.UNAUTHENTICATED, "bad signature")
+        val event = s.paymentProvider.parseWebhook(body) { call.request.headers[it] }
+            ?: throw ApiException(401, ErrorCode.UNAUTHENTICATED, "bad signature")
+        // Events that are not about a payment intent (e.g. Stripe's charge.*) are acknowledged and not stored.
+        if (event.paymentRef != null) {
+            val stored = JsonObject(mapOf("id" to JsonPrimitive(event.id), "type" to JsonPrimitive(event.type), "paymentRef" to JsonPrimitive(event.paymentRef)))
+            s.billing.handleProviderEvent(providerName, event.id, event.type, event.paymentRef, stored)
         }
-        val json = ApiJson.parseToJsonElement(body) as? JsonObject ?: throw invalid("body")
-        val eventId = json["id"]?.jsonPrimitive?.content ?: throw invalid("id")
-        val type = json["type"]?.jsonPrimitive?.content ?: throw invalid("type")
-        val ref = json["paymentRef"]?.jsonPrimitive?.content ?: throw invalid("paymentRef")
-        s.billing.handleProviderEvent(providerName, eventId, type, ref, json)
         call.respond(HttpStatusCode.OK, mapOf("received" to true))
     }
 }

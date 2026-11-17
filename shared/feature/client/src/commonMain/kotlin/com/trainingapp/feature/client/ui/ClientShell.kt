@@ -29,6 +29,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,7 +59,9 @@ import com.trainingapp.feature.client.presentation.TodayWorkoutViewModel
 import com.trainingapp.feature.client.presentation.WalletViewModel
 import com.trainingapp.feature.client.resources.*
 import org.jetbrains.compose.resources.stringResource
+import pl.trainer.domain.CheckoutResult
 import pl.trainer.domain.ClientSession
+import pl.trainer.ui.LocalProviderPaymentSheet
 import pl.trainer.ui.PlatformBackHandler
 
 /** What the client shell needs from the app: other features' entry points and the session actions. */
@@ -131,6 +134,24 @@ fun ClientShell(
         if (walletState.paymentSubmitted) {
             wallet.dismissSubmitted()
             snackbar.showSnackbar(paymentPending)
+        }
+    }
+    // A started Stripe payment is confirmed in the provider's sheet; its result goes back to the wallet.
+    val providerSheet = LocalProviderPaymentSheet.current
+    DisposableEffect(providerSheet, wallet) {
+        val listener: (CheckoutResult) -> Unit = wallet::onCheckoutResult
+        providerSheet?.onResult = listener
+        onDispose { if (providerSheet?.onResult === listener) providerSheet.onResult = null }
+    }
+    val merchantName = stringResource(Res.string.payment_merchant_name)
+    LaunchedEffect(walletState.checkout) {
+        val checkout = walletState.checkout ?: return@LaunchedEffect
+        if (checkout.presented) return@LaunchedEffect
+        if (providerSheet == null) {
+            wallet.onCheckoutResult(CheckoutResult.Failed("no provider sheet on this platform"))
+        } else {
+            wallet.checkoutPresented()
+            providerSheet.present(checkout.checkout, merchantName)
         }
     }
 
@@ -279,6 +300,7 @@ fun ClientShell(
     walletState.payment?.let { sheet ->
         PaymentSheet(
             state = sheet,
+            methods = walletState.paymentMethods,
             submitting = walletState.submitting,
             offline = walletState.offline,
             onMethod = wallet::paymentMethod,

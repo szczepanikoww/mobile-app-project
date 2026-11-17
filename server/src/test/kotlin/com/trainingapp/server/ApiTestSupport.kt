@@ -3,6 +3,7 @@ package com.trainingapp.server
 import com.trainingapp.contract.policy.PolicyPreset
 import com.trainingapp.contract.policy.PolicyPresets
 import com.trainingapp.server.billing.FakePaymentProvider
+import com.trainingapp.server.billing.PaymentProvider
 import com.trainingapp.server.catalogue.Gyms
 import com.trainingapp.server.catalogue.Offers
 import com.trainingapp.server.catalogue.PolicyTiers
@@ -33,15 +34,18 @@ import java.time.LocalDate
 import java.time.LocalTime
 import kotlin.uuid.Uuid
 
-/** One migrated database and one service graph per test class; the app runs in Ktor's test engine. */
-abstract class ApiTest {
+/**
+ * One migrated database and one service graph per test class; the app runs in Ktor's test engine. [provider] replaces
+ * the fake payment provider (e.g. a Stripe-like stub).
+ */
+abstract class ApiTest(provider: PaymentProvider? = null) {
     protected val db = TestDatabase.fresh()
     private val storageDir = Files.createTempDirectory("trainer-media").toString()
     protected val config = ServerConfig.fromEnv(
         mapOf("TRAINER_PROFILE" to "local", "MEDIA_STORAGE_DIR" to storageDir, "FAKE_PAYMENT_DELAY_SECONDS" to "0", "WORKER_INLINE" to "false"),
     )
     protected val fakeProvider = FakePaymentProvider(config.payments.fakeWebhookSecret)
-    protected val services = Services(db, config, paymentProvider = fakeProvider)
+    protected val services = Services(db, config, paymentProvider = provider ?: fakeProvider)
     protected val fixtures = Fixtures(services)
 
     protected fun api(block: suspend ApplicationTestBuilder.(HttpClient) -> Unit) = testApplication {

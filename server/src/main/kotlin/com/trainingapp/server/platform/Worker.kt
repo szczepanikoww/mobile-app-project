@@ -160,6 +160,7 @@ class Worker(
                 }
             }
             JobQueue.FAKE_PAYMENT_CONFIRM -> billing.confirmFakePayment(id("paymentId"))
+            JobQueue.PAYMENT_RECONCILE -> billing.reconcile(id("paymentId"))
             JobQueue.MEDIA_PROCESS -> media.process(id("mediaId"))
             else -> log.warn("unknown job kind {}", kind)
         }

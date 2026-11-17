@@ -216,4 +216,5 @@ internal fun WalletDto.toModel() = Wallet(
     charges = charges.map { it.toModel() }.sortedByDescending { it.createdAt },
     payments = payments.map { it.toModel() }.sortedByDescending { it.at },
     serverNow = serverNow,
+    paymentMethods = paymentMethods.filter { it != PaymentMethodDto.CASH }.map { it.toModel() },
 )

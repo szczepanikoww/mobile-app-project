@@ -39,6 +39,8 @@ docker compose -f server/docker-compose.yml up -d     # PostgreSQL with the trai
 ./gradlew -Ptrainer.ui=false :server:run              # http://localhost:8080
 ```
 
+Payments use the synthetic `fake` provider by default; `"-Ppayment.provider=stripe"` switches to Stripe test mode with the keys from `local.properties` ([Stripe payments](docs/features/stripe-payments.md)).
+
 Reset the database with `docker compose -f server/docker-compose.yml down -v`. Tests: `./gradlew -Ptrainer.ui=false :server:test` (both suites; the trainer API tests use Testcontainers, so Docker must be running).
 
 The app uses the demo data by default. With a running server, `-Ptrainer.backend=local` connects it (quoted, because PowerShell splits the argument at the dot):

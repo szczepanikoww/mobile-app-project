@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("org.jetbrains.kotlin.jvm")
     id("org.jetbrains.kotlin.plugin.serialization")
@@ -42,6 +44,7 @@ dependencies {
     implementation(libs.postgresql)
     implementation(libs.hikari)
     implementation(libs.logback)
+    implementation(libs.stripe.java)
 
     testImplementation(kotlin("test"))
     testImplementation(libs.ktor.server.testHost)
@@ -57,6 +60,22 @@ tasks.test {
     // Integration tests start one PostgreSQL per JVM; keep them in one fork.
     maxParallelForks = 1
     systemProperty("user.timezone", "UTC")
+}
+
+// Stripe test mode locally: `./gradlew -Ptrainer.ui=false :server:run "-Ppayment.provider=stripe"` takes the keys from the
+// uncommitted local.properties (stripe.secretKey, stripe.publishableKey, stripe.webhookSecret). Real environment
+// variables win. See docs/features/stripe-payments.md.
+tasks.named<JavaExec>("run") {
+    val local = Properties()
+    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { local.load(it) }
+    mapOf(
+        "STRIPE_SECRET_KEY" to "stripe.secretKey",
+        "STRIPE_PUBLISHABLE_KEY" to "stripe.publishableKey",
+        "STRIPE_WEBHOOK_SECRET" to "stripe.webhookSecret",
+    ).forEach { (variable, key) ->
+        if (System.getenv(variable) == null) local.getProperty(key)?.trim()?.let { environment(variable, it) }
+    }
+    providers.gradleProperty("payment.provider").orNull?.let { environment("PAYMENT_PROVIDER", it) }
 }
 
 // `./gradlew :server:runWorker` starts only the worker (outbox, jobs, media checks).

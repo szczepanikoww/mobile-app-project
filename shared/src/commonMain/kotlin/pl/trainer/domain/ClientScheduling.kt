@@ -205,9 +205,34 @@ data class Wallet(
     val charges: List<Charge>,
     val payments: List<Payment>,
     val serverNow: Instant,
+    /** The methods the server's payment provider accepts; the payment sheet offers only these. */
+    val paymentMethods: List<PaymentMethod> = PaymentMethod.payableInApp,
 ) {
     /** Charges still to pay, including those whose payment is pending confirmation. */
     val outstanding: List<Charge> get() = charges.filter { it.state != ChargeState.Settled }
+}
+
+/**
+ * What the provider's own payment sheet needs to confirm a started payment (Stripe's PaymentSheet). The client secret
+ * is a one-payment credential: keep it in memory only, never log or store it.
+ */
+data class ProviderCheckout(val paymentId: String, val clientSecret: String, val publishableKey: String) {
+    override fun toString() = "ProviderCheckout(paymentId=$paymentId)"
+}
+
+/** A started payment: always pending; [checkout] is set when the client still confirms it in the provider's sheet. */
+data class PaymentStart(val payment: Payment, val checkout: ProviderCheckout? = null)
+
+/** How the provider's sheet ended, from the app's side. Only the server's confirmation makes a payment paid. */
+sealed interface CheckoutResult {
+    /** The client confirmed; the payment stays pending until the server has the provider's confirmation. */
+    data object Completed : CheckoutResult
+
+    /** Closed without paying. */
+    data object Canceled : CheckoutResult
+
+    /** The sheet could not take the payment (e.g. it could not load); [message] is the provider's, for logs only. */
+    data class Failed(val message: String?) : CheckoutResult
 }
 
 interface WalletRepository {
@@ -219,6 +244,16 @@ interface WalletRepository {
      * server receives the provider's confirmation. The same [idempotencyKey] never pays twice.
      */
     suspend fun pay(chargeId: String, method: PaymentMethod, idempotencyKey: String): Payment
+
+    /** Like [pay], with what the provider's sheet needs when the payment is confirmed there (Stripe). */
+    suspend fun startPayment(chargeId: String, method: PaymentMethod, idempotencyKey: String): PaymentStart =
+        PaymentStart(pay(chargeId, method, idempotencyKey))
+
+    /**
+     * The provider's sheet was closed without paying: the server cancels the payment so the charge can be paid again.
+     * Answers the payment's state afterwards (still pending when the provider is already processing it).
+     */
+    suspend fun cancelPayment(paymentId: String): Payment? = null
 }
 
 /* Cancellation policy versions (trainer) */

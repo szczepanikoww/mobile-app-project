@@ -154,6 +154,8 @@
     <string name="method_test">Tryb testowy</string>
     <string name="method_cash">Gotówka</string>
     <string name="test_mode_note">Tryb testowy: żadne pieniądze nie zostaną pobrane.</string>
+    <string name="payment_checkout_failed">Płatność nie została dokończona i nic nie zostało pobrane. Możesz spróbować ponownie.</string>
+    <string name="payment_merchant_name">TrainerApp (tryb testowy)</string>
 
     <string name="error_unsent">Niewysłane. Brak połączenia – spróbuj ponownie, gdy wrócisz do sieci.</string>
     <string name="error_conflict">Dane zmieniły się w międzyczasie albo termin jest już zajęty. Odświeżyliśmy je – sprawdź i spróbuj ponownie.</string>

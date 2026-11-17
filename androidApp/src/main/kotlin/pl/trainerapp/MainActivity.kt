@@ -9,16 +9,21 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import com.trainingapp.app.App
 import com.trainingapp.feature.workoutlogging.rest.AndroidRestTimerNotifier
 import pl.trainer.domain.ClientSession
+import pl.trainer.ui.LocalProviderPaymentSheet
 
 class MainActivity : ComponentActivity() {
     /** Incremented when the rest-timer notification is tapped; the app then opens the live workout. */
     private var openWorkoutRequests by mutableIntStateOf(0)
+
+    /** Stripe's PaymentSheet for wallet payments; created before the activity starts, as Stripe requires. */
+    private lateinit var paymentSheet: StripePaymentSheetHost
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,8 +32,13 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
         )
         if (savedInstanceState == null) handleIntent(intent)
+        paymentSheet = StripePaymentSheetHost(this)
         // The whole UI lives in :shared and :shared:app, so Android and desktop render the same shells.
-        setContent { App(openLiveWorkoutRequest = openWorkoutRequests, addToCalendar = ::addToCalendar) }
+        setContent {
+            CompositionLocalProvider(LocalProviderPaymentSheet provides paymentSheet) {
+                App(openLiveWorkoutRequest = openWorkoutRequests, addToCalendar = ::addToCalendar)
+            }
+        }
     }
 
     /**

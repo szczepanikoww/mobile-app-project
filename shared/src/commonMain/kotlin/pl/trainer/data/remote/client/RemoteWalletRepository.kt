@@ -2,6 +2,7 @@ package pl.trainer.data.remote.client
 
 import com.trainingapp.contract.wallet.PayRequestDto
 import com.trainingapp.contract.wallet.PayResponseDto
+import com.trainingapp.contract.wallet.PaymentDto
 import com.trainingapp.contract.wallet.WalletDto
 import io.ktor.http.HttpMethod
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,6 +11,9 @@ import kotlinx.coroutines.flow.update
 import pl.trainer.domain.Failure
 import pl.trainer.domain.Payment
 import pl.trainer.domain.PaymentMethod
+import pl.trainer.domain.PaymentStart
+import pl.trainer.domain.PaymentState
+import pl.trainer.domain.ProviderCheckout
 import pl.trainer.domain.TrainerException
 import pl.trainer.domain.Wallet
 import pl.trainer.domain.WalletRepository
@@ -58,7 +62,10 @@ class RemoteWalletRepository(
         }
     }
 
-    override suspend fun pay(chargeId: String, method: PaymentMethod, idempotencyKey: String): Payment {
+    override suspend fun pay(chargeId: String, method: PaymentMethod, idempotencyKey: String): Payment =
+        startPayment(chargeId, method, idempotencyKey).payment
+
+    override suspend fun startPayment(chargeId: String, method: PaymentMethod, idempotencyKey: String): PaymentStart {
         if (method == PaymentMethod.Cash) throw TrainerException(Failure.Save) // cash is recorded by the trainer, never paid in the app
         val operationId = operationIdFor(idempotencyKey)
         val answer = try {
@@ -76,6 +83,26 @@ class RemoteWalletRepository(
         val payment = answer.payment.toModel()
         // The cached wallet is stale now (the charge is pending); the next load shows the server's state.
         updated.update { it + 1 }
-        return payment
+        val secret = answer.clientSecret
+        val key = answer.publishableKey
+        val checkout = if (answer.provider == STRIPE && secret != null && key != null && payment.state == PaymentState.Pending) {
+            ProviderCheckout(payment.id, secret, key)
+        } else null
+        return PaymentStart(payment, checkout)
+    }
+
+    override suspend fun cancelPayment(paymentId: String): Payment {
+        val answer = try {
+            api.send<Unit, PaymentDto>(HttpMethod.Post, "v1/client/payments/$paymentId/cancel", response = PaymentDto.serializer())
+                ?: throw TrainerException(Failure.Save)
+        } catch (e: Throwable) {
+            throw e.toTrainerException(Op.Write)
+        }
+        updated.update { it + 1 }
+        return answer.toModel()
+    }
+
+    private companion object {
+        const val STRIPE = "stripe"
     }
 }

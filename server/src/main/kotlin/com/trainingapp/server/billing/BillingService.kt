@@ -52,6 +52,7 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 import java.time.ZoneId
 import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
@@ -75,6 +76,12 @@ class BillingService(
         val ONLINE_SESSION_DUE = 7.days
 
         const val UNITS_PER_SESSION = 100
+
+        /** How long the client has to finish the provider's sheet before [reconcile] cancels the intent. */
+        val UNFINISHED_AFTER = 15.minutes
+
+        /** A pending payment that never got a provider reference is treated as abandoned after this long. */
+        val STALE_WITHOUT_REF = 120.seconds
     }
 
     // ----- Fee quotes and decisions (used inside Scheduling's transactions) -----
@@ -384,7 +391,7 @@ class BillingService(
                 at = (row[Payments.settledAt] ?: row[Payments.createdAt]).toKotlin(),
             )
         }
-        WalletDto(packages, charges, payments, now)
+        WalletDto(packages, charges, payments, now, paymentProvider.methods)
     }
 
     /** Package fees taken from credits have no money charge: built from fee_decision + consumed reservation. */
@@ -428,7 +435,9 @@ class BillingService(
      * provider's webhook arrives. Idempotent by [operationId] (`payment.operation_id`).
      */
     suspend fun pay(client: CurrentUser, chargeId: Uuid, method: PaymentMethodDto, operationId: Uuid): PayResponseDto {
-        if (method == PaymentMethodDto.CASH) throw invalid("method")
+        if (method == PaymentMethodDto.CASH || method !in paymentProvider.methods) throw invalid("method")
+        val retry = db.tx { Payments.selectAll().where { Payments.operationId eq operationId }.any() }
+        if (!retry) releaseAbandoned(chargeId)
         // Phase 1: payment + allocation in one transaction with the charge row locked.
         val paymentId = db.tx {
             Payments.selectAll().where { Payments.operationId eq operationId }.singleOrNull()?.let { existing ->
@@ -476,10 +485,87 @@ class BillingService(
             Payments.update({ (Payments.id eq paymentId) and Payments.providerRef.isNull() }) { it[providerRef] = intent.ref }
             if (paymentProvider is FakePaymentProvider) {
                 schedule(JobQueue.FAKE_PAYMENT_CONFIRM, "fake-confirm:$paymentId", dbNow() + fakeConfirmDelaySeconds.seconds, mapOf("paymentId" to paymentId))
+            } else {
+                schedule(JobQueue.PAYMENT_RECONCILE, "reconcile:$paymentId", dbNow() + UNFINISHED_AFTER, mapOf("paymentId" to paymentId))
             }
         }
         val payment = wallet(client).payments.first { it.id == paymentId.toString() }
-        return PayResponseDto(payment, intent.clientSecret)
+        return PayResponseDto(payment, intent.clientSecret, paymentProvider.name, paymentProvider.publishableKey)
+    }
+
+    /**
+     * Before a new payment: pending payments of [chargeId] that the client left unfinished in the provider's sheet are
+     * cancelled at the provider and marked FAILED. One the provider is processing (or has paid) stays PENDING, so the
+     * pay call still answers "a payment is already pending". A pending row without a provider reference is from a
+     * call that never reached the provider; after [STALE_WITHOUT_REF] it is failed too.
+     */
+    private suspend fun releaseAbandoned(chargeId: Uuid) {
+        val pending = db.tx {
+            val now = dbNow()
+            (Allocations innerJoin Payments).selectAll()
+                .where { (Allocations.chargeId eq chargeId) and (Payments.status eq "PENDING") and (Payments.provider eq paymentProvider.name) }
+                .map { Triple(it[Payments.id], it[Payments.providerRef], it[Payments.createdAt].toKotlin() < now - STALE_WITHOUT_REF) }
+        }
+        for ((id, ref, stale) in pending) {
+            val cancelled = if (ref == null) stale else paymentProvider.cancel(ref)
+            if (cancelled) db.tx { failPending(id) }
+        }
+    }
+
+    private fun JdbcTransaction.failPending(paymentId: Uuid): Boolean = settlePending(paymentId, "FAILED")
+
+    /** PENDING → SUCCEEDED or FAILED, once (the row is locked); false when it was already final. */
+    private fun JdbcTransaction.settlePending(paymentId: Uuid, status: String): Boolean {
+        val row = Payments.selectAll().where { Payments.id eq paymentId }.forUpdate(ForUpdateOption.ForUpdate).single()
+        if (row[Payments.status] != "PENDING") return false
+        val now = dbNow()
+        Payments.update({ Payments.id eq paymentId }) {
+            it[Payments.status] = status
+            if (status == "SUCCEEDED") it[settledAt] = now.toOffset()
+        }
+        emit("payment", paymentId, "payment.${status.lowercase()}", mapOf("relationshipId" to row[Payments.relationshipId]))
+        return true
+    }
+
+    /**
+     * Worker job [JobQueue.PAYMENT_RECONCILE], [UNFINISHED_AFTER] after a provider payment started: a webhook that never
+     * arrived is replaced by the provider's own status, and an intent the client left in the sheet (e.g. the app was
+     * closed) is cancelled so the charge can be paid again. One still being processed is checked again later.
+     */
+    suspend fun reconcile(paymentId: Uuid) {
+        val row = db.tx { Payments.selectAll().where { Payments.id eq paymentId }.singleOrNull() } ?: return
+        if (row[Payments.status] != "PENDING" || row[Payments.provider] != paymentProvider.name) return
+        val ref = row[Payments.providerRef] ?: run { db.tx { failPending(paymentId) }; return }
+        when (paymentProvider.fetchStatus(ref)) {
+            "SUCCEEDED" -> db.tx { settlePending(paymentId, "SUCCEEDED") }
+            "FAILED" -> db.tx { failPending(paymentId) }
+            else -> if (paymentProvider.cancel(ref)) {
+                db.tx { failPending(paymentId) }
+            } else {
+                db.tx {
+                    val next = dbNow() + UNFINISHED_AFTER
+                    schedule(JobQueue.PAYMENT_RECONCILE, "reconcile:$paymentId:${next.epochSeconds}", next, mapOf("paymentId" to paymentId))
+                }
+            }
+        }
+    }
+
+    /**
+     * The client closed the provider's sheet without paying: the intent is cancelled at the provider and the payment
+     * marked FAILED, so the charge can be paid again. When the provider is already processing or has settled it, the
+     * payment stays PENDING and the webhook decides. Answers the payment as the wallet shows it.
+     */
+    suspend fun abandon(client: CurrentUser, paymentId: Uuid): PaymentDto {
+        val row = db.tx { Payments.selectAll().where { Payments.id eq paymentId }.singleOrNull() } ?: throw notFound("payment")
+        val relationship = db.tx { with(identity) { relationship(row[Payments.relationshipId]) } }
+        if (relationship == null || relationship.clientId != client.id) {
+            throw notFound("payment", DeniedSubject("payment", paymentId, row[Payments.relationshipId]))
+        }
+        val ref = row[Payments.providerRef]
+        if (row[Payments.status] == "PENDING" && row[Payments.provider] == paymentProvider.name && ref != null && paymentProvider.cancel(ref)) {
+            db.tx { failPending(paymentId) }
+        }
+        return wallet(client).payments.first { it.id == paymentId.toString() }
     }
 
     /**
@@ -505,16 +591,14 @@ class BillingService(
                 "payment.failed" -> "FAILED"
                 else -> null
             }
-            // Out-of-order or unknown events: trust the provider's current state, not the event.
-            val status = paymentProvider.fetchStatus(paymentRef).takeIf { it == "SUCCEEDED" || it == "FAILED" } ?: claimed
-            if (status != null) {
-                val now = dbNow()
-                Payments.update({ Payments.id eq payment[Payments.id] }) {
-                    it[Payments.status] = status
-                    if (status == "SUCCEEDED") it[settledAt] = now.toOffset()
-                }
-                emit("payment", payment[Payments.id], "payment.${status.lowercase()}", mapOf("relationshipId" to payment[Payments.relationshipId]))
+            // Out-of-order or unknown events: trust the provider's current state, not the event. While the provider
+            // still has it open (e.g. a declined card the client may retry), nothing is applied.
+            val status = when (val current = paymentProvider.fetchStatus(paymentRef)) {
+                "SUCCEEDED", "FAILED" -> current
+                "PENDING" -> null
+                else -> claimed
             }
+            if (status != null) settlePending(payment[Payments.id], status)
         }
         ProviderEvents.update({ (ProviderEvents.provider eq providerName) and (ProviderEvents.eventId eq eventId) }) {
             it[processedAt] = dbNow().toOffset()

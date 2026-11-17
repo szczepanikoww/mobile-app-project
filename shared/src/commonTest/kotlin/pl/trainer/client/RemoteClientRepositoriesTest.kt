@@ -19,6 +19,7 @@ import pl.trainer.domain.ClientSessionState
 import pl.trainer.domain.Failure
 import pl.trainer.domain.PaymentMethod
 import pl.trainer.domain.PaymentState
+import pl.trainer.domain.ProviderCheckout
 import pl.trainer.domain.RescheduleRequest
 import pl.trainer.domain.TrainerException
 import kotlin.test.Test
@@ -325,6 +326,31 @@ class RemoteClientRepositoriesTest {
         assertEquals(ChargeState.PaymentPending, repository.load().charges.first { it.id == "ch-1" }.state)
         api.answers["GET v1/client/wallet"] = wallet.replace("%STATE%", "SETTLED")
         assertEquals(ChargeState.Settled, repository.load().charges.first { it.id == "ch-1" }.state)
+    }
+
+    @Test
+    fun aStripePaymentCarriesTheSheetCheckoutAndCanBeCancelled() = runTest {
+        val api = FakeApi()
+        val repository = RemoteWalletRepository(api, identity = { "client-1" })
+        api.answers["GET v1/client/wallet"] = wallet.replace("%STATE%", "UNPAID")
+        // Older servers send no method list: the fake provider's set is assumed.
+        assertTrue(PaymentMethod.TestMode in repository.load().paymentMethods)
+
+        val payment = """{"id":"pay-1","chargeId":"ch-1","reason":"LATE_CANCELLATION","trainer":$trainer,
+            "amount":{"minor":6000,"currency":"PLN"},"method":"CARD","state":"%S%","at":"2026-11-11T09:30:00Z"}"""
+        api.answers["POST v1/client/charges/ch-1/payments"] =
+            """{"payment":${payment.replace("%S%", "PENDING")},"clientSecret":"pi_1_secret_x","provider":"stripe","publishableKey":"pk_test_1"}"""
+        val start = repository.startPayment("ch-1", PaymentMethod.Card, "key-1")
+        assertEquals(ProviderCheckout("pay-1", "pi_1_secret_x", "pk_test_1"), start.checkout)
+        assertFalse("pi_1_secret_x" in start.checkout.toString()) // never in logs
+
+        api.answers["POST v1/client/payments/pay-1/cancel"] = payment.replace("%S%", "FAILED")
+        assertEquals(PaymentState.Failed, repository.cancelPayment("pay-1").state)
+
+        // The fake provider: nothing to confirm in the app.
+        api.answers["POST v1/client/charges/ch-1/payments"] =
+            """{"payment":${payment.replace("%S%", "PENDING")},"clientSecret":"fake_secret","provider":"fake"}"""
+        assertNull(repository.startPayment("ch-1", PaymentMethod.Card, "key-2").checkout)
     }
 
     @Test

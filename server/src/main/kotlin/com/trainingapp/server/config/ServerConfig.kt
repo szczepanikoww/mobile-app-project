@@ -51,6 +51,9 @@ data class ServerConfig(
                     provider = env["PAYMENT_PROVIDER"] ?: "fake",
                     fakeWebhookSecret = secret("FAKE_PAYMENT_WEBHOOK_SECRET", "local-fake-webhook-secret"),
                     fakeConfirmDelaySeconds = env["FAKE_PAYMENT_DELAY_SECONDS"]?.toLong() ?: 3,
+                    stripeSecretKey = env["STRIPE_SECRET_KEY"],
+                    stripePublishableKey = env["STRIPE_PUBLISHABLE_KEY"],
+                    stripeWebhookSecret = env["STRIPE_WEBHOOK_SECRET"],
                 ),
                 workerInline = env["WORKER_INLINE"]?.toBooleanStrict() ?: true,
                 seedDemoData = local && (env["SEED_DEMO_DATA"]?.toBooleanStrict() ?: true),
@@ -111,8 +114,14 @@ data class MediaConfig(
 )
 
 data class PaymentConfig(
-    /** `fake` (synthetic provider, confirmed by the worker through the webhook path) — Stripe test mode later. */
+    /** `fake` (synthetic provider, confirmed by the worker through the webhook path) or `stripe` (test mode only). */
     val provider: String,
     val fakeWebhookSecret: String,
     val fakeConfirmDelaySeconds: Long,
-)
+    /** Stripe test keys (`sk_test_…`, `pk_test_…`) and the webhook signing secret (`whsec_…`); required for `stripe`. */
+    val stripeSecretKey: String? = null,
+    val stripePublishableKey: String? = null,
+    val stripeWebhookSecret: String? = null,
+) {
+    override fun toString() = "PaymentConfig(provider=$provider)" // never log keys
+}

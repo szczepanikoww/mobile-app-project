@@ -72,12 +72,27 @@ data class WalletDto(
     val charges: List<ChargeDto>,
     val payments: List<PaymentDto>,
     val serverNow: IsoInstant,
+    /** The methods the server's payment provider accepts in the app (never CASH). */
+    val paymentMethods: List<PaymentMethodDto> = DEFAULT_APP_PAYMENT_METHODS,
 )
+
+/** What older servers accepted (the fake provider). */
+val DEFAULT_APP_PAYMENT_METHODS = listOf(PaymentMethodDto.CARD, PaymentMethodDto.BLIK, PaymentMethodDto.PRZELEWY24, PaymentMethodDto.TEST_MODE)
 
 /** `POST /v1/client/charges/{id}/payments` with the `Idempotency-Key` header. */
 @Serializable
 data class PayRequestDto(val method: PaymentMethodDto)
 
-/** Always PENDING. [clientSecret] is handed to the provider's payment sheet (Stripe later; the fake provider's id now). */
+/**
+ * Always PENDING. With [provider] `stripe` the app opens Stripe's PaymentSheet with [clientSecret] and
+ * [publishableKey]; with `fake` (or null, older servers) there is nothing to confirm in the app. A sheet closed
+ * without paying is reported with `POST /v1/client/payments/{id}/cancel`, which answers the updated [PaymentDto].
+ */
 @Serializable
-data class PayResponseDto(val payment: PaymentDto, val clientSecret: String?)
+data class PayResponseDto(
+    val payment: PaymentDto,
+    val clientSecret: String?,
+    val provider: String? = null,
+    val publishableKey: String? = null,
+)
+
