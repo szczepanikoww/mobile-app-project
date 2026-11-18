@@ -2,8 +2,8 @@ package com.trainingapp.server
 
 import com.trainingapp.server.auth.AuditLog
 import com.trainingapp.server.auth.CallerResolver
-import com.trainingapp.server.auth.TokenService
-import com.trainingapp.server.auth.trainerJwt
+import com.trainingapp.server.auth.trainerBearer
+import com.trainingapp.server.http.TokenVerifier
 import com.trainingapp.server.platform.ApiJson
 import com.trainingapp.server.platform.AppConfig
 import com.trainingapp.server.platform.Db
@@ -30,8 +30,9 @@ class TrainerServices(
     val config: AppConfig,
     val db: Db,
     val clock: ServerClock,
+    /** The same verifier as the client API; tests may pass a fake. */
+    val verifier: TokenVerifier = TokenVerifier.from(config.auth),
 ) {
-    val tokens = TokenService(config.auth)
     val callers = CallerResolver(db)
     val audit = AuditLog(db.dataSource)
     val sessions = TrainerSessions(db, clock)
@@ -60,7 +61,7 @@ fun Application.startTrainerWorker(services: TrainerServices) {
 fun Application.trainerApiModule(services: TrainerServices) {
     install(ContentNegotiation) { json(ApiJson) }
     install(StatusPages) { exception<Throwable> { call, e -> call.respondTrainerError(e) } }
-    install(Authentication) { trainerJwt(services.tokens) }
+    install(Authentication) { trainerBearer(services.verifier) }
     routing { trainerApiRoutes(services) }
     startTrainerWorker(services)
 }

@@ -1,5 +1,6 @@
 package pl.trainer
 
+import com.trainingapp.domain.auth.TokenProvider
 import kotlinx.coroutines.runBlocking
 import pl.trainer.data.remote.RemotePolicyRepository
 import pl.trainer.data.remote.RemoteTrainerRepository
@@ -29,7 +30,7 @@ class LiveTrainerApiTest {
     fun trainerFlowsAgainstLocalServer() {
         val baseUrl = url ?: return
         runBlocking {
-            val api = TrainerApiClient(baseUrl, subject = { "demo-trainer" })
+            val api = TrainerApiClient(baseUrl, tokens = TokenProvider.dev { "demo-trainer" })
             val trainer = RemoteTrainerRepository(api)
 
             val dashboard = trainer.load()

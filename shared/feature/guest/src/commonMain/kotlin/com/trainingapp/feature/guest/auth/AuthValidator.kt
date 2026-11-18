@@ -12,8 +12,10 @@ data class AuthInput(
     val email: String,
     val password: String,
     val termsAccepted: Boolean,
+    /** Finishing an account the identity provider already has: the e-mail is fixed and no password is asked. */
+    val completing: Boolean = false,
 ) {
-    override fun toString() = "AuthInput(mode=$mode, name=***, email=***, password=***, termsAccepted=$termsAccepted)"
+    override fun toString() = "AuthInput(mode=$mode, name=***, email=***, password=***, termsAccepted=$termsAccepted, completing=$completing)"
 }
 
 /** Client-side checks before a request is sent. The server repeats them; this only gives fast inline feedback. */
@@ -24,6 +26,10 @@ object AuthValidator {
 
     fun validate(input: AuthInput): Map<AuthField, FieldError> = buildMap {
         if (input.mode == AuthMode.Register && input.name.isBlank()) put(AuthField.Name, FieldError.Required)
+        if (input.mode == AuthMode.Register && input.completing) {
+            if (!input.termsAccepted) put(AuthField.Terms, FieldError.TermsRequired)
+            return@buildMap
+        }
         val email = input.email.trim()
         when {
             email.isEmpty() -> put(AuthField.Email, FieldError.Required)

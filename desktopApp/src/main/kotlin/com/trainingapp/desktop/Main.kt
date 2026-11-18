@@ -16,6 +16,7 @@ import com.trainingapp.app.App
 import com.trainingapp.app.AppPlatform
 import com.trainingapp.app.initKoin
 import com.trainingapp.data.db.TrainingDatabase
+import com.trainingapp.data.auth.IdentityConfig
 import com.trainingapp.data.remote.BackendConfig
 import com.trainingapp.domain.common.NetworkMonitor
 import com.trainingapp.domain.media.LocalFiles
@@ -41,6 +42,11 @@ private object DesktopPlatform : AppPlatform {
     override val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
     override val localFiles: LocalFiles = LocalFiles { File(it).delete() }
     override val backend: BackendConfig = BackendConfig.parse(System.getProperty("trainer.backend"))
+    override val identity: IdentityConfig = IdentityConfig.parse(
+        mode = System.getProperty("trainer.auth"),
+        apiKey = System.getProperty("firebase.apiKey"),
+        googleWebClientId = null,
+    )
 }
 
 fun main() {

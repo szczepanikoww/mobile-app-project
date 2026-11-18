@@ -19,11 +19,19 @@ dependencies {
 }
 // `-Ptrainer.backend=local` (or a URL) connects the app to the backend; the default is the demo data.
 val trainerBackend = providers.gradleProperty("trainer.backend").orElse("demo")
+// `-Ptrainer.auth=firebase` signs in through Firebase (docs/plans/firebase-auth.md §8). Desktop
+// has no Google sign-in and keeps the session in memory only.
+val trainerAuth = providers.gradleProperty("trainer.auth").orElse("dev")
+val firebaseApiKey = providers.gradleProperty("firebase.apiKey").orElse("")
 
 compose.desktop {
     application {
         mainClass = "com.trainingapp.desktop.MainKt"
-        jvmArgs += listOf("-Dtrainer.backend=${trainerBackend.get()}")
+        jvmArgs += listOf(
+            "-Dtrainer.backend=${trainerBackend.get()}",
+            "-Dtrainer.auth=${trainerAuth.get()}",
+            "-Dfirebase.apiKey=${firebaseApiKey.get()}",
+        )
     }
 }
 

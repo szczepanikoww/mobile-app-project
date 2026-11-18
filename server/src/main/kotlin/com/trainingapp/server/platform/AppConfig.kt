@@ -1,6 +1,7 @@
 package com.trainingapp.server.platform
 
-import org.jetbrains.exposed.v1.core.and
+import com.trainingapp.server.config.AuthConfig
+import com.trainingapp.server.config.AuthMode
 import java.util.Base64
 
 /**
@@ -14,7 +15,10 @@ data class AppConfig(
     val dbPassword: String,
     /** Loads the synthetic demo users and data (db/dev). Never enable in production. */
     val devSeed: Boolean,
+    /** Identity tokens: the same mode and project as the client API (docs/plans/firebase-auth.md §4). */
     val auth: AuthConfig,
+    /** HMAC key for the signed media links. */
+    val mediaSigningSecret: String,
     /** AES-256 key for private columns such as client information. KMS later. */
     val dataKeyId: String,
     val dataKey: ByteArray,
@@ -31,19 +35,15 @@ data class AppConfig(
 
         fun fromEnv(env: Map<String, String> = System.getenv()): AppConfig {
             fun get(name: String, default: String) = env[name]?.takeIf { it.isNotBlank() } ?: default
-            val authMode = get("AUTH_MODE", "dev")
+            val authMode = AuthMode.parse(get("AUTH_MODE", "dev"))
             val config = AppConfig(
                 port = get("PORT", "8080").toInt(),
                 dbUrl = get("DB_URL", "jdbc:postgresql://localhost:5432/trainer"),
                 dbUser = get("DB_USER", "trainer"),
                 dbPassword = get("DB_PASSWORD", "trainer-dev"),
-                devSeed = get("DEV_SEED", if (authMode == "dev") "true" else "false").toBoolean(),
-                auth = AuthConfig(
-                    mode = authMode,
-                    jwtSecret = get("JWT_SECRET", "dev-only-secret-change-me-0123456789"),
-                    jwtIssuer = get("JWT_ISSUER", "trainer-app-dev"),
-                    jwtAudience = get("JWT_AUDIENCE", "trainer-app"),
-                ),
+                devSeed = get("DEV_SEED", if (authMode == AuthMode.DEV) "true" else "false").toBoolean(),
+                auth = AuthConfig(mode = authMode, firebaseProjectId = get("FIREBASE_PROJECT_ID", "demo-trainer")),
+                mediaSigningSecret = get("MEDIA_SIGNING_KEY", get("JWT_SECRET", "dev-only-secret-change-me-0123456789")),
                 dataKeyId = get("DATA_KEY_ID", "dev-1"),
                 dataKey = Base64.getDecoder().decode(get("DATA_KEY", DEV_KEY)),
                 mediaDir = get("MEDIA_DIR", "build/media"),
@@ -54,13 +54,4 @@ data class AppConfig(
             return config
         }
     }
-}
-
-/**
- * [mode] "dev": the server signs its own HS256 tokens (POST /api/v1/dev/token) for the seeded demo users.
- * "jwt": verifies HS256 tokens from [jwtIssuer]; switching to the chosen identity provider (RS256/JWKS) only changes
- * the verifier in Auth.kt. Endpoints only see [com.trainingapp.server.auth.Caller].
- */
-data class AuthConfig(val mode: String, val jwtSecret: String, val jwtIssuer: String, val jwtAudience: String) {
-    val isDev get() = mode == "dev"
 }

@@ -223,6 +223,7 @@ private fun AuthRoute(
             onSubmit = viewModel::submit,
             onGoogle = viewModel::continueWithGoogle,
             onBrowse = onBrowse,
+            onCancelCompletion = { viewModel.cancelCompletion() },
         ),
     )
 }

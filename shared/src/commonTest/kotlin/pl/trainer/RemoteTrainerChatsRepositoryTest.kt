@@ -1,5 +1,6 @@
 package pl.trainer
 
+import com.trainingapp.domain.auth.TokenProvider
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.MockRequestHandleScope
@@ -48,7 +49,7 @@ class RemoteTrainerChatsRepositoryTest {
     }
 
     private fun repository(server: Server) =
-        RemoteTrainerChatsRepository(TrainerApiClient("http://test", subject = { "demo-trainer" }, engine = HttpClient(server.engine)))
+        RemoteTrainerChatsRepository(TrainerApiClient("http://test", tokens = TokenProvider.dev { "demo-trainer" }, engine = HttpClient(server.engine)))
 
     private fun MockRequestHandleScope.token() = respond("""{"token":"tok-1","userId":"t-1"}""", HttpStatusCode.OK, json)
 

@@ -33,7 +33,7 @@ class RemoteAuthRepositoryTest {
 
     private fun error(code: String) = json.encodeToString(ApiErrorDto.serializer(), ApiErrorDto(code, "synthetic"))
 
-    private fun repo(engine: MockEngine) = RemoteAuthRepository(apiFor = { token -> ApiClient("http://test", engine, token = token) })
+    private fun repo(engine: MockEngine) = RemoteAuthRepository(apiFor = { tokens -> ApiClient("http://test", engine, tokens = tokens) })
 
     @Test
     fun logInMapsRolesAndSendsDevToken() = runTest {

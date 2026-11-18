@@ -168,6 +168,12 @@
     <string name="failure_offline">Nie wysłano. Sprawdź połączenie.</string>
     <string name="failure_unavailable">Usługa jest niedostępna. Spróbuj ponownie później.</string>
     <string name="failure_google">Logowanie Google nie jest jeszcze dostępne.</string>
+    <string name="complete_account">Dokończ rejestrację</string>
+    <string name="complete_account_title">Dokończ zakładanie konta</string>
+    <string name="complete_account_body">Zalogowano jako %1$s. Podaj imię i nazwisko, wybierz rolę i zaakceptuj regulamin.</string>
+    <string name="complete_account_body_no_email">Zalogowano. Podaj imię i nazwisko, wybierz rolę i zaakceptuj regulamin.</string>
+    <string name="cancel_completion">Anuluj</string>
+    <string name="failure_too_many">Zbyt wiele prób. Odczekaj chwilę i spróbuj ponownie.</string>
     <string name="log_out">Wyloguj się</string>
     <plurals name="results_count">
         <item quantity="one">%d wynik</item>
