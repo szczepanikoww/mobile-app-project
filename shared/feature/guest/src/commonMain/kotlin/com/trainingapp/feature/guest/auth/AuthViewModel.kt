@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-enum class AuthFailure { InvalidCredentials, AccountExists, Offline, Unavailable, GoogleUnavailable }
+enum class AuthFailure { InvalidCredentials, AccountExists, Offline, Unavailable, GoogleUnavailable, TooManyAttempts }
 
 /**
  * The form state. The password is deliberately not here: it stays in screen-local state and is passed to
@@ -31,6 +31,11 @@ data class AuthUiState(
     val submitting: Boolean = false,
     val googleSubmitting: Boolean = false,
     val failure: AuthFailure? = null,
+    /**
+     * Signed in at the identity provider but no account here yet ([AuthResult.NeedsAccount]): the register form asks
+     * only for name, role and consent, with the e-mail fixed. Leaving it forgets the provider's sign-in.
+     */
+    val completing: Boolean = false,
     /** Set once sign-in succeeded; the route navigates to the role shell. */
     val signedIn: AuthSession? = null,
 ) {
@@ -50,8 +55,21 @@ class AuthViewModel(
     val state: StateFlow<AuthUiState> = mutableState.asStateFlow()
 
     /** Switching tabs keeps e-mail and password; name, role and consent only apply to registration. */
-    fun onModeChange(mode: AuthMode) = mutableState.update {
-        it.copy(mode = mode, failure = null, validatedFields = emptySet(), errors = emptyMap())
+    fun onModeChange(mode: AuthMode) {
+        if (state.value.completing) {
+            cancelCompletion(mode)
+            return
+        }
+        mutableState.update { it.copy(mode = mode, failure = null, validatedFields = emptySet(), errors = emptyMap()) }
+    }
+
+    /** Leaves the account completion: back to a normal form, the provider's sign-in is forgotten. */
+    fun cancelCompletion(mode: AuthMode = AuthMode.LogIn) {
+        if (!state.value.completing || state.value.busy) return
+        mutableState.update {
+            it.copy(mode = mode, completing = false, failure = null, validatedFields = emptySet(), errors = emptyMap())
+        }
+        viewModelScope.launch { repository.cancelAccountCompletion() }
     }
 
     fun onNameChange(value: String, password: String) = edit(password) { it.copy(name = value) }
@@ -79,9 +97,10 @@ class AuthViewModel(
         }
         mutableState.update { it.copy(errors = emptyMap(), submitting = true, failure = null) }
         viewModelScope.launch {
-            val result = when (current.mode) {
-                AuthMode.LogIn -> repository.logIn(current.email.trim(), password)
-                AuthMode.Register -> repository.register(
+            val result = when {
+                current.completing -> repository.completeAccount(current.name.trim(), current.role, termsVersion)
+                current.mode == AuthMode.LogIn -> repository.logIn(current.email.trim(), password)
+                else -> repository.register(
                     Registration(current.name.trim(), current.email.trim(), password, current.role, termsVersion),
                 )
             }
@@ -90,7 +109,7 @@ class AuthViewModel(
     }
 
     fun continueWithGoogle() {
-        if (state.value.busy || state.value.signedIn != null) return
+        if (state.value.busy || state.value.signedIn != null || state.value.completing) return
         mutableState.update { it.copy(googleSubmitting = true, failure = null) }
         viewModelScope.launch { handle(repository.continueWithGoogle()) }
     }
@@ -107,8 +126,18 @@ class AuthViewModel(
             AuthResult.Offline -> done.copy(failure = AuthFailure.Offline)
             AuthResult.Unavailable -> done.copy(failure = AuthFailure.Unavailable)
             AuthResult.NotSupported -> done.copy(failure = AuthFailure.GoogleUnavailable)
+            AuthResult.TooManyAttempts -> done.copy(failure = AuthFailure.TooManyAttempts)
+            AuthResult.Cancelled -> done
+            is AuthResult.NeedsAccount -> done.copy(
+                mode = AuthMode.Register,
+                completing = true,
+                email = result.email ?: done.email,
+                name = done.name.ifBlank { result.suggestedName.orEmpty() },
+                validatedFields = emptySet(),
+                errors = emptyMap(),
+            )
         }
     }
 
-    private fun AuthUiState.input(password: String) = AuthInput(mode, name, email, password, termsAccepted)
+    private fun AuthUiState.input(password: String) = AuthInput(mode, name, email, password, termsAccepted, completing)
 }

@@ -2,8 +2,7 @@ package pl.trainer.data.remote
 
 import com.trainingapp.contract.api.ApiError
 import com.trainingapp.contract.api.ApiErrorCode
-import com.trainingapp.contract.api.DevTokenRequest
-import com.trainingapp.contract.api.TokenDto
+import com.trainingapp.domain.auth.TokenProvider
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -20,8 +19,6 @@ import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
 import pl.trainer.domain.Failure
 import pl.trainer.domain.TrainerException
@@ -34,13 +31,14 @@ val TrainerApiJson = Json {
 }
 
 /**
- * The trainer API over HTTP (`/api/v1`). [subject] is the signed-in account; until an identity provider exists the
- * server's development endpoint issues its token (decision TB2). Errors become [TrainerException]s, so view models
- * keep their existing failure handling. Request and response bodies are never logged.
+ * The trainer API over HTTP (`/api/v1`). [tokens] gives the signed-in account's bearer token, the same source as the
+ * client API (`dev.<subject>` locally, a Firebase ID token otherwise; docs/plans/firebase-auth.md §5). Errors become
+ * [TrainerException]s, so view models keep their existing failure handling. Request and response bodies and tokens
+ * are never logged.
  */
 class TrainerApiClient(
     baseUrl: String,
-    private val subject: () -> String,
+    private val tokens: TokenProvider,
     engine: HttpClient? = null,
 ) {
     private val http: HttpClient = (engine ?: HttpClient()).config {
@@ -52,15 +50,16 @@ class TrainerApiClient(
         }
     }
 
-    private val tokenLock = Mutex()
-    private var token: Pair<String, String>? = null // subject to token
-
-    private suspend fun token(forceNew: Boolean): String = tokenLock.withLock {
-        val who = subject()
-        token?.takeIf { !forceNew && it.first == who }?.let { return it.second }
-        val response = send(HttpMethod.Post, "dev/token", write = true) { setBody(DevTokenRequest(who)) }
-        if (!response.status.isSuccess()) throw response.failure(write = false)
-        response.body<TokenDto>().token.also { token = who to it }
+    /** The current token; a provider that cannot refresh (no connection) is offline. Signed out → [Failure.Denied]. */
+    private suspend fun token(forceNew: Boolean): String {
+        val token = try {
+            tokens.token(forceNew)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            throw TrainerException(Failure.Offline)
+        }
+        return token ?: throw TrainerException(Failure.Denied)
     }
 
     /** Sends one call with the account's token; a rejected token is renewed once. */

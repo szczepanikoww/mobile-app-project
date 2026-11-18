@@ -75,7 +75,7 @@ class TrainerMediaService(
 
     private fun sign(mediaId: UUID, purpose: String, expires: Long): String {
         val mac = Mac.getInstance("HmacSHA256")
-        mac.init(SecretKeySpec(config.auth.jwtSecret.toByteArray(Charsets.UTF_8), "HmacSHA256"))
+        mac.init(SecretKeySpec(config.mediaSigningSecret.toByteArray(Charsets.UTF_8), "HmacSHA256"))
         val sig = mac.doFinal("$mediaId:$purpose:$expires".toByteArray(Charsets.UTF_8))
         return "$expires.${Base64.getUrlEncoder().withoutPadding().encodeToString(sig)}"
     }

@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("org.jetbrains.kotlin.jvm")
     id("org.jetbrains.kotlin.plugin.serialization")
@@ -64,4 +66,36 @@ tasks.register<JavaExec>("runWorker") {
     group = "application"
     classpath = sourceSets["main"].runtimeClasspath
     mainClass.set("com.trainingapp.server.WorkerMainKt")
+}
+
+// Sign-in settings for `run` and `runWorker` from local.properties (not committed), the same file the app reads
+// (docs/plans/firebase-auth.md §8). An environment variable set in the terminal always wins.
+//   trainer.auth=dev | firebase              → AUTH_MODE (dev, firebase)
+//   firebase.projectId=<Project ID>          → FIREBASE_PROJECT_ID for `firebase`
+val serverLocalProperties = Properties().apply {
+    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+val serverAuthEnvironment: Map<String, String> = buildMap {
+    val mode = when (serverLocalProperties.getProperty("trainer.auth")?.trim()?.lowercase()) {
+        "firebase" -> "firebase"
+        else -> null
+    }
+    if (mode != null) put("AUTH_MODE", mode)
+    val projectId = when (mode) {
+        "firebase" -> serverLocalProperties.getProperty("firebase.projectId")?.trim()?.takeIf { it.isNotEmpty() }
+        else -> null
+    }
+    if (projectId != null) put("FIREBASE_PROJECT_ID", projectId)
+}.filterKeys { System.getenv(it).isNullOrBlank() }
+
+tasks.withType<JavaExec>().configureEach {
+    if (name == "run" || name == "runWorker") {
+        environment(serverAuthEnvironment)
+        doFirst {
+            val firebaseMode = (System.getenv("AUTH_MODE") ?: serverAuthEnvironment["AUTH_MODE"]) == "firebase"
+            if (firebaseMode && System.getenv("FIREBASE_PROJECT_ID").isNullOrBlank() && serverAuthEnvironment["FIREBASE_PROJECT_ID"] == null) {
+                logger.warn("AUTH_MODE=firebase without firebase.projectId in local.properties: every Firebase token will be rejected.")
+            }
+        }
+    }
 }

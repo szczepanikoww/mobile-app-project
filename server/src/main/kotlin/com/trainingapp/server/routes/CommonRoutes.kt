@@ -7,6 +7,7 @@ import com.trainingapp.contract.api.TokenDto
 import com.trainingapp.server.TrainerServices
 import com.trainingapp.server.auth.AUTH
 import com.trainingapp.server.auth.caller
+import com.trainingapp.server.config.AuthMode
 import com.trainingapp.server.platform.notFound
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate
@@ -21,12 +22,12 @@ fun Route.commonRoutes(services: TrainerServices) {
     get("/health") { call.respond(HttpStatusCode.OK, mapOf("status" to "ok")) }
 
     route("/api/v1") {
-        // Local development only: issue a token for a seeded demo account. Not routed outside AUTH_MODE=dev.
-        if (services.config.auth.isDev) {
+        // Local development only: the `dev.<subject>` token of a seeded demo account. Not routed outside AUTH_MODE=dev.
+        if (services.config.auth.mode == AuthMode.DEV) {
             post("/dev/token") {
                 val request = call.receive<DevTokenRequest>()
                 val caller = runCatching { services.callers.resolve(request.subject) }.getOrElse { notFound("Unknown demo account") }
-                call.respond(TokenDto(services.tokens.issue(request.subject), caller.userId.toString()))
+                call.respond(TokenDto("dev.${request.subject}", caller.userId.toString()))
             }
         }
 

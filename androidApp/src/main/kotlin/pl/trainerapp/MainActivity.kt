@@ -1,5 +1,6 @@
 package pl.trainerapp
 
+import com.trainingapp.android.auth.CurrentActivity
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.graphics.Color
@@ -22,6 +23,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Google sign-in shows its account picker over this activity.
+        CurrentActivity.set(this)
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
@@ -29,6 +32,16 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) handleIntent(intent)
         // The whole UI lives in :shared and :shared:app, so Android and desktop render the same shells.
         setContent { App(openLiveWorkoutRequest = openWorkoutRequests, addToCalendar = ::addToCalendar) }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        CurrentActivity.set(this)
+    }
+
+    override fun onDestroy() {
+        CurrentActivity.clear(this)
+        super.onDestroy()
     }
 
     /**

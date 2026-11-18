@@ -11,6 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -109,9 +110,15 @@ fun App(
             }
         }
 
-        LaunchedEffect(openLiveWorkoutRequest) {
-            if (openLiveWorkoutRequest > 0) {
-                navController.navigate(LiveWorkoutDestination) { launchSingleTop = true }
+        // A session that ends by itself (refresh token revoked in Firebase, account removed) returns to sign-in.
+        // A normal log-out has already navigated there.
+        LaunchedEffect(auth) {
+            var wasSignedIn = auth.session.value != null
+            auth.session.collect { session ->
+                if (session == null && wasSignedIn && navController.currentDestination?.hasRoute<AuthDestination>() != true) {
+                    replaceStack(AuthDestination())
+                }
+                wasSignedIn = session != null
             }
         }
 

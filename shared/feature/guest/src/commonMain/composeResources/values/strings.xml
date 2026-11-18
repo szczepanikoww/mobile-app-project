@@ -168,6 +168,12 @@
     <string name="failure_offline">Not sent. Check your connection.</string>
     <string name="failure_unavailable">The service is unavailable. Try again later.</string>
     <string name="failure_google">Google sign-in is not available yet.</string>
+    <string name="complete_account">Finish sign-up</string>
+    <string name="complete_account_title">Finish creating your account</string>
+    <string name="complete_account_body">You are signed in as %1$s. Add your name, choose a role and accept the terms.</string>
+    <string name="complete_account_body_no_email">You are signed in. Add your name, choose a role and accept the terms.</string>
+    <string name="cancel_completion">Cancel</string>
+    <string name="failure_too_many">Too many attempts. Wait a moment and try again.</string>
     <string name="log_out">Log out</string>
     <plurals name="results_count">
         <item quantity="one">%d result</item>
