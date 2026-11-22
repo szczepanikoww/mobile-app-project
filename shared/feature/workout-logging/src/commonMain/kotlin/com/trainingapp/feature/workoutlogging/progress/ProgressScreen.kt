@@ -1,12 +1,14 @@
 package com.trainingapp.feature.workoutlogging.progress
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
@@ -25,6 +27,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
@@ -38,7 +42,9 @@ import com.trainingapp.designsystem.component.DetailHeader
 import com.trainingapp.designsystem.component.EmptyState
 import com.trainingapp.designsystem.component.ErrorState
 import com.trainingapp.designsystem.component.GroupedSurface
+import com.trainingapp.designsystem.component.ExercisePhoto
 import com.trainingapp.designsystem.component.LineChart
+import com.trainingapp.designsystem.component.rememberExercisePhoto
 import com.trainingapp.designsystem.component.ListRow
 import com.trainingapp.designsystem.component.LoadingState
 import com.trainingapp.designsystem.component.PrimaryButton
@@ -190,6 +196,7 @@ private fun LazyListScope.exercisesTab(state: ProgressUiState, actions: Progress
             )
         }
     }
+    item(key = "exercise-photo") { ExercisePhotoBanner(selected) }
     item(key = "chart") { ChartCard(state) }
     item(key = "points-title") {
         Text(stringResource(Res.string.progress_best_sets), style = AppTheme.type.sectionTitle, color = AppTheme.colors.text, modifier = Modifier.semantics { heading() })
@@ -206,6 +213,24 @@ private fun LazyListScope.exercisesTab(state: ProgressUiState, actions: Progress
             }
         }
     }
+}
+
+/**
+ * The selected exercise's photo between the picker and the chart. Decorative (the name is in the picker), and
+ * left out when the exercise has no photo, so the chart does not move under an empty placeholder.
+ */
+@Composable
+private fun ExercisePhotoBanner(exerciseId: String) {
+    val image = rememberExercisePhoto(ExercisePhoto.OfExercise(exerciseId)) ?: return
+    Image(
+        bitmap = image,
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(180.dp)
+            .clip(AppShapes.featureCard),
+    )
 }
 
 @Composable

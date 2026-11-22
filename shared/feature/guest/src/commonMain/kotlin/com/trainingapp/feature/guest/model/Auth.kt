@@ -86,6 +86,24 @@ interface AuthRepository {
      * the role is not held (or switching is not supported).
      */
     suspend fun switchRole(role: Role): AuthSession? = null
+
+    /**
+     * Changes the signed-in user's display name on the server. Only a confirmed change updates [session]; any other
+     * result leaves it as it was.
+     */
+    suspend fun updateDisplayName(name: String): AccountUpdateResult = AccountUpdateResult.Unavailable
+}
+
+/** The outcome of changing the signed-in user's own account data (`PATCH /v1/me`). */
+enum class AccountUpdateResult {
+    /** The server confirmed it; the session already carries the new value. */
+    Saved,
+    /** Not sent: no connection. Nothing changed. */
+    Offline,
+    /** The server rejected the value (e.g. an empty or too long name). */
+    Invalid,
+    /** No session, an unsupported sign-in, or a server error. Nothing changed. */
+    Unavailable,
 }
 
 /** Raised by the catalogue when the server cannot be reached; the screens keep the last loaded data. */

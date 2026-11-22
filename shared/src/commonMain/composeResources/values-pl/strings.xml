@@ -210,4 +210,8 @@
     <string name="waive_fee_hint">Klient nie zapłaci za tę zmianę.</string>
     <string name="waive_reason">Powód (opcjonalnie)</string>
     <string name="propose_other_time">Zaproponuj inny termin</string>
+    <string name="profile_change_photo">Zmień zdjęcie</string>
+    <string name="profile_photo_uploading">Wysyłanie zdjęcia…</string>
+    <string name="profile_photo_saved">Zdjęcie profilowe zaktualizowane</string>
+    <string name="profile_photo_failed">Nie udało się wysłać zdjęcia. Sprawdź połączenie i spróbuj ponownie.</string>
 </resources>

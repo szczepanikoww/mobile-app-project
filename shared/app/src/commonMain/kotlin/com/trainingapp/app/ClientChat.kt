@@ -10,7 +10,18 @@ import org.koin.compose.getKoin
 import org.koin.compose.koinInject
 import pl.trainer.ui.PlatformBackHandler
 import pl.trainerapp.core.designsystem.AppTheme
+import com.trainingapp.domain.workout.CurrentClient
+import org.jetbrains.compose.resources.stringResource
+import com.trainingapp.app.resources.Res
+import com.trainingapp.app.resources.client_chats_empty_body
+import pl.trainerapp.feature.chat.ChatListRepository
 import pl.trainerapp.feature.chat.ChatMediaSource
+import pl.trainerapp.feature.chat.TrainerChatListRoute
+import pl.trainerapp.feature.chat.data.DemoClientConversations
+import pl.trainerapp.feature.chat.data.remote.ChatServerApi
+import pl.trainerapp.feature.chat.data.remote.RemoteClientChatRepository
+import pl.trainerapp.feature.chat.data.remote.RemoteClientContext
+import pl.trainerapp.feature.chat.data.remote.RemoteClientConversations
 import pl.trainerapp.feature.chat.ClientChatRepository
 import pl.trainerapp.feature.chat.ClientChatRoute
 import pl.trainerapp.feature.chat.TrainerChatsRepository
@@ -28,11 +39,20 @@ import pl.trainerapp.feature.chat.model.ChatRole
  * client's own technique video opens as a read-only player.
  */
 @Composable
-internal fun ClientChat(relationshipId: String, onBack: () -> Unit) {
+internal fun ClientChat(relationshipId: String, onBack: () -> Unit, pinned: Boolean = false) {
     val store: DemoChatStore = koinInject()
     val media: ChatMediaSource = koinInject()
-    // With a server the conversation is the client's own; without one it is the shared demo store.
-    val remote: ClientChatRepository? = getKoin().getOrNull()
+    // With a server the conversation is the client's own; without one it is the shared demo store. A conversation
+    // chosen in the list ([pinned]) stays on that relationship instead of following the active one.
+    val active: ClientChatRepository? = getKoin().getOrNull()
+    val koin = getKoin()
+    val remote: ClientChatRepository? = if (active != null && pinned) {
+        remember(relationshipId) {
+            RemoteClientChatRepository(koin.get<ChatServerApi>(), koin.get<RemoteClientContext>(), pinnedRelationshipId = relationshipId)
+        }
+    } else {
+        active
+    }
     var openVideo by rememberSaveable { mutableStateOf<String?>(null) }
     val videoId = openVideo
     AppTheme {
@@ -55,6 +75,29 @@ internal fun ClientChat(relationshipId: String, onBack: () -> Unit) {
                 videoCard = AppTechniqueVideoCard,
             )
         }
+    }
+}
+
+/**
+ * A6 "Wiadomości": the client's conversations (in practice the one with their trainer); tapping one opens it. With
+ * a server the list comes from the client's relationships, otherwise from the shared demo store.
+ */
+@Composable
+internal fun ClientMessages(onBack: () -> Unit, onOpenChat: (String) -> Unit) {
+    val koin = getKoin()
+    val store: DemoChatStore = koinInject()
+    val client: CurrentClient = koinInject()
+    val remote: ClientChatRepository? = koin.getOrNull()
+    val repository: ChatListRepository = remember(remote, store, client.trainerRelationshipId) {
+        if (remote != null) RemoteClientConversations(koin.get<ChatServerApi>()) else DemoClientConversations(store, setOf(client.trainerRelationshipId))
+    }
+    AppTheme {
+        TrainerChatListRoute(
+            repository = repository,
+            onBack = onBack,
+            onOpenChat = onOpenChat,
+            emptyBody = stringResource(Res.string.client_chats_empty_body),
+        )
     }
 }
 

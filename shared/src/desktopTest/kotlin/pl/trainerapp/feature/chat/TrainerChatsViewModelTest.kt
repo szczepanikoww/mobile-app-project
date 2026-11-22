@@ -22,6 +22,8 @@ import kotlin.test.assertTrue
 import pl.trainerapp.feature.chat.data.DemoChatMedia
 import pl.trainerapp.feature.chat.data.DemoChatStore
 import pl.trainerapp.feature.chat.data.DemoClientChatRepository
+import pl.trainerapp.feature.chat.data.DemoClientConversations
+import pl.trainerapp.feature.chat.data.TrainerChatsFixtures
 import pl.trainerapp.feature.chat.data.DemoTrainerChatsRepository
 import pl.trainerapp.feature.chat.model.ChatRole
 import pl.trainerapp.feature.chat.model.MediaRef
@@ -45,6 +47,18 @@ class TrainerChatsViewModelTest {
     @AfterTest fun tearDown() = Dispatchers.resetMain()
 
     private fun repo(store: DemoChatStore = DemoChatStore()) = DemoTrainerChatsRepository(store, latencyMillis = 0)
+
+    @Test
+    fun `client list shows only the client's own conversation, named after the trainer`() = runTest {
+        val store = DemoChatStore()
+        val vm = TrainerChatListViewModel(DemoClientConversations(store, setOf("c6"), latencyMillis = 0))
+        advanceUntilIdle()
+        val rows = vm.state.value.snapshot!!.conversations
+        assertEquals(listOf("c6"), rows.map { it.relationshipId })
+        assertEquals(TrainerChatsFixtures.trainerName, rows.single().name)
+        // The trainer's unread count is not the client's.
+        assertEquals(0, rows.single().unread)
+    }
 
     @Test
     fun `list shows conversations newest first with unread total`() = runTest {

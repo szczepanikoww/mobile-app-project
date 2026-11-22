@@ -31,6 +31,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -257,13 +258,18 @@ private fun Divider() = HorizontalDivider(color = MaterialTheme.colorScheme.outl
 private fun IdentityCard(profile: TrainerProfile) {
     CardColumn {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Layout.padding)) {
-            Avatar(profile.name, size = 64.dp)
-            Column(verticalArrangement = Arrangement.spacedBy(Layout.tiny)) {
+            Avatar(profile.name, size = 64.dp, photoOf = pl.trainer.ui.MyPhoto)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Layout.tiny)) {
                 Text(profile.name, style = MaterialTheme.typography.titleLarge)
                 Text(profile.email, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (profile.location.isNotBlank()) {
                     Text(profile.location, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+            }
+        }
+        pl.trainer.ui.LocalProfilePhotoChange.current?.let { change ->
+            TextButton(onClick = change.pick, enabled = change.state != pl.trainer.ui.PhotoUploadState.Uploading) {
+                Text(stringResource(Res.string.profile_change_photo))
             }
         }
     }

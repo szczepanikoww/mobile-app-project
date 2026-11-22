@@ -1,5 +1,8 @@
 package com.trainingapp.feature.workoutlogging.logger
 
+import androidx.compose.material.icons.outlined.FitnessCenter
+import androidx.compose.material.icons.outlined.RemoveCircleOutline
+import androidx.compose.material.icons.automirrored.outlined.PlaylistAdd
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -116,12 +119,16 @@ fun LiveWorkoutRoute(
     onBack: () -> Unit,
     onOpenSummary: (String) -> Unit,
     onExit: () -> Unit,
+    /** Opens the exercise library in pick mode with this request key ("Dodaj ćwiczenie"). */
+    onPickExercises: (String) -> Unit = {},
     viewModel: LiveWorkoutViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val permission = rememberNotificationPermission()
     val currentOnOpenSummary by rememberUpdatedState(onOpenSummary)
     val currentOnExit by rememberUpdatedState(onExit)
+    val currentOnPickExercises by rememberUpdatedState(onPickExercises)
+    val emptyWorkoutName = stringResource(Res.string.live_own_workout_name)
     val picker = rememberVideoPicker(viewModel::onVideoPicked)
 
     LaunchedEffect(Unit) { viewModel.onScreenShown() }
@@ -132,6 +139,7 @@ fun LiveWorkoutRoute(
                 is LiveWorkoutEvent.OpenSummary -> currentOnOpenSummary(event.workoutLogId)
                 LiveWorkoutEvent.Exit -> currentOnExit()
                 LiveWorkoutEvent.RequestNotificationPermission -> permission.request(viewModel::onNotificationPermissionResult)
+                is LiveWorkoutEvent.PickExercises -> currentOnPickExercises(event.requestKey)
             }
         }
     }
@@ -143,6 +151,10 @@ fun LiveWorkoutRoute(
             onBack = onBack,
             onRetry = viewModel::load,
             onStart = viewModel::start,
+            onStartEmpty = { viewModel.startEmpty(emptyWorkoutName) },
+            onAddExercise = viewModel::onAddExerciseClick,
+            onRemoveExercise = viewModel::onRemoveExerciseClick,
+            onConfirmRemoveExercise = viewModel::confirmRemoveExercise,
             onFieldChange = viewModel::onFieldChange,
             onToggleSet = viewModel::onToggleSet,
             onAddSet = viewModel::onAddSet,
@@ -173,6 +185,11 @@ data class LiveWorkoutActions(
     val onBack: () -> Unit = {},
     val onRetry: () -> Unit = {},
     val onStart: () -> Unit = {},
+    /** An empty workout of the client's own; exercises are added while logging. */
+    val onStartEmpty: () -> Unit = {},
+    val onAddExercise: () -> Unit = {},
+    val onRemoveExercise: (String) -> Unit = {},
+    val onConfirmRemoveExercise: () -> Unit = {},
     val onFieldChange: (String, SetField, String) -> Unit = { _, _, _ -> },
     val onToggleSet: (String) -> Unit = {},
     val onAddSet: (String) -> Unit = {},
@@ -214,6 +231,12 @@ fun LiveWorkoutScreen(state: LiveWorkoutUiState, nowEpochMs: Long, actions: Live
                         OverflowMenu(
                             listOf(
                                 MenuAction(stringResource(Res.string.live_exercise_list), Icons.AutoMirrored.Outlined.FormatListBulleted) { showExerciseList = true },
+                                MenuAction(stringResource(Res.string.live_add_exercise), Icons.AutoMirrored.Outlined.PlaylistAdd, onClick = actions.onAddExercise),
+                            ) + listOfNotNull(
+                                log.currentExercise?.let { current ->
+                                    MenuAction(stringResource(Res.string.live_remove_exercise), Icons.Outlined.RemoveCircleOutline) { actions.onRemoveExercise(current.id) }
+                                },
+                            ) + listOf(
                                 MenuAction(stringResource(Res.string.live_discard), Icons.Outlined.DeleteOutline, destructive = true, onClick = actions.onDiscard),
                             ),
                         )
@@ -225,7 +248,15 @@ fun LiveWorkoutScreen(state: LiveWorkoutUiState, nowEpochMs: Long, actions: Live
             val rest = log?.rest
             when {
                 state.phase == LivePhase.NotStarted -> BottomActionBar {
-                    PrimaryButton(stringResource(Res.string.live_start), onClick = actions.onStart, loading = state.starting, modifier = Modifier.fillMaxWidth())
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                        PrimaryButton(stringResource(Res.string.live_start), onClick = actions.onStart, loading = state.starting, modifier = Modifier.fillMaxWidth())
+                        AppTextButton(
+                            stringResource(Res.string.live_start_empty_instead),
+                            onClick = actions.onStartEmpty,
+                            enabled = !state.starting,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                 }
                 rest != null -> RestBar(rest, nowEpochMs, actions)
             }
@@ -238,8 +269,9 @@ fun LiveWorkoutScreen(state: LiveWorkoutUiState, nowEpochMs: Long, actions: Live
                 LivePhase.NoPlan -> EmptyState(
                     title = stringResource(Res.string.live_no_plan_title),
                     message = stringResource(Res.string.live_no_plan_body),
-                    actionLabel = stringResource(Res.string.live_refresh),
-                    onAction = actions.onRetry,
+                    actionLabel = stringResource(Res.string.live_start_empty),
+                    onAction = actions.onStartEmpty,
+                    icon = Icons.Outlined.FitnessCenter,
                 )
                 LivePhase.NotStarted -> NotStartedContent(state)
                 LivePhase.Active -> if (log != null) {
@@ -263,6 +295,14 @@ fun LiveWorkoutScreen(state: LiveWorkoutUiState, nowEpochMs: Long, actions: Live
                     },
                 )
             }
+            ActionRow(
+                icon = Icons.AutoMirrored.Outlined.PlaylistAdd,
+                title = stringResource(Res.string.live_add_exercise),
+                onClick = {
+                    showExerciseList = false
+                    actions.onAddExercise()
+                },
+            )
         }
     }
     infoExerciseId?.let { id ->
@@ -327,7 +367,15 @@ private fun ActiveContent(
         item(key = "header") { WorkoutHeader(state, log, nowEpochMs, actions.onFinish) }
         state.message?.let { message -> item(key = "message") { MessageBanner(message, actions) } }
         if (exercise == null) {
-            item(key = "empty") { EmptyState(stringResource(Res.string.live_no_exercises), message = null) }
+            item(key = "empty") {
+                EmptyState(
+                    title = stringResource(Res.string.live_no_exercises),
+                    message = stringResource(Res.string.live_no_exercises_hint),
+                    actionLabel = stringResource(Res.string.live_add_exercise),
+                    onAction = actions.onAddExercise,
+                    icon = Icons.AutoMirrored.Outlined.PlaylistAdd,
+                )
+            }
         } else {
             item(key = "exercise-${exercise.id}") {
                 ExerciseCard(state, log, exercise, onShowInfo, onShowList, actions)
@@ -357,6 +405,15 @@ private fun ActiveContent(
                         loading = state.importingVideo,
                     )
                 }
+            }
+            item(key = "add-exercise") {
+                // As in Strong: the workout grows while logging, plan or not. The plan itself is not changed.
+                SecondaryButton(
+                    stringResource(Res.string.live_add_exercise),
+                    onClick = actions.onAddExercise,
+                    icon = Icons.AutoMirrored.Outlined.PlaylistAdd,
+                    modifier = Modifier.fillMaxWidth().padding(top = Spacing.l),
+                )
             }
         }
     }
@@ -656,6 +713,13 @@ private fun Dialogs(state: LiveWorkoutUiState, actions: LiveWorkoutActions) {
             title = { Text(stringResource(Res.string.live_discard_title)) },
             text = { Text(stringResource(Res.string.live_discard_body), style = AppTheme.type.body) },
             confirmButton = { AppTextButton(stringResource(Res.string.live_discard_confirm), onClick = actions.onConfirmDiscard, destructive = true) },
+            dismissButton = { AppTextButton(stringResource(Res.string.live_keep_training), onClick = actions.onDismissDialog) },
+        )
+        is LiveDialog.ConfirmRemoveExercise -> AlertDialog(
+            onDismissRequest = actions.onDismissDialog,
+            title = { Text(stringResource(Res.string.live_remove_exercise_title)) },
+            text = { Text(stringResource(Res.string.live_remove_exercise_body, dialog.completedSets), style = AppTheme.type.body) },
+            confirmButton = { AppTextButton(stringResource(Res.string.live_remove_exercise), onClick = actions.onConfirmRemoveExercise, destructive = true) },
             dismissButton = { AppTextButton(stringResource(Res.string.live_keep_training), onClick = actions.onDismissDialog) },
         )
         LiveDialog.NotificationRationale -> AlertDialog(

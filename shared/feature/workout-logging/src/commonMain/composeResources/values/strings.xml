@@ -7,7 +7,15 @@
     <string name="live_finish">Zakończ</string>
     <string name="live_load_error">Nie udało się wczytać treningu.</string>
     <string name="live_no_plan_title">Brak treningu na dziś</string>
-    <string name="live_no_plan_body">Trener nie przypisał Ci planu na dziś. Gdy to zrobi, trening pojawi się tutaj.</string>
+    <string name="live_no_plan_body">Trener nie przypisał Ci planu na dziś. Możesz zacząć własny trening i dodawać ćwiczenia w trakcie.</string>
+    <string name="live_start_empty">Zacznij pusty trening</string>
+    <string name="live_start_empty_instead">Zacznij pusty trening zamiast planu</string>
+    <string name="live_own_workout_name">Własny trening</string>
+    <string name="live_no_exercises_hint">Dodaj pierwsze ćwiczenie. Kolejne możesz dodawać w trakcie treningu.</string>
+    <string name="live_add_exercise">Dodaj ćwiczenie</string>
+    <string name="live_remove_exercise">Usuń ćwiczenie</string>
+    <string name="live_remove_exercise_title">Usunąć ćwiczenie?</string>
+    <string name="live_remove_exercise_body">Zaznaczone serie tego ćwiczenia (%1$d) zostaną usunięte z tego treningu. Plan od trenera się nie zmieni.</string>
     <string name="live_refresh">Odśwież</string>
     <string name="live_no_exercises">Ten trening nie ma ćwiczeń.</string>
     <string name="live_restored">Przywrócono niezakończony trening. Wszystkie serie były zapisane na telefonie.</string>

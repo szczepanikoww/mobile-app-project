@@ -15,11 +15,13 @@ import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import com.trainingapp.app.resources.Res
 import com.trainingapp.app.resources.assign_message
 import com.trainingapp.app.resources.assign_title
 import com.trainingapp.app.resources.understood
 import com.trainingapp.designsystem.component.AppTextButton
+import com.trainingapp.app.photos.ProvidePhotos
 import com.trainingapp.designsystem.theme.AppTheme
 import com.trainingapp.feature.client.ClientShellArgs
 import com.trainingapp.feature.client.ClientShellRoute
@@ -55,9 +57,13 @@ import pl.trainerapp.feature.chat.model.ChatRole
 @Serializable
 data object TrainerHomeDestination
 
-/** The client's chat (A6). */
+/** The client's conversation list ("Wiadomości", A6), behind the message icon of the client shell. */
 @Serializable
-data object ClientChatDestination
+data object ClientMessagesDestination
+
+/** One of the client's conversations (A6); null is the conversation with the client's own trainer. */
+@Serializable
+data class ClientChatDestination(val relationshipId: String? = null)
 
 /**
  * Where the app opens: the role shell for a signed-in session, otherwise "Zaloguj się / Załóż konto". Guests reach
@@ -88,7 +94,7 @@ fun App(
     openLiveWorkoutRequest: Int = 0,
     addToCalendar: ((ClientSession) -> Unit)? = null,
 ) {
-    AppTheme {
+    AppTheme { ProvidePhotos {
         val navController = rememberNavController()
         val auth: AuthRepository = koinInject()
         val scope = rememberCoroutineScope()
@@ -169,7 +175,8 @@ fun App(
                         args = ClientShellArgs(pendingIntent = intent != null, pendingTrainerId = intent?.trainerId),
                         actions = ClientShellActions(
                             onStartWorkout = { navController.navigate(LiveWorkoutDestination) { launchSingleTop = true } },
-                            onOpenChat = { navController.navigate(ClientChatDestination) },
+                            onOpenChat = { navController.navigate(ClientChatDestination()) },
+                            onOpenMessages = { navController.navigate(ClientMessagesDestination) { launchSingleTop = true } },
                             onFindTrainer = { navController.navigate(GuestHomeDestination) },
                             onSwitchToTrainer = if (session != null && Role.Trainer in session.roles) {
                                 { switchRole(Role.Trainer) }
@@ -191,9 +198,16 @@ fun App(
                 },
             )
             workoutLoggingGraph(navController)
-            composable<ClientChatDestination> {
+            composable<ClientMessagesDestination> {
+                ClientMessages(
+                    onBack = { navController.popBackStack() },
+                    onOpenChat = { navController.navigate(ClientChatDestination(it)) },
+                )
+            }
+            composable<ClientChatDestination> { entry ->
                 val client: CurrentClient = koinInject()
-                ClientChat(client.trainerRelationshipId, onBack = { navController.popBackStack() })
+                val chosen = entry.toRoute<ClientChatDestination>().relationshipId
+                ClientChat(chosen ?: client.trainerRelationshipId, pinned = chosen != null, onBack = { navController.popBackStack() })
             }
         }
 
@@ -205,5 +219,5 @@ fun App(
                 confirmButton = { AppTextButton(stringResource(Res.string.understood), onClick = { showAssignInfo = false }) },
             )
         }
-    }
+    } }
 }

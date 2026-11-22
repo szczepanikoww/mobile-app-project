@@ -20,6 +20,7 @@ import com.trainingapp.data.auth.GoogleIdTokenSource
 import com.trainingapp.data.auth.IdentityConfig
 import com.trainingapp.data.auth.InMemoryTokenStore
 import com.trainingapp.data.auth.TokenStore
+import com.trainingapp.app.photos.exerciseSourceId
 import com.trainingapp.data.remote.ApiClient
 import com.trainingapp.data.remote.BackendConfig
 import com.trainingapp.data.remote.HttpEngines
@@ -50,11 +51,13 @@ import com.trainingapp.domain.media.MediaRepository
 import com.trainingapp.domain.plan.PlanRepository
 import com.trainingapp.feature.guest.data.DemoAccounts
 import com.trainingapp.feature.guest.guestModule
+import com.trainingapp.feature.guest.model.AccountUpdateResult
 import com.trainingapp.feature.guest.model.AuthRepository
 import com.trainingapp.feature.guest.model.AuthSession
 import com.trainingapp.feature.guest.model.GuestCatalogRepository
 import com.trainingapp.feature.guest.model.TrainerProfile
 import com.trainingapp.feature.client.clientModule
+import com.trainingapp.feature.client.presentation.ClientAccount
 import pl.trainer.data.AdvancingDemoClock
 import pl.trainer.data.CatalogTrainer
 import pl.trainer.data.ClientIdentity
@@ -189,6 +192,16 @@ private class RemoteCurrentClient(private val auth: AuthRepository, private val 
     override val trainerRelationshipId: String get() = context.relationshipId.orEmpty()
 }
 
+/** The client's own name, saved through [auth]; the session (and so the shell's header) updates on success. */
+private class SessionClientAccount(private val auth: AuthRepository) : ClientAccount {
+    override suspend fun saveDisplayName(name: String): ClientAccount.SaveResult = when (auth.updateDisplayName(name)) {
+        AccountUpdateResult.Saved -> ClientAccount.SaveResult.Saved
+        AccountUpdateResult.Offline -> ClientAccount.SaveResult.Offline
+        AccountUpdateResult.Invalid -> ClientAccount.SaveResult.Invalid
+        AccountUpdateResult.Unavailable -> ClientAccount.SaveResult.Failed
+    }
+}
+
 /** A public trainer profile from the guest catalogue, as the demo server needs it for a booking request. */
 private fun TrainerProfile.toCatalogTrainer() = CatalogTrainer(
     id = summary.id,
@@ -241,7 +254,8 @@ fun appModule(platform: AppPlatform) = module {
     single<NetworkMonitor> { platform.networkMonitor }
     single<CurrentUser> { SessionCurrentUser(get()) }
     // The app is Polish only, whatever the device language is.
-    single<AppLanguage> { AppLanguage { "pl" } }
+    // The UI language (English for now, see MainActivity); server texts and exercise names follow it.
+    single<AppLanguage> { AppLanguage { pl.trainer.ui.DateFormats.defaultLanguage() } }
     single<IdGenerator> { IdGenerator.Uuids }
     single<TimeSource> { TimeSource.System }
     single(AppScope) { CoroutineScope(SupervisorJob() + Dispatchers.Default) }
@@ -263,6 +277,8 @@ fun appModule(platform: AppPlatform) = module {
     }
     single<PlanRepository> { LocalPlanRepository(get(), get(), get(), platform.ioDispatcher) }
     single<ExerciseUsage> { PublishedPlanExerciseUsage(get()) }
+    // Exercise photos bundled with the app, for Home and other screens (LocalExercisePhotos).
+    single { com.trainingapp.app.photos.BundledExercisePhotos(get()) }
 
     single<LocalFiles> { platform.localFiles }
     single<MediaRemoteDataSource> {
@@ -310,6 +326,8 @@ fun appModule(platform: AppPlatform) = module {
 
     // Client workout logging (docs/features/workout-logging-video.md). Local only: no sync in this phase.
     single<CurrentClient> { SessionCurrentClient(get(), get()) }
+    // "Edytuj dane" on the client profile: saved through the sign-in session (`PATCH /v1/me` or the demo session).
+    single<ClientAccount> { SessionClientAccount(get()) }
     single<WorkoutRepository> { LocalWorkoutRepository(get(), platform.ioDispatcher) }
     single<MeasurementRepository> { LocalMeasurementRepository(get(), platform.ioDispatcher) }
     // Integration point: the plan assignment flow replaces this demo source.
@@ -380,6 +398,13 @@ fun remoteModule(
         }
     }
     single<GuestCatalogRepository> { RemoteGuestCatalogRepository(get()) }
+    // Profile photos (`/v1/me/photo`, `/v1/users/{id}/photo`): shown in both shells, changed from the account menu.
+    single { com.trainingapp.app.photos.RemoteProfilePhotos(get()) }
+    // Exercise photos for the server's plans: their exercise ids are resolved through `/v1/exercises`.
+    single {
+        val api: ApiClient = get()
+        com.trainingapp.app.photos.BundledExercisePhotos(get(), remoteSourceId = { id -> api.exerciseSourceId(id) })
+    }
 
     // Client workouts: today's plan day from the server; local logs and measurements are synced to it.
     single { LocalWorkoutSyncStore(get(), io) }

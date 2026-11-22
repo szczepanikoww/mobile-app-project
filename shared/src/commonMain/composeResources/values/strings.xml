@@ -210,4 +210,8 @@
     <string name="waive_fee_hint">The client will not be charged for this change.</string>
     <string name="waive_reason">Reason (optional)</string>
     <string name="propose_other_time">Propose another time</string>
+    <string name="profile_change_photo">Change photo</string>
+    <string name="profile_photo_uploading">Uploading your photo…</string>
+    <string name="profile_photo_saved">Profile photo updated</string>
+    <string name="profile_photo_failed">Couldn’t upload the photo. Check your connection and try again.</string>
 </resources>

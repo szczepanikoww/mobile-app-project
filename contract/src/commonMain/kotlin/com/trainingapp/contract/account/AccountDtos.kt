@@ -31,9 +31,16 @@ data class CreateAccountRequest(
     val acceptedPrivacyVersion: String,
 )
 
-/** `PATCH /v1/me`. `locale` is `pl` or `en`. */
+/**
+ * `PATCH /v1/me`. Only the given fields change. `locale` is `pl` or `en`; `displayName` is trimmed and must be
+ * 1..[DISPLAY_NAME_MAX_LENGTH] characters (the same limit as the trainer profile).
+ */
 @Serializable
-data class UpdateMeRequest(val locale: String? = null, val timeZone: String? = null)
+data class UpdateMeRequest(val locale: String? = null, val timeZone: String? = null, val displayName: String? = null) {
+    companion object {
+        const val DISPLAY_NAME_MAX_LENGTH = 80
+    }
+}
 
 @Serializable
 enum class PushPlatform { ANDROID, IOS }
@@ -41,3 +48,4 @@ enum class PushPlatform { ANDROID, IOS }
 /** `PUT /v1/me/push-tokens/{token}`. */
 @Serializable
 data class PushTokenRequest(val platform: PushPlatform)
+

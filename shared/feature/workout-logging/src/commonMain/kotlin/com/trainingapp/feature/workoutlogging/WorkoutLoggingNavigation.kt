@@ -4,12 +4,13 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.trainingapp.feature.workoutbuilder.common.ExerciseBrowserDestination
 import com.trainingapp.feature.workoutlogging.logger.LiveWorkoutRoute
 import com.trainingapp.feature.workoutlogging.progress.ProgressRoute
 import com.trainingapp.feature.workoutlogging.summary.WorkoutSummaryRoute
 import kotlinx.serialization.Serializable
 
-/** A1 "Trening na żywo": today's plan, or the unfinished workout restored from the device. */
+/** A1 "Trening na żywo": today's plan, an empty workout of the client's own, or the unfinished one restored. */
 @Serializable
 data object LiveWorkoutDestination
 
@@ -31,6 +32,8 @@ fun NavGraphBuilder.workoutLoggingGraph(navController: NavController) {
             onBack = { navController.popBackStack() },
             onOpenSummary = { id -> navController.navigate(WorkoutSummaryDestination(id)) },
             onExit = { navController.popBackStack() },
+            // The library in pick mode, without the trainer's create/edit tools.
+            onPickExercises = { key -> navController.navigate(ExerciseBrowserDestination(pickRequestKey = key, libraryEditable = false)) },
         )
     }
     composable<WorkoutSummaryDestination> { entry ->

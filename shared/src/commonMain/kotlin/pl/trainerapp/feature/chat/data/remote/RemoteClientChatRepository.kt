@@ -30,14 +30,22 @@ class RemoteClientChatRepository(
     private val context: RemoteClientContext,
     private val zone: TimeZone = TimeZone.of("Europe/Warsaw"),
     private val clock: Clock = Clock.System,
+    /** The conversation opened from the list; null follows the client's active relationship. */
+    private val pinnedRelationshipId: String? = null,
 ) : ClientChatRepository {
 
-    override val relationshipId: String get() = context.relationshipId.orEmpty()
+    override val relationshipId: String get() = pinnedRelationshipId ?: context.relationshipId.orEmpty()
+
+    private suspend fun current(fresh: Boolean): ClientRelationship? = when {
+        pinnedRelationshipId != null -> context.find(pinnedRelationshipId)
+        fresh -> context.refresh()
+        else -> context.ensure()
+    }
 
     private val failedSends = mutableMapOf<String, String>() // text to message id
 
     override suspend fun thread(): ChatThread {
-        val relationship = context.refresh() ?: throw IllegalStateException("no trainer relationship")
+        val relationship = current(fresh = true) ?: throw IllegalStateException("no trainer relationship")
         val id = relationship.relationshipId
         val messages = mutableListOf<MessageDto>()
         var afterSeq = 0L
@@ -67,7 +75,7 @@ class RemoteClientChatRepository(
     }
 
     override suspend fun send(text: String): ChatMessage {
-        val relationship = context.ensure() ?: throw IllegalStateException("no trainer relationship")
+        val relationship = current(fresh = false) ?: throw IllegalStateException("no trainer relationship")
         check(relationship.canSend) { "relationship ended" }
         val messageId = failedSends.getOrPut(text) { Uuid.random().toString() }
         val stored = api.send(relationship.relationshipId, SendMessageRequest(id = messageId, text = text))

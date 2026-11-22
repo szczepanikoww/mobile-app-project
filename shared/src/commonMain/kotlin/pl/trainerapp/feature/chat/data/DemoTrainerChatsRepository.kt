@@ -1,6 +1,7 @@
 package pl.trainerapp.feature.chat.data
 
 import kotlinx.coroutines.delay
+import pl.trainerapp.feature.chat.ChatListRepository
 import pl.trainerapp.feature.chat.ClientChatRepository
 import pl.trainerapp.feature.chat.TrainerChatsRepository
 import pl.trainerapp.feature.chat.model.ChatMessage
@@ -132,5 +133,24 @@ class DemoClientChatRepository(
     override suspend fun send(text: String): ChatMessage {
         delay(latencyMillis)
         return store.send(relationshipId, ChatRole.Client, text)
+    }
+}
+
+/** The demo client's conversation list: only the client's own relationship(s) from the shared demo store. */
+class DemoClientConversations(
+    private val store: DemoChatStore,
+    private val relationshipIds: Set<String>,
+    private val latencyMillis: Long = 300,
+) : ChatListRepository {
+
+    override suspend fun conversations(): ConversationsSnapshot {
+        delay(latencyMillis)
+        val now = store.now
+        return ConversationsSnapshot(
+            conversations = store.conversations(ChatRole.Client).filter { it.relationshipId in relationshipIds },
+            generatedAt = now,
+            isOffline = false,
+            lastUpdated = now,
+        )
     }
 }

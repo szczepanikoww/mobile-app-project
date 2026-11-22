@@ -26,6 +26,9 @@ kotlin {
             implementation(libs.kotlinx.coroutines.test)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
         }
+        androidMain.dependencies {
+            implementation(libs.androidx.activity.compose)
+        }
         commonMain.dependencies {
             api(projects.shared.designsystem)
             implementation(libs.compose.components.resources)

@@ -3,6 +3,7 @@ package com.trainingapp.feature.guest.data
 import com.trainingapp.contract.account.CreateAccountRequest
 import com.trainingapp.contract.account.MeDto
 import com.trainingapp.contract.account.RoleDto
+import com.trainingapp.contract.account.UpdateMeRequest
 import com.trainingapp.contract.api.ApiErrorCodes
 import com.trainingapp.data.auth.FirebaseAuthApi
 import com.trainingapp.data.auth.FirebaseAuthException
@@ -13,6 +14,7 @@ import com.trainingapp.data.auth.GoogleSignInResult
 import com.trainingapp.data.remote.ApiClient
 import com.trainingapp.data.remote.ApiHttpException
 import com.trainingapp.data.remote.ApiOfflineException
+import com.trainingapp.feature.guest.model.AccountUpdateResult
 import com.trainingapp.feature.guest.model.AuthRepository
 import com.trainingapp.feature.guest.model.AuthResult
 import com.trainingapp.feature.guest.model.AuthSession
@@ -117,6 +119,26 @@ class FirebaseAuthRepository(
         val current = state.value ?: return null
         if (role !in current.roles) return null
         return current.copy(activeRole = role).also { open(it) }
+    }
+
+    override suspend fun updateDisplayName(name: String): AccountUpdateResult {
+        val current = state.value ?: return AccountUpdateResult.Unavailable
+        val me = try {
+            api.send(
+                method = HttpMethod.Patch,
+                path = "/v1/me",
+                body = UpdateMeRequest(displayName = name.trim()),
+                bodySerializer = UpdateMeRequest.serializer(),
+                response = MeDto.serializer(),
+            )
+        } catch (e: ApiOfflineException) {
+            return AccountUpdateResult.Offline
+        } catch (e: ApiHttpException) {
+            return if (e.status == 422 || e.status == 400) AccountUpdateResult.Invalid else AccountUpdateResult.Unavailable
+        } ?: return AccountUpdateResult.Unavailable
+        // The session may have ended or changed while the call was running.
+        if (state.value?.userId == current.userId) open(sessionOf(me, state.value?.activeRole ?: current.activeRole))
+        return AccountUpdateResult.Saved
     }
 
     /**

@@ -12,6 +12,9 @@ enum class ClientTab { Start, Calendar, Progress, Wallet }
 /** Screens pushed over the tabs inside the client shell. */
 sealed interface ClientRoute {
     data class SessionDetail(val sessionId: String) : ClientRoute
+
+    /** Profile and settings, opened from the avatar in the top bar. */
+    data object Profile : ClientRoute
 }
 
 data class ClientShellUiState(

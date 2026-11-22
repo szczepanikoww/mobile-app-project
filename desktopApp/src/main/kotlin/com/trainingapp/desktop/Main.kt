@@ -50,6 +50,8 @@ private object DesktopPlatform : AppPlatform {
 }
 
 fun main() {
+    // English UI for now, as on Android (MainActivity); the Polish resources stay in place.
+    java.util.Locale.setDefault(java.util.Locale.ENGLISH)
     initKoin(DesktopPlatform)
     application {
         val owner = remember { object : ViewModelStoreOwner { override val viewModelStore = ViewModelStore() } }

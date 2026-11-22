@@ -10,7 +10,7 @@ import java.security.interfaces.RSAPublicKey
 import java.util.concurrent.TimeUnit
 
 /** Who the identity provider says the caller is. The API never sees a password (plan §6). */
-data class TokenIdentity(val subject: String, val email: String?)
+data class TokenIdentity(val subject: String, val email: String?, val picture: String? = null)
 
 /** Verifies a bearer token. Returns null for an invalid or expired token (→ `401`). */
 fun interface TokenVerifier {
@@ -59,7 +59,8 @@ class FirebaseTokenVerifier(
             .verify(token)
         // Firebase also guarantees a non-empty `sub` of at most 128 characters; reject anything else.
         val subject = verified.subject?.takeIf { it.isNotBlank() && it.length <= 128 } ?: return null
-        TokenIdentity(subject, verified.getClaim("email").asString())
+        // `picture`: the Google account photo, copied once as the profile photo (ProfilePhotoService).
+        TokenIdentity(subject, verified.getClaim("email").asString(), verified.getClaim("picture").asString())
     }.getOrNull()
 
     companion object {

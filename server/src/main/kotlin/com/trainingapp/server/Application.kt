@@ -29,6 +29,7 @@ import com.trainingapp.server.platform.respondTrainerError
 import com.trainingapp.server.training.ExerciseLibraryImport
 import com.trainingapp.server.platform.Db as TrainerDb
 import com.trainingapp.server.identity.IdentityService
+import com.trainingapp.server.identity.ProfilePhotoService
 import com.trainingapp.server.media.LocalDiskStorage
 import com.trainingapp.server.media.MediaService
 import com.trainingapp.server.media.ObjectStorage
@@ -66,6 +67,7 @@ class Services(
     push: PushSender = PushSender.Logging,
 ) {
     val identity = IdentityService(db)
+    val photos = ProfilePhotoService(db)
     val catalogue = CatalogueService(db)
     val billing = BillingService(db, identity, catalogue, paymentProvider, config.payments.fakeConfirmDelaySeconds)
     val training = TrainingService(db, identity)
@@ -126,6 +128,8 @@ fun main() {
     val trainerApi = TrainerServices.create(AppConfig.fromEnv().copy(auth = config.auth), TrainerDb(db.dataSource), ServerClock.System)
     // The global exercise library (free-exercise-db); upserts by source id, so the seeded exercises are kept.
     runBlocking { ExerciseLibraryImport.importIfIncomplete(trainerApi.db, trainerApi.clock) }
+    // The demo client's past workouts, measurements and payments use library exercises, so they come after the import.
+    if (config.seedDemoData) runBlocking { com.trainingapp.server.dev.DemoClientActivity(services).seedIfMissing() }
     log.info("starting on port {} (profile {}, auth {})", config.port, config.profile, config.auth.mode)
     embeddedServer(Netty, port = config.port, host = "0.0.0.0") { trainerModule(services, trainerApi = trainerApi) }.start(wait = true)
 }

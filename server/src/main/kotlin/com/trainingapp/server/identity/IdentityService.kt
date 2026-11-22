@@ -140,10 +140,13 @@ class IdentityService(private val db: Db) {
     suspend fun updateMe(user: CurrentUser, request: UpdateMeRequest): CurrentUser {
         if (request.locale != null && request.locale !in setOf("pl", "en")) throw invalid("locale")
         if (request.timeZone != null && runCatching { ZoneId.of(request.timeZone) }.isFailure) throw invalid("timeZone")
+        val name = request.displayName?.trim()
+        if (name != null && name.length !in 1..UpdateMeRequest.DISPLAY_NAME_MAX_LENGTH) throw invalid("displayName")
         return db.tx {
             AppUsers.update({ AppUsers.id eq user.id }) { row ->
                 request.locale?.let { row[locale] = it }
                 request.timeZone?.let { row[timeZone] = it }
+                name?.let { row[displayName] = it }
             }
             currentUser(AppUsers.selectAll().where { AppUsers.id eq user.id }.single())
         }

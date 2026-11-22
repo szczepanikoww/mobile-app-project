@@ -38,6 +38,8 @@ data class ExerciseBrowserUiState(
     val pickMode: Boolean = false,
     val singleSelect: Boolean = false,
     val selection: List<String> = emptyList(),
+    /** False in pickers that must not create exercises or open the details ([ExerciseBrowserDestination.libraryEditable]). */
+    val libraryEditable: Boolean = true,
 ) {
     val isEmpty: Boolean get() = !loading && !error && sections.all { it.exercises.isEmpty() }
 }
@@ -69,7 +71,7 @@ class ExerciseBrowserViewModel(
         selection,
     ) { all, recentIds, currentFilter, selected ->
         if (all == null) {
-            ExerciseBrowserUiState(loading = false, error = true, filter = currentFilter, pickMode = pickKey != null)
+            ExerciseBrowserUiState(loading = false, error = true, filter = currentFilter, pickMode = pickKey != null, libraryEditable = destination.libraryEditable)
         } else {
             val sections = sectionsFor(all, recentIds, currentFilter)
             ExerciseBrowserUiState(
@@ -80,12 +82,13 @@ class ExerciseBrowserViewModel(
                 pickMode = pickKey != null,
                 singleSelect = destination.singleSelect,
                 selection = selected,
+                libraryEditable = destination.libraryEditable,
             )
         }
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5_000),
-        ExerciseBrowserUiState(pickMode = pickKey != null, singleSelect = destination.singleSelect),
+        ExerciseBrowserUiState(pickMode = pickKey != null, singleSelect = destination.singleSelect, libraryEditable = destination.libraryEditable),
     )
 
     private fun sectionsFor(all: List<Exercise>, recentIds: List<String>, filter: ExerciseFilter): List<ExerciseSection> {

@@ -38,7 +38,7 @@ object Layout {
 }
 
 object AppColors {
-    val brandStrong = Color(0xFFA04100)
+    val brandStrong = Color(0xFF0F766E)
     val background = Color(0xFFF8F9FA)
     val surface = Color.White
     val text = Color(0xFF0F172A)
@@ -49,9 +49,9 @@ object AppColors {
     val errorSurface = Color(0xFFFFDAD6)
     val errorAccent = Color(0xFFEF4444)
 
-    val accent = Color(0xFFFF6B00)
-    val softAccent = Color(0xFFFFF0E6)
-    val onSoftAccent = Color(0xFF572000)
+    val accent = Color(0xFF14B8A6)
+    val softAccent = Color(0xFFCCFBF1)
+    val onSoftAccent = Color(0xFF134E4A)
     val success = Color(0xFF15803D)
     val successSurface = Color(0xFFDCFCE7)
     val warningText = Color(0xFF783B00)

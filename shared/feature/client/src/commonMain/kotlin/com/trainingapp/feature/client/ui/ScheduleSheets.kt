@@ -1,5 +1,6 @@
 package com.trainingapp.feature.client.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Checkbox
@@ -19,16 +21,24 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import com.trainingapp.contract.money.Money
 import com.trainingapp.contract.policy.CancellationPolicy
 import com.trainingapp.designsystem.component.AppBottomSheet
 import com.trainingapp.designsystem.component.AppTextButton
 import com.trainingapp.designsystem.component.DestructiveButton
 import com.trainingapp.designsystem.component.InlineMessage
 import com.trainingapp.designsystem.component.MessageTone
+import com.trainingapp.designsystem.component.MonthCalendar
+import com.trainingapp.designsystem.component.PersonPortrait
 import com.trainingapp.designsystem.component.PrimaryButton
 import com.trainingapp.designsystem.component.TonalButton
+import com.trainingapp.designsystem.theme.AppShapes
 import com.trainingapp.designsystem.theme.AppTheme
 import com.trainingapp.designsystem.theme.Sizes
 import com.trainingapp.designsystem.theme.Spacing
@@ -54,7 +64,7 @@ private fun SheetProgress() {
     }
 }
 
-/** Working days as chips: "Pon 2", "Wt 3". */
+/** Working days as chips: "Mon 2", "Tue 3". */
 @Composable
 private fun DayChips(dates: List<LocalDate>, selected: LocalDate?, onSelect: (LocalDate) -> Unit) {
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
@@ -98,6 +108,7 @@ private fun chipColors() = FilterChipDefaults.filterChipColors(
 
 data class BookingSheetActions(
     val onTrainer: (String) -> Unit,
+    val onChangeTrainer: () -> Unit,
     val onDate: (LocalDate) -> Unit,
     val onSlot: (AvailableSlot) -> Unit,
     val onPlace: (String) -> Unit,
@@ -108,35 +119,54 @@ data class BookingSheetActions(
 )
 
 /**
- * "Poproś o sesję": trainer, day, free slot and place. The client ticks the trainer's current policy (never
- * pre-ticked). Sending creates a request, not a booking.
+ * "Request a session" in two steps: the client's trainers as round portraits, then the chosen trainer's details with
+ * a month calendar, the free times of the picked day and the place. The client ticks the trainer's current policy
+ * (never pre-ticked). Sending creates a request, not a booking.
  */
 @Composable
-fun BookingRequestSheet(state: BookingSheetState, trainers: List<TrainerRef>, submitting: Boolean, offline: Boolean, actions: BookingSheetActions) {
+fun BookingRequestSheet(
+    state: BookingSheetState,
+    trainers: List<TrainerRef>,
+    today: LocalDate?,
+    submitting: Boolean,
+    offline: Boolean,
+    actions: BookingSheetActions,
+) {
     AppBottomSheet(onDismiss = actions.onDismiss, title = stringResource(Res.string.request_session)) {
-        val options = state.options
-        if (trainers.size > 1) {
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                trainers.forEach { trainer ->
-                    FilterChip(
-                        selected = trainer.id == options?.trainer?.id || trainer.id == state.trainerId,
-                        onClick = { actions.onTrainer(trainer.id) },
-                        label = { Text(trainer.name) },
-                        modifier = Modifier.heightIn(min = Sizes.minTouchTarget),
-                        colors = chipColors(),
-                    )
-                }
-            }
+        val trainerId = state.trainerId
+        if (trainerId == null) {
+            TrainerPicker(trainers, actions.onTrainer)
+            return@AppBottomSheet
         }
+        val options = state.options
+        val trainer = options?.trainer ?: trainers.firstOrNull { it.id == trainerId }
+        TrainerHeader(trainer, price = options?.price, canChange = state.canChangeTrainer && !submitting, onChange = actions.onChangeTrainer)
         when {
-            state.trainerId == null -> Text(stringResource(Res.string.booking_no_trainer), style = AppTheme.type.body, color = AppTheme.colors.text)
             state.loadingOptions -> SheetProgress()
             options == null -> InlineMessage(failureMessage(state.failure ?: Failure.Load), tone = MessageTone.Error)
             else -> {
-                Text(options.trainer.name, style = AppTheme.type.itemTitle, color = AppTheme.colors.text)
-                Text(stringResource(Res.string.session_price, money(options.price)), style = AppTheme.type.compactBody, color = AppTheme.colors.textSecondary)
-                DayChips(state.dates, state.date, actions.onDate)
-                SlotChips(state.slots, state.loadingSlots, state.slot, options.timeZone, actions.onSlot)
+                Text(stringResource(Res.string.choose_day), style = AppTheme.type.label, color = AppTheme.colors.textSecondary)
+                val first = state.dates.firstOrNull()
+                val last = state.dates.lastOrNull()
+                if (first != null && last != null) {
+                    val bookable = state.dates.toSet()
+                    MonthCalendar(
+                        selected = state.date,
+                        today = today ?: first,
+                        firstDate = first,
+                        lastDate = last,
+                        isSelectable = { it in bookable },
+                        onSelect = actions.onDate,
+                        language = language(),
+                    )
+                }
+                val date = state.date
+                if (date == null) {
+                    Text(stringResource(Res.string.choose_day_hint), style = AppTheme.type.compactBody, color = AppTheme.colors.textSecondary)
+                } else {
+                    Text(dayTitle(date), style = AppTheme.type.itemTitle, color = AppTheme.colors.text)
+                    SlotChips(state.slots, state.loadingSlots, state.slot, options.timeZone, actions.onSlot)
+                }
                 if (options.places.size > 1) {
                     Text(stringResource(Res.string.place), style = AppTheme.type.label, color = AppTheme.colors.textSecondary)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
@@ -178,6 +208,59 @@ fun BookingRequestSheet(state: BookingSheetState, trainers: List<TrainerRef>, su
                 )
             }
         }
+    }
+}
+
+/** The first step: the client's trainers as round portraits with the name below. Tapping one opens its details. */
+@Composable
+private fun TrainerPicker(trainers: List<TrainerRef>, onTrainer: (String) -> Unit) {
+    if (trainers.isEmpty()) {
+        Text(stringResource(Res.string.booking_no_trainer), style = AppTheme.type.body, color = AppTheme.colors.text)
+        return
+    }
+    Text(stringResource(Res.string.choose_trainer_hint), style = AppTheme.type.compactBody, color = AppTheme.colors.textSecondary)
+    val chooseLabel = stringResource(Res.string.choose_trainer)
+    FlowRow(
+        Modifier.fillMaxWidth().padding(vertical = Spacing.s),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.l),
+        verticalArrangement = Arrangement.spacedBy(Spacing.l),
+    ) {
+        trainers.forEach { trainer ->
+            Column(
+                Modifier
+                    .width(TrainerTileWidth)
+                    .clip(AppShapes.card)
+                    .clickable(role = Role.Button, onClickLabel = chooseLabel) { onTrainer(trainer.id) }
+                    .padding(vertical = Spacing.s),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(Spacing.s),
+            ) {
+                PersonPortrait(trainer.initials, size = 72.dp, photoOf = trainer.id)
+                Text(
+                    trainer.name,
+                    style = AppTheme.type.compactBody.copy(fontWeight = FontWeight.SemiBold),
+                    color = AppTheme.colors.text,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+private val TrainerTileWidth = 96.dp
+
+/** The chosen trainer at the top of the details: portrait, name and price, with a way back to the list. */
+@Composable
+private fun TrainerHeader(trainer: TrainerRef?, price: Money?, canChange: Boolean, onChange: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
+        PersonPortrait(trainer?.initials.orEmpty(), size = 64.dp, selected = true, photoOf = trainer?.id)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            Text(trainer?.name.orEmpty(), style = AppTheme.type.itemTitle, color = AppTheme.colors.text)
+            price?.let { Text(stringResource(Res.string.session_price, money(it)), style = AppTheme.type.compactBody, color = AppTheme.colors.textSecondary) }
+        }
+        if (canChange) AppTextButton(stringResource(Res.string.change_trainer), onClick = onChange)
     }
 }
 

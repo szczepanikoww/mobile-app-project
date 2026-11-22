@@ -21,9 +21,13 @@ import com.trainingapp.server.catalogue.TrainerGyms
 import com.trainingapp.server.catalogue.TrainerListings
 import com.trainingapp.server.common.Ids
 import com.trainingapp.server.common.dbNow
+import com.trainingapp.server.common.toOffset
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.insertIgnore
 import com.trainingapp.server.http.TokenIdentity
 import com.trainingapp.server.identity.AppUsers
 import com.trainingapp.server.identity.ClientProfiles
+import com.trainingapp.server.identity.ProfilePhotosTable
 import com.trainingapp.server.identity.TrainerProfiles
 import com.trainingapp.server.scheduling.AvailabilityRules
 import org.jetbrains.exposed.v1.jdbc.JdbcTransaction
@@ -104,12 +108,35 @@ class DemoSeed(private val s: Services) {
             listOf("STRENGTH", "MOBILITY"), listOf("EVENING"), null, 24, "Cennik ustalam indywidualnie po pierwszej rozmowie."),
     )
 
-    /** Seeds once: does nothing when any user exists. */
+    /** Seeds once: does nothing when any user exists. Demo photos are added on every start (see [seedPhotos]). */
     suspend fun seedIfEmpty() {
         val empty = s.db.tx { AppUsers.selectAll().limit(1).none() }
-        if (!empty) return
-        seed()
-        log.info("demo data seeded")
+        if (empty) {
+            seed()
+            log.info("demo data seeded")
+        }
+        seedPhotos()
+    }
+
+    /**
+     * Profile photos of the demo client and the demo trainer (gym photos from free-exercise-db, public domain), also
+     * for databases seeded before photos existed. Never replaces a photo: an uploaded one stays.
+     */
+    suspend fun seedPhotos() {
+        val photos = mapOf(CLIENT_SUBJECT to "demo-client.jpg", TRAINER_SUBJECT to "demo-trainer.jpg")
+        s.db.tx {
+            for ((subject, file) in photos) {
+                val bytes = DemoSeed::class.java.getResourceAsStream("/seed/photos/$file")?.use { it.readBytes() } ?: continue
+                val userId = AppUsers.selectAll().where { AppUsers.authSubject eq subject }.singleOrNull()?.get(AppUsers.id) ?: continue
+                ProfilePhotosTable.insertIgnore {
+                    it[ProfilePhotosTable.userId] = userId
+                    it[contentType] = "image/jpeg"
+                    it[ProfilePhotosTable.bytes] = bytes
+                    it[photoSource] = "UPLOAD"
+                    it[updatedAt] = dbNow().toOffset()
+                }
+            }
+        }
     }
 
     suspend fun seed() {

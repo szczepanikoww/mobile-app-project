@@ -87,12 +87,17 @@ private val Gutter = Modifier.padding(horizontal = Spacing.screenGutter)
 
 // ---------------------------------------------------------------- Conversation list
 
+/**
+ * The conversation list. The trainer sees one row per client; the client (A6) sees their trainer(s), with
+ * [emptyBody] explaining where conversations come from in their role.
+ */
 @Composable
 fun TrainerChatListRoute(
-    repository: TrainerChatsRepository,
+    repository: ChatListRepository,
     onBack: () -> Unit,
     onOpenChat: (String) -> Unit,
     modifier: Modifier = Modifier,
+    emptyBody: String? = null,
 ) {
     val viewModel = viewModel { TrainerChatListViewModel(repository) }
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -107,7 +112,7 @@ fun TrainerChatListRoute(
         }
     }
 
-    TrainerChatListScreen(state, viewModel::onAction, onBack, modifier)
+    TrainerChatListScreen(state, viewModel::onAction, onBack, modifier, emptyBody)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -117,6 +122,7 @@ fun TrainerChatListScreen(
     onAction: (ChatListAction) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    emptyBody: String? = null,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
         DetailHeader(title = stringResource(Res.string.chats_title), onBack = onBack)
@@ -148,7 +154,7 @@ fun TrainerChatListScreen(
                             item {
                                 EmptyState(
                                     title = stringResource(Res.string.chats_empty_title),
-                                    body = stringResource(Res.string.chats_empty_body),
+                                    body = emptyBody ?: stringResource(Res.string.chats_empty_body),
                                     icon = Icons.Outlined.ChatBubbleOutline,
                                 )
                             }

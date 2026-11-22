@@ -223,7 +223,7 @@ fun ExerciseBrowserContent(
                                 color = AppTheme.colors.textSecondary,
                                 modifier = Modifier.weight(1f),
                             )
-                            if (!state.pickMode) {
+                            if (!state.pickMode && state.libraryEditable) {
                                 AppTextButton(stringResource(Res.string.library_new), onClick = { onCreateExercise(null) }, icon = Icons.Outlined.Add)
                             }
                         }
@@ -246,7 +246,11 @@ fun ExerciseBrowserContent(
                             pickMode = state.pickMode,
                             selected = exercise.id in state.selection,
                             onClick = { if (state.pickMode) onToggle(exercise.id) else onOpenExercise(exercise.id) },
-                            onOpenDetails = { onOpenExercise(exercise.id) },
+                            onOpenDetails = if (state.libraryEditable) {
+                                { onOpenExercise(exercise.id) }
+                            } else {
+                                null
+                            },
                             modifier = Modifier.padding(bottom = Spacing.s),
                         )
                     }
@@ -296,15 +300,23 @@ private fun NoResults(state: ExerciseBrowserUiState, onCreateExercise: (String?)
         query.isNotEmpty() -> EmptyState(
             title = stringResource(Res.string.library_no_results_title),
             message = stringResource(Res.string.library_no_results_query, query),
-            actionLabel = stringResource(Res.string.library_create_from_query, query),
-            onAction = { onCreateExercise(query) },
+            actionLabel = if (state.libraryEditable) stringResource(Res.string.library_create_from_query, query) else null,
+            onAction = if (state.libraryEditable) {
+                { onCreateExercise(query) }
+            } else {
+                null
+            },
             icon = Icons.Outlined.SearchOff,
         )
         state.filter.scope == ExerciseScope.MINE && state.filter.muscles.isEmpty() && state.filter.equipment.isEmpty() -> EmptyState(
             title = stringResource(Res.string.library_mine_empty_title),
             message = stringResource(Res.string.library_mine_empty_message),
-            actionLabel = stringResource(Res.string.library_new),
-            onAction = { onCreateExercise(null) },
+            actionLabel = if (state.libraryEditable) stringResource(Res.string.library_new) else null,
+            onAction = if (state.libraryEditable) {
+                { onCreateExercise(null) }
+            } else {
+                null
+            },
         )
         else -> EmptyState(
             title = stringResource(Res.string.library_no_results_title),
@@ -321,7 +333,8 @@ private fun ExerciseRow(
     pickMode: Boolean,
     selected: Boolean,
     onClick: () -> Unit,
-    onOpenDetails: () -> Unit,
+    /** Null: the thumbnail does not open the details. */
+    onOpenDetails: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val name = exercise.name(languageTag)
@@ -332,7 +345,7 @@ private fun ExerciseRow(
         onClick = onClick,
         onClickLabel = stringResource(if (pickMode) Res.string.library_select else Res.string.library_open),
         leading = {
-            if (pickMode) {
+            if (pickMode && onOpenDetails != null) {
                 // In pick mode the row toggles selection; the thumbnail opens the details.
                 Box(
                     Modifier.clickable(
