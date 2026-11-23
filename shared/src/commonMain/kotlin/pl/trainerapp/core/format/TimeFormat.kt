@@ -58,3 +58,18 @@ fun formatListWhen(at: Instant, zone: TimeZone, now: Instant): String {
         else -> DateFormats.date(day, AppLanguage, "d MMM")
     }
 }
+
+/**
+ * Message timestamp as in a messenger: "Dziś, 14:32", "Wczoraj, 14:32" or "czw. 5 lis, 14:32". Used for the time
+ * separators between messages and for the "seen" receipt. [now] is for display only.
+ */
+@Composable
+fun formatMessageWhen(at: Instant, zone: TimeZone, now: Instant): String {
+    val time = formatTime(at, zone)
+    val day = at.toLocalDateTime(zone).date
+    return when (day.daysUntil(now.toLocalDateTime(zone).date)) {
+        0 -> stringResource(Res.string.day_today_time, time)
+        1 -> stringResource(Res.string.chat_yesterday_time, time)
+        else -> stringResource(Res.string.day_other_time, DateFormats.date(day, AppLanguage, "EEE d MMM"), time)
+    }
+}

@@ -200,4 +200,8 @@
     <string name="settings_change_password">Zmień hasło</string>
     <string name="settings_terms">Regulamin</string>
     <string name="settings_not_available">Ta opcja nie jest jeszcze dostępna</string>
+    <string name="shortcut_workout">Mój trening</string>
+    <string name="shortcut_sessions">Moje sesje</string>
+    <string name="shortcut_chat">Napisz do trenera</string>
+    <string name="shortcut_package">Mój pakiet</string>
 </resources>

@@ -75,6 +75,8 @@
     <string name="availability_hint">Deklarowana przez trenerów. To nie są wolne terminy.</string>
     <string name="apply_filters">Zastosuj</string>
     <string name="search_gyms_placeholder">Nazwa siłowni lub dzielnica</string>
+    <string name="gyms_map_description">Mapa siłowni. Wybierz pinezkę, aby zobaczyć siłownię.</string>
+    <string name="gyms_map_no_position">Siłownie bez położenia (%1$d) są widoczne tylko na liście.</string>
     <string name="gyms_empty_title">Nie znaleziono siłowni</string>
     <string name="gyms_catalog_empty_body">Siłownie pojawią się tutaj, gdy trenerzy je wskażą.</string>
     <string name="distance_meters">%1$d m</string>

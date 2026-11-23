@@ -19,4 +19,8 @@
     <string name="assign_title">Przypisz podopiecznemu</string>
     <string name="understood">Rozumiem</string>
     <string name="client_chats_empty_body">Tutaj pojawi się rozmowa z Twoim trenerem.</string>
+    <string name="client_chats_find_title">Dostępni trenerzy</string>
+    <string name="client_chats_find_body">Nie masz jeszcze trenera. Wybierz trenera, aby poprosić o termin i zacząć rozmowę.</string>
+    <string name="client_chats_find_error">Nie udało się wczytać trenerów.</string>
+    <string name="client_chats_find_none">Na razie nie ma dostępnych trenerów.</string>
 </resources>

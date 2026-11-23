@@ -75,6 +75,8 @@
     <string name="availability_hint">Declared by trainers. These are not live free slots.</string>
     <string name="apply_filters">Apply</string>
     <string name="search_gyms_placeholder">Gym name or district</string>
+    <string name="gyms_map_description">Map of gyms. Choose a pin to see the gym.</string>
+    <string name="gyms_map_no_position">%1$d gyms have no position and are shown only on the list.</string>
     <string name="gyms_empty_title">No gyms found</string>
     <string name="gyms_catalog_empty_body">Gyms will appear here once trainers list them.</string>
     <string name="distance_meters">%1$d m</string>

@@ -243,6 +243,7 @@ fun ClientShell(
                                     onFindTrainer = actions.onFindTrainer,
                                     onOpenWallet = openWallet,
                                     onRetry = schedule::reload,
+                                    onOpenCalendar = { shell.select(ClientTab.Calendar) },
                                 ),
                             )
                             ClientTab.Calendar -> ClientCalendarContent(

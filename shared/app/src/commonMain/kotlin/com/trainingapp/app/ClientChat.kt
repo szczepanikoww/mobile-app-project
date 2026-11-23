@@ -1,6 +1,28 @@
 package com.trainingapp.app
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.trainingapp.app.resources.client_chats_find_body
+import com.trainingapp.app.resources.client_chats_find_error
+import com.trainingapp.app.resources.client_chats_find_none
+import com.trainingapp.app.resources.client_chats_find_title
+import com.trainingapp.designsystem.component.ErrorState
+import com.trainingapp.designsystem.component.LoadingState
+import com.trainingapp.designsystem.component.SectionHeader
+import com.trainingapp.designsystem.theme.Spacing
+import com.trainingapp.feature.guest.component.TrainerRow
+import com.trainingapp.feature.guest.model.GuestCatalogRepository
+import com.trainingapp.feature.guest.model.TrainerQuery
+import com.trainingapp.feature.guest.model.TrainerSummary
+import kotlinx.coroutines.CancellationException
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -9,6 +31,7 @@ import androidx.compose.runtime.setValue
 import org.koin.compose.getKoin
 import org.koin.compose.koinInject
 import pl.trainer.ui.PlatformBackHandler
+import com.trainingapp.designsystem.theme.AppTheme as DsTheme
 import pl.trainerapp.core.designsystem.AppTheme
 import com.trainingapp.domain.workout.CurrentClient
 import org.jetbrains.compose.resources.stringResource
@@ -83,7 +106,7 @@ internal fun ClientChat(relationshipId: String, onBack: () -> Unit, pinned: Bool
  * a server the list comes from the client's relationships, otherwise from the shared demo store.
  */
 @Composable
-internal fun ClientMessages(onBack: () -> Unit, onOpenChat: (String) -> Unit) {
+internal fun ClientMessages(onBack: () -> Unit, onOpenChat: (String) -> Unit, onOpenTrainer: (String) -> Unit = {}) {
     val koin = getKoin()
     val store: DemoChatStore = koinInject()
     val client: CurrentClient = koinInject()
@@ -97,7 +120,47 @@ internal fun ClientMessages(onBack: () -> Unit, onOpenChat: (String) -> Unit) {
             onBack = onBack,
             onOpenChat = onOpenChat,
             emptyBody = stringResource(Res.string.client_chats_empty_body),
+            // A client without a trainer picks one from the public list instead of seeing an empty screen.
+            emptyContent = { AvailableTrainers(onOpenTrainer) },
         )
+    }
+}
+
+private sealed interface TrainersLoad {
+    data object Loading : TrainersLoad
+    data object Failed : TrainersLoad
+    data class Ready(val trainers: List<TrainerSummary>) : TrainersLoad
+}
+
+/** The public trainers a client without a trainer can choose from; a row opens that trainer's profile. */
+@Composable
+private fun AvailableTrainers(onOpenTrainer: (String) -> Unit) {
+    val catalog: GuestCatalogRepository = koinInject()
+    var attempt by remember { mutableIntStateOf(0) }
+    var load by remember { mutableStateOf<TrainersLoad>(TrainersLoad.Loading) }
+    LaunchedEffect(attempt) {
+        load = TrainersLoad.Loading
+        load = try {
+            TrainersLoad.Ready(catalog.trainers(TrainerQuery()))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            TrainersLoad.Failed
+        }
+    }
+    Column(Modifier.padding(horizontal = Spacing.gutter), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+        SectionHeader(stringResource(Res.string.client_chats_find_title))
+        Text(stringResource(Res.string.client_chats_find_body), style = DsTheme.type.compactBody, color = DsTheme.colors.textSecondary)
+        when (val state = load) {
+            TrainersLoad.Loading -> LoadingState(Modifier.height(160.dp))
+            TrainersLoad.Failed -> ErrorState(stringResource(Res.string.client_chats_find_error), onRetry = { attempt++ })
+            is TrainersLoad.Ready ->
+                if (state.trainers.isEmpty()) {
+                    Text(stringResource(Res.string.client_chats_find_none), style = DsTheme.type.compactBody, color = DsTheme.colors.textSecondary)
+                } else {
+                    state.trainers.forEach { trainer -> TrainerRow(trainer, onClick = { onOpenTrainer(trainer.id) }, compact = true) }
+                }
+        }
     }
 }
 

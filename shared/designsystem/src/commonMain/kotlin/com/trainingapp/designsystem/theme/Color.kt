@@ -68,6 +68,21 @@ val LightAppColors = AppColors(
     onErrorContainer = SharedColors.errorText,
 )
 
+/** The client and guest palette (see [pl.trainer.ui.ClubColors]); semantic success, warning and error colours are shared. */
+val ClubAppColors = LightAppColors.copy(
+    background = pl.trainer.ui.ClubColors.background,
+    subtleSurface = pl.trainer.ui.ClubColors.subtleSurface,
+    tonalSurface = pl.trainer.ui.ClubColors.subtleSurface,
+    text = pl.trainer.ui.ClubColors.text,
+    textSecondary = pl.trainer.ui.ClubColors.textSecondary,
+    outline = pl.trainer.ui.ClubColors.outline,
+    fieldOutline = pl.trainer.ui.ClubColors.fieldOutline,
+    brandAccent = pl.trainer.ui.ClubColors.accent,
+    brandStrong = pl.trainer.ui.ClubColors.brandStrong,
+    softAccent = pl.trainer.ui.ClubColors.softAccent,
+    onSoftAccent = pl.trainer.ui.ClubColors.onSoftAccent,
+)
+
 internal fun AppColors.toMaterialScheme(): ColorScheme = lightColorScheme(
     primary = brandStrong,
     onPrimary = onBrandStrong,

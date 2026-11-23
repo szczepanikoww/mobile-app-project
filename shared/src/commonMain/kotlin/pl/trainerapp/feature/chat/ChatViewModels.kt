@@ -123,6 +123,9 @@ class ChatViewModel(
                         messages = thread.messages,
                         now = thread.generatedAt,
                         zone = thread.zone,
+                        peerActiveAt = thread.peerActiveAt,
+                        seenMessageId = thread.seenMessageId,
+                        seenAt = thread.seenAt,
                         isRefreshing = false,
                     )
                 }

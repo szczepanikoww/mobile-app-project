@@ -20,6 +20,9 @@ interface ChatFixtures {
     val clients: Map<String, String>
     val threads: Map<String, List<ChatMessage>>
     val unread: Map<String, Int>
+
+    /** Relationships whose other side counts as "active now" in the demo. */
+    val activeIds: Set<String> get() = emptySet()
 }
 
 /** Deterministic synthetic data. Relationship ids match the home fixtures, so "Napisz" opens the matching thread. */
@@ -88,6 +91,8 @@ object TrainerChatsFixtures : ChatFixtures {
     )
 
     override val unread: Map<String, Int> = mapOf("c6" to 1, "c7" to 2)
+
+    override val activeIds: Set<String> = setOf("c1", "c6")
 }
 
 /** The trainer's view of [DemoChatStore]. Not connected to any backend. */

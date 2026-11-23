@@ -200,4 +200,8 @@
     <string name="settings_change_password">Change password</string>
     <string name="settings_terms">Terms of service</string>
     <string name="settings_not_available">This option is not available yet</string>
+    <string name="shortcut_workout">My workout</string>
+    <string name="shortcut_sessions">My sessions</string>
+    <string name="shortcut_chat">Message your trainer</string>
+    <string name="shortcut_package">My package</string>
 </resources>

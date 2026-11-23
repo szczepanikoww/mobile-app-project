@@ -94,6 +94,11 @@ fun App(
     openLiveWorkoutRequest: Int = 0,
     addToCalendar: ((ClientSession) -> Unit)? = null,
 ) {
+    // Client and guest views use the club palette; the trainer's shell keeps the teal one (one switch, at the root).
+    val themeAuth: AuthRepository = koinInject()
+    val themeSession by themeAuth.session.collectAsState()
+    val clubPalette = (themeSession ?: initialSession)?.activeRole != Role.Trainer
+    androidx.compose.runtime.CompositionLocalProvider(pl.trainer.ui.LocalClubPalette provides clubPalette) {
     AppTheme { ProvidePhotos {
         val navController = rememberNavController()
         val auth: AuthRepository = koinInject()
@@ -202,6 +207,7 @@ fun App(
                 ClientMessages(
                     onBack = { navController.popBackStack() },
                     onOpenChat = { navController.navigate(ClientChatDestination(it)) },
+                    onOpenTrainer = { navController.navigate(com.trainingapp.feature.guest.TrainerProfileDestination(it)) },
                 )
             }
             composable<ClientChatDestination> { entry ->
@@ -220,4 +226,5 @@ fun App(
             )
         }
     } }
+    }
 }

@@ -75,6 +75,9 @@ class CatalogueAndAccountTest : ApiTest() {
         assertEquals(HttpStatusCode.NotFound, client.get("/v1/public/trainers/not-a-uuid").status)
         val gym = client.get("/v1/public/gyms/${DemoSeed.id("gym-centrum")}").body<GymDetailDto>()
         assertEquals("Pon–Pt 06:00–22:00 · Sob–Nd 08:00–20:00", gym.summary.hoursSummary)
+        // The map on the gyms screen needs a position for every seeded gym.
+        assertEquals(52.2297, gym.summary.latitude!!, 1e-6)
+        assertEquals(21.0122, gym.summary.longitude!!, 1e-6)
         val wola = client.get("/v1/public/gyms/${DemoSeed.id("gym-wola")}") { header(HttpHeaders.AcceptLanguage, "en") }.body<GymDetailDto>()
         assertEquals("Open 24 hours", wola.summary.hoursSummary)
         assertTrue(gym.trainers.any { it.name == "Michał Kowalczyk" })

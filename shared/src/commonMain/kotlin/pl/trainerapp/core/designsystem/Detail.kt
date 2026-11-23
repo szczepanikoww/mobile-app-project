@@ -100,7 +100,7 @@ fun Avatar(name: String, modifier: Modifier = Modifier, size: Dp = Layout.target
         modifier = modifier
             .size(size)
             .clip(CircleShape)
-            .background(SharedColors.softAccent, CircleShape)
+            .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
             .clearAndSetSemantics { },
         contentAlignment = Alignment.Center,
     ) {
@@ -115,7 +115,7 @@ fun Avatar(name: String, modifier: Modifier = Modifier, size: Dp = Layout.target
             Text(
                 initialsOf(name),
                 style = if (size >= Layout.target) MaterialTheme.typography.titleMedium else MaterialTheme.typography.labelLarge,
-                color = SharedColors.onSoftAccent,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
         }
     }

@@ -50,6 +50,9 @@ data class ChatUiState(
     val isSending: Boolean = false,
     val sendFailed: Boolean = false,
     val isRefreshing: Boolean = false,
+    val peerActiveAt: Instant? = null,
+    val seenMessageId: String? = null,
+    val seenAt: Instant? = null,
 )
 
 sealed interface ChatAction {

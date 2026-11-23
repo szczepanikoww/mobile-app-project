@@ -44,7 +44,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.resources.StringResource
 import com.trainingapp.designsystem.component.AppTextButton
 import com.trainingapp.designsystem.component.CardRow
 import com.trainingapp.designsystem.component.EmptyState
@@ -85,6 +87,8 @@ data class ClientHomeActions(
     val onFindTrainer: () -> Unit,
     val onOpenWallet: () -> Unit,
     val onRetry: () -> Unit,
+    /** Opens the calendar tab; the shortcut grid links to destinations the client already has. */
+    val onOpenCalendar: () -> Unit = {},
 )
 
 /**
@@ -119,8 +123,10 @@ fun ClientHomeContent(
                 )
                 return@Column
             }
-            AttentionSection(schedule, wallet, actions)
+            // Club layout: the next session as the big brand card, then the shortcut grid, then what needs attention.
             NextSessionSection(schedule.nextSession, actions)
+            ShortcutGrid(actions)
+            AttentionSection(schedule, wallet, actions)
             TodayWorkoutSection(workout, actions.onStartWorkout)
             wallet.wallet?.packages?.firstOrNull()?.let { pack ->
                 PackageCard(pack.name, pack.used, pack.total, actions.onOpenWallet)
@@ -222,14 +228,9 @@ private fun NextSessionSection(next: ClientSession?, actions: ClientHomeActions)
         }
         val date = next.session.start.dateIn(next.zone)
         HomeCard {
-            // Hero: a gym photo under a dark scrim, with the date tile, the day and the hours in white.
-            ExercisePhotoBox(
-                ExercisePhoto.OfLibrary(sessionPhoto(next.id)),
-                Modifier.fillMaxWidth(),
-                shape = RectangleShape,
-                scrim = true,
-            ) {
-                Column(Modifier.fillMaxWidth().padding(Spacing.cardPadding).padding(top = Spacing.xxl), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+            // Hero: a solid brand block with the date tile, the day and the hours in white.
+            Box(Modifier.fillMaxWidth().background(AppTheme.colors.brandStrong)) {
+                Column(Modifier.fillMaxWidth().padding(Spacing.cardPadding).padding(top = Spacing.l), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
                     SessionStateChip(next.state)
                     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.l), verticalAlignment = Alignment.CenterVertically) {
                         DateTile(date)
@@ -263,6 +264,40 @@ private fun NextSessionSection(next: ClientSession?, actions: ClientHomeActions)
                     AppTextButton(stringResource(Res.string.details), onClick = { actions.onOpenSession(next.id) })
                 }
             }
+        }
+    }
+}
+
+private data class Shortcut(val icon: ImageVector, val label: StringResource, val onClick: () -> Unit)
+
+/** A two-column grid of shortcuts to places the client already has: workout, sessions, chat and package. */
+@Composable
+private fun ShortcutGrid(actions: ClientHomeActions) {
+    val shortcuts = buildList {
+        add(Shortcut(Icons.Outlined.FitnessCenter, Res.string.shortcut_workout, actions.onStartWorkout))
+        add(Shortcut(Icons.Outlined.CalendarToday, Res.string.shortcut_sessions, actions.onOpenCalendar))
+        actions.onChat?.let { add(Shortcut(Icons.AutoMirrored.Outlined.Chat, Res.string.shortcut_chat, it)) }
+        add(Shortcut(Icons.Outlined.CardMembership, Res.string.shortcut_package, actions.onOpenWallet))
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+        shortcuts.chunked(2).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
+                row.forEach { item -> ShortcutTile(item, Modifier.weight(1f)) }
+                if (row.size == 1) Spacer(Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ShortcutTile(item: Shortcut, modifier: Modifier = Modifier) {
+    HomeCard(modifier, onClick = item.onClick) {
+        Column(
+            Modifier.padding(Spacing.cardPadding),
+            verticalArrangement = Arrangement.spacedBy(Spacing.m),
+        ) {
+            IconBadge(item.icon)
+            Text(stringResource(item.label), style = AppTheme.type.bodyStrong, color = AppTheme.colors.text)
         }
     }
 }
@@ -346,12 +381,8 @@ private fun ExerciseStrip(exerciseIds: List<String>) {
 private const val StripSize = 4
 
 /* Library photos (free-exercise-db, public domain) for cards without an exercise of their own. */
-private val SessionPhotos = listOf("Barbell_Full_Squat", "Dumbbell_Shoulder_Press", "Barbell_Deadlift", "Bent_Over_Barbell_Row")
 private const val NoSessionPhoto = "Dumbbell_Bench_Press"
 private const val FreeWorkoutPhoto = "Dumbbell_Lunges"
-
-/** The same photo for the same session, different ones across sessions. */
-private fun sessionPhoto(sessionId: String): String = SessionPhotos[(sessionId.hashCode() and Int.MAX_VALUE) % SessionPhotos.size]
 
 /** The active package with a progress bar of used sessions; opens the wallet. */
 @Composable

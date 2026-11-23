@@ -65,22 +65,55 @@ object AppColors {
     val completedText = Color(0xFF3D5368)
 }
 
+/**
+ * The client and guest views use a warmer "club" palette (orange brand on warm neutrals); the trainer views keep the teal
+ * one. Switched once at the app root through [LocalClubPalette], never per screen. White on [ClubColors.brandStrong] is
+ * 5.2:1, and every text/background pair below is at least 4.5:1.
+ */
+object ClubColors {
+    val brandStrong = Color(0xFFC2410C)
+    val accent = Color(0xFFF97316)
+    val softAccent = Color(0xFFFFEDD5)
+    val onSoftAccent = Color(0xFF7C2D12)
+    val background = Color(0xFFF5F5F4)
+    val subtleSurface = Color(0xFFFAFAF9)
+    val text = Color(0xFF1C1917)
+    val textSecondary = Color(0xFF57534E)
+    val outline = Color(0xFFE7E5E4)
+    val fieldOutline = Color(0xFF78716C)
+}
+
+val LocalClubPalette = androidx.compose.runtime.staticCompositionLocalOf { false }
+
 private fun style(size: Int, line: Int, weight: FontWeight = FontWeight.Normal) = TextStyle(
     fontFamily = FontFamily.SansSerif, fontSize = size.sp, lineHeight = line.sp, fontWeight = weight,
 )
 
 @Composable
 fun TrainerTheme(content: @Composable () -> Unit) = MaterialTheme(
-    colorScheme = lightColorScheme(
-        primary = AppColors.brandStrong, onPrimary = AppColors.surface,
-        primaryContainer = AppColors.softAccent, onPrimaryContainer = AppColors.onSoftAccent,
-        background = AppColors.background, onBackground = AppColors.text,
-        surface = AppColors.surface, onSurface = AppColors.text,
-        surfaceVariant = AppColors.subtleSurface, onSurfaceVariant = AppColors.textSecondary,
-        outline = AppColors.fieldOutline, outlineVariant = AppColors.outline,
-        error = AppColors.errorText, errorContainer = AppColors.errorSurface, onErrorContainer = AppColors.errorText,
-        secondaryContainer = AppColors.softAccent, onSecondaryContainer = AppColors.onSoftAccent,
-    ),
+    colorScheme = if (LocalClubPalette.current) {
+        lightColorScheme(
+            primary = ClubColors.brandStrong, onPrimary = AppColors.surface,
+            primaryContainer = ClubColors.softAccent, onPrimaryContainer = ClubColors.onSoftAccent,
+            background = ClubColors.background, onBackground = ClubColors.text,
+            surface = AppColors.surface, onSurface = ClubColors.text,
+            surfaceVariant = ClubColors.subtleSurface, onSurfaceVariant = ClubColors.textSecondary,
+            outline = ClubColors.fieldOutline, outlineVariant = ClubColors.outline,
+            error = AppColors.errorText, errorContainer = AppColors.errorSurface, onErrorContainer = AppColors.errorText,
+            secondaryContainer = ClubColors.softAccent, onSecondaryContainer = ClubColors.onSoftAccent,
+        )
+    } else {
+        lightColorScheme(
+            primary = AppColors.brandStrong, onPrimary = AppColors.surface,
+            primaryContainer = AppColors.softAccent, onPrimaryContainer = AppColors.onSoftAccent,
+            background = AppColors.background, onBackground = AppColors.text,
+            surface = AppColors.surface, onSurface = AppColors.text,
+            surfaceVariant = AppColors.subtleSurface, onSurfaceVariant = AppColors.textSecondary,
+            outline = AppColors.fieldOutline, outlineVariant = AppColors.outline,
+            error = AppColors.errorText, errorContainer = AppColors.errorSurface, onErrorContainer = AppColors.errorText,
+            secondaryContainer = AppColors.softAccent, onSecondaryContainer = AppColors.onSoftAccent,
+        )
+    },
     typography = Typography(
         headlineMedium = style(26, 32, FontWeight.Bold),
         titleLarge = style(20, 26, FontWeight.Bold),

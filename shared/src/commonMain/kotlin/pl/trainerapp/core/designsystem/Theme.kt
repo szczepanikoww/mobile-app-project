@@ -90,6 +90,17 @@ private val LightAppColors = AppColors(
     dangerText = SharedColors.errorText,
 )
 
+private val ClubAppColors = LightAppColors.copy(
+    brand = pl.trainer.ui.ClubColors.brandStrong,
+    brandAccent = pl.trainer.ui.ClubColors.accent,
+    softBrand = pl.trainer.ui.ClubColors.softAccent,
+    brandBorder = pl.trainer.ui.ClubColors.accent.copy(alpha = 0.2f),
+    textMuted = pl.trainer.ui.ClubColors.textSecondary,
+    textStrong = pl.trainer.ui.ClubColors.text,
+    border = pl.trainer.ui.ClubColors.outline,
+    chipSurface = pl.trainer.ui.ClubColors.subtleSurface,
+)
+
 private val LocalAppColors = staticCompositionLocalOf { LightAppColors }
 
 object AppTheme {
@@ -99,7 +110,8 @@ object AppTheme {
 
 @Composable
 fun AppTheme(content: @Composable () -> Unit) {
-    CompositionLocalProvider(LocalAppColors provides LightAppColors) {
+    val colors = if (pl.trainer.ui.LocalClubPalette.current) ClubAppColors else LightAppColors
+    CompositionLocalProvider(LocalAppColors provides colors) {
         TrainerTheme(content)
     }
 }

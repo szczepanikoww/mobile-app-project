@@ -39,6 +39,7 @@ class RemoteClientConversations(
                     lastFromMe = last != null && !fromTrainer,
                     lastHasVideo = last?.attachments?.isNotEmpty() == true,
                     unread = row.unread,
+                    peerActiveAt = row.peerActiveAt,
                 )
             }
         }.awaitAll()

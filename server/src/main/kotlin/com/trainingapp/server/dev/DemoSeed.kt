@@ -58,7 +58,7 @@ class DemoSeed(private val s: Services) {
         const val TRAINER_SUBJECT = "demo-trainer"
     }
 
-    private data class GymSeed(val id: String, val name: String, val district: String, val street: String, val hours: List<OpeningHours>)
+    private data class GymSeed(val id: String, val name: String, val district: String, val street: String, val hours: List<OpeningHours>, val lat: String, val lng: String)
 
     private data class TrainerSeed(
         val id: String, val name: String, val headline: String, val gyms: List<String>, val tags: List<String>,
@@ -70,12 +70,12 @@ class DemoSeed(private val s: Services) {
     private fun everyDay(open: String, close: String) = (1..7).map { OpeningHours(it, open, close) }
 
     private val gyms = listOf(
-        GymSeed("gym-centrum", "Studio Centrum", "Śródmieście", "ul. Przykładowa 68", weekdays("06:00", "22:00") + weekend("08:00", "20:00")),
-        GymSeed("gym-wola", "Forma Wola", "Wola", "ul. Modelowa 12", everyDay("00:00", "00:00")),
-        GymSeed("gym-mokotow", "Ruch Mokotów", "Mokotów", "ul. Wzorcowa 5", weekdays("06:00", "23:00") + weekend("08:00", "21:00")),
-        GymSeed("gym-praga", "Hala Praga", "Praga-Południe", "ul. Próbna 30", everyDay("07:00", "22:00")),
-        GymSeed("gym-zoliborz", "Puls Żoliborz", "Żoliborz", "ul. Szkicowa 3", weekdays("06:30", "22:00") + OpeningHours(6, "09:00", "18:00")),
-        GymSeed("gym-ursynow", "Strefa Ursynów", "Ursynów", "ul. Robocza 101", weekdays("06:00", "22:00") + weekend("08:00", "20:00")),
+        GymSeed("gym-centrum", "Studio Centrum", "Śródmieście", "ul. Przykładowa 68", weekdays("06:00", "22:00") + weekend("08:00", "20:00"), "52.229700", "21.012200"),
+        GymSeed("gym-wola", "Forma Wola", "Wola", "ul. Modelowa 12", everyDay("00:00", "00:00"), "52.237000", "20.965000"),
+        GymSeed("gym-mokotow", "Ruch Mokotów", "Mokotów", "ul. Wzorcowa 5", weekdays("06:00", "23:00") + weekend("08:00", "21:00"), "52.193000", "21.025000"),
+        GymSeed("gym-praga", "Hala Praga", "Praga-Południe", "ul. Próbna 30", everyDay("07:00", "22:00"), "52.240000", "21.080000"),
+        GymSeed("gym-zoliborz", "Puls Żoliborz", "Żoliborz", "ul. Szkicowa 3", weekdays("06:30", "22:00") + OpeningHours(6, "09:00", "18:00"), "52.270000", "20.985000"),
+        GymSeed("gym-ursynow", "Strefa Ursynów", "Ursynów", "ul. Robocza 101", weekdays("06:00", "22:00") + weekend("08:00", "20:00"), "52.140000", "21.045000"),
     )
 
     private val trainers = listOf(
@@ -233,6 +233,8 @@ class DemoSeed(private val s: Services) {
             it[name] = g.name
             it[street] = g.street
             it[city] = "Warszawa"
+            it[latitude] = java.math.BigDecimal(g.lat)
+            it[longitude] = java.math.BigDecimal(g.lng)
             it[timeZone] = zone
             it[openingHours] = g.hours
             it[isPublic] = true

@@ -1,6 +1,8 @@
 package com.trainingapp.feature.guest.home
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -99,10 +101,7 @@ fun GuestHomeContent(
         contentPadding = PaddingValues(Spacing.gutter),
         verticalArrangement = Arrangement.spacedBy(Spacing.m),
     ) {
-        item {
-            Text(stringResource(Res.string.home_heading), style = AppTheme.type.screenTitle, color = AppTheme.colors.text,
-                modifier = Modifier.semantics { heading() })
-        }
+        item { HeroBanner() }
         item {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 SearchField(
@@ -170,6 +169,29 @@ fun GuestHomeContent(
             }
         }
         item { Spacer(Modifier.height(Spacing.l)) }
+    }
+}
+
+/**
+ * The brand-colored banner at the top, as in club apps: the heading of the screen on a solid brand block. It only
+ * frames the heading; the search and the actions below it are unchanged.
+ */
+@Composable
+private fun HeroBanner() {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(AppShapes.frame)
+            .background(AppTheme.colors.brandStrong)
+            .padding(Spacing.xl),
+        verticalArrangement = Arrangement.spacedBy(Spacing.s),
+    ) {
+        Text(
+            stringResource(Res.string.home_heading),
+            style = AppTheme.type.screenTitle,
+            color = AppTheme.colors.onBrandStrong,
+            modifier = Modifier.semantics { heading() },
+        )
     }
 }
 
