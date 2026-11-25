@@ -1,0 +1,43 @@
+{
+  "family": "trainer-api",
+  "requiresCompatibilities": ["FARGATE"],
+  "networkMode": "awsvpc",
+  "runtimePlatform": { "operatingSystemFamily": "LINUX", "cpuArchitecture": "ARM64" },
+  "cpu": "512",
+  "memory": "1024",
+  "taskRoleArn": "arn:aws:iam::<account-id>:role/trainerTaskRole",
+  "executionRoleArn": "arn:aws:iam::<account-id>:role/trainerTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "api",
+      "image": "<account-id>.dkr.ecr.eu-central-1.amazonaws.com/trainer-backend:latest",
+      "essential": true,
+      "portMappings": [{ "containerPort": 8080, "protocol": "tcp", "appProtocol": "http" }],
+      "environment": [
+        { "name": "TRAINER_PROFILE", "value": "local" },
+        { "name": "AUTH_MODE", "value": "dev" },
+        { "name": "DB_URL", "value": "jdbc:postgresql://<rds-endpoint>:5432/trainer" },
+        { "name": "DB_OWNER_USER", "value": "trainer_owner" },
+        { "name": "DB_APP_USER", "value": "trainer_app" },
+        { "name": "DATA_KEY_ID", "value": "aws-1" },
+        { "name": "PUBLIC_BASE_URL", "value": "http://<alb-dns-name>" }
+      ],
+      "secrets": [
+        { "name": "DB_OWNER_PASSWORD", "valueFrom": "arn:aws:ssm:eu-central-1:<account-id>:parameter/trainer/db-owner-password" },
+        { "name": "DB_APP_PASSWORD", "valueFrom": "arn:aws:ssm:eu-central-1:<account-id>:parameter/trainer/db-app-password" },
+        { "name": "JWT_SECRET", "valueFrom": "arn:aws:ssm:eu-central-1:<account-id>:parameter/trainer/jwt-secret" },
+        { "name": "DATA_KEY", "valueFrom": "arn:aws:ssm:eu-central-1:<account-id>:parameter/trainer/data-key" },
+        { "name": "MEDIA_SIGNING_KEY", "valueFrom": "arn:aws:ssm:eu-central-1:<account-id>:parameter/trainer/media-signing-key" },
+        { "name": "FAKE_PAYMENT_WEBHOOK_SECRET", "valueFrom": "arn:aws:ssm:eu-central-1:<account-id>:parameter/trainer/fake-webhook-secret" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/trainer-api",
+          "awslogs-region": "eu-central-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}
