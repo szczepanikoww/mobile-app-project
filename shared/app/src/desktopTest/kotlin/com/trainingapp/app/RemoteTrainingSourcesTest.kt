@@ -1,5 +1,6 @@
 package com.trainingapp.app
 
+import com.trainingapp.domain.auth.TokenProvider
 import com.trainingapp.app.remote.RemoteExerciseRemoteDataSource
 import com.trainingapp.app.remote.RemoteMediaRemoteDataSource
 import com.trainingapp.app.remote.RemotePlanRemoteDataSource
@@ -43,7 +44,7 @@ class RemoteTrainingSourcesTest {
         fun paths() = requests.filterNot { it.url.encodedPath.endsWith("dev/token") }.map { "${it.method.value} ${it.url.encodedPath}" }
     }
 
-    private fun Server.api() = TrainerApiClient("http://test", subject = { "demo-trainer" }, engine = HttpClient(engine))
+    private fun Server.api() = TrainerApiClient("http://test", tokens = TokenProvider.dev { "demo-trainer" }, engine = HttpClient(engine))
 
     private fun MockRequestHandleScope.token() = respond("""{"token":"tok","userId":"t-1"}""", HttpStatusCode.OK, json)
 

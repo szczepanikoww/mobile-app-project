@@ -149,6 +149,46 @@ class WorkoutLogReducerTest {
         val log = WorkoutLogReducer.setNote(startTestWorkout(), "a".repeat(800))
         assertEquals(WorkoutLogReducer.NOTE_MAX_LENGTH, log.note.length)
     }
+
+    @Test
+    fun anIndependentWorkoutGrowsWhileLogging() {
+        val ids = SequentialIds("e")
+        val empty = WorkoutLogReducer.startEmpty("log2", "client1", "Własny trening", nowEpochMs = 0)
+        assertNull(empty.planVersionId)
+        assertTrue(empty.exercises.isEmpty())
+
+        val added = WorkoutLogReducer.addExercises(empty, listOf("bench", "plank", "unknown"), mapOf("plank" to TrackingType.TIME), ids)
+        assertEquals(listOf("bench", "plank", "unknown"), added.exercises.map { it.exerciseId })
+        assertEquals(listOf(TrackingType.WEIGHT_REPS, TrackingType.TIME, TrackingType.WEIGHT_REPS), added.exercises.map { it.trackingType })
+        assertTrue(added.exercises.all { it.sets.size == 1 && it.plannedSetCount == 0 })
+        assertEquals(0, added.currentExerciseIndex)
+
+        // Adding to a started plan workout shows the first new exercise and keeps the plan link.
+        val plan = startTestWorkout()
+        val more = WorkoutLogReducer.addExercises(plan, listOf("row"), emptyMap(), ids)
+        assertEquals(2, more.currentExerciseIndex)
+        assertEquals("v1", more.planVersionId)
+        assertSame(plan, WorkoutLogReducer.addExercises(plan, emptyList(), emptyMap(), ids))
+    }
+
+    @Test
+    fun removingAnExerciseKeepsTheShownOneAndEndsItsRest() {
+        val log = WorkoutLogReducer.selectExercise(startTestWorkout(), 1)
+        val bench = log.exercises[0]
+        val resting = WorkoutLogReducer.toggleComplete(log, bench.sets[1].id, 0)
+        assertNotNull(resting.rest)
+
+        val removed = WorkoutLogReducer.removeExercise(resting, bench.id)
+        assertEquals(listOf("plank"), removed.exercises.map { it.exerciseId })
+        assertEquals(0, removed.currentExerciseIndex)
+        assertNull(removed.rest)
+
+        val last = WorkoutLogReducer.removeExercise(startTestWorkout().let { WorkoutLogReducer.selectExercise(it, 1) }, "w-unknown")
+        assertEquals(1, last.currentExerciseIndex)
+        val none = WorkoutLogReducer.removeExercise(removed, removed.exercises[0].id)
+        assertTrue(none.exercises.isEmpty())
+        assertNull(none.currentExercise)
+    }
 }
 
 class RestTimerTest {

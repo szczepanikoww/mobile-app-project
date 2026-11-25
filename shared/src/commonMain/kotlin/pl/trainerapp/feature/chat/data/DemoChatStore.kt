@@ -31,6 +31,15 @@ class DemoChatStore(
         fixtures.unread.forEach { (id, count) -> put(id to ChatRole.Trainer, count) }
     }
     private val reviewed = mutableSetOf<String>()
+
+    /** How many messages each side has read of a thread, and when they caught up. */
+    private val reads = mutableMapOf<Pair<String, ChatRole>, Pair<Int, Instant>>().apply {
+        fixtures.threads.forEach { (id, messages) ->
+            val at = messages.lastOrNull()?.at ?: return@forEach
+            put(id to ChatRole.Client, messages.size to at + 300.seconds)
+            put(id to ChatRole.Trainer, (messages.size - (fixtures.unread[id] ?: 0)) to at + 300.seconds)
+        }
+    }
     private var clock: Instant = start
     private var counter = 0
 
@@ -53,6 +62,7 @@ class DemoChatStore(
                 lastFromMe = last.author == viewer,
                 lastHasVideo = last.attachment != null,
                 unread = unread[id to viewer] ?: 0,
+                peerActiveAt = peerActiveAt(id, viewer),
             )
         }.sortedByDescending { it.lastAt }
     }
@@ -60,12 +70,20 @@ class DemoChatStore(
     /** Opening a thread marks it read for [viewer]. */
     suspend fun open(relationshipId: String, viewer: ChatRole): ChatThread = mutex.withLock {
         unread.remove(relationshipId to viewer)
+        val messages = threads[relationshipId].orEmpty().toList()
+        reads[relationshipId to viewer] = messages.size to clock
+        val peerRead = reads[relationshipId to viewer.other()]
+        // "Seen" sits under my newest message that is within what the other side has read.
+        val seenIndex = if (peerRead == null) -1 else messages.take(peerRead.first).indexOfLast { it.author == viewer }
         ChatThread(
             relationshipId = relationshipId,
             name = if (viewer == ChatRole.Trainer) fixtures.clients[relationshipId] ?: relationshipId else fixtures.trainerName,
-            messages = threads[relationshipId].orEmpty().toList(),
+            messages = messages,
             generatedAt = clock,
             zone = fixtures.zone,
+            peerActiveAt = peerActiveAt(relationshipId, viewer),
+            seenMessageId = messages.getOrNull(seenIndex)?.id,
+            seenAt = if (seenIndex >= 0) peerRead?.second else null,
         ).also { _version.value++ }
     }
 
@@ -78,11 +96,23 @@ class DemoChatStore(
     ): ChatMessage = mutex.withLock {
         clock += 60.seconds
         val message = ChatMessage("msg-${counter++}", author, text, clock, attachment, quotedMediaId)
-        threads.getOrPut(relationshipId) { mutableListOf() } += message
+        val thread = threads.getOrPut(relationshipId) { mutableListOf() }
+        thread += message
+        reads[relationshipId to author] = thread.size to clock // the sender has read their own message
         val other = if (author == ChatRole.Trainer) ChatRole.Client else ChatRole.Trainer
         unread[relationshipId to other] = (unread[relationshipId to other] ?: 0) + 1
         _version.value++
         message
+    }
+
+    private fun ChatRole.other() = if (this == ChatRole.Trainer) ChatRole.Client else ChatRole.Trainer
+
+    /** The other side's latest sign of life: "now" for the demo's active people, otherwise their last read or message. */
+    private fun peerActiveAt(relationshipId: String, viewer: ChatRole): Instant? {
+        if (relationshipId in fixtures.activeIds) return clock
+        val peer = viewer.other()
+        val lastSent = threads[relationshipId]?.lastOrNull { it.author == peer }?.at
+        return listOfNotNull(reads[relationshipId to peer]?.second, lastSent).maxOrNull()
     }
 
     /** The message that carries [mediaId], with its relationship, or `null`. */

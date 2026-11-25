@@ -9,6 +9,7 @@ import com.trainingapp.feature.client.presentation.ClientShellViewModel
 import com.trainingapp.feature.client.presentation.ClientTab
 import com.trainingapp.feature.client.presentation.ScheduleMessage
 import com.trainingapp.feature.client.presentation.WalletViewModel
+import com.trainingapp.feature.client.presentation.workingDays
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -111,6 +112,15 @@ class ClientViewModelsTest {
         val model = f.scheduleModel()
         advanceUntilIdle()
         model.openBooking()
+        advanceUntilIdle()
+        // The sheet opens on the trainer list, with no day chosen yet.
+        assertNull(model.state.value.booking!!.trainerId)
+        assertTrue(model.state.value.booking!!.canChangeTrainer)
+        model.bookingTrainer(DemoTrainerId)
+        advanceUntilIdle()
+        assertNull(model.state.value.booking!!.date)
+        assertTrue(model.state.value.booking!!.slots.isEmpty())
+        model.bookingDate(workingDays(model.state.value.today!!).first())
         advanceUntilIdle()
         val slot = model.state.value.booking!!.slots.first()
         model.bookingSlot(slot)

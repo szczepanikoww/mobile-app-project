@@ -1,5 +1,6 @@
 package pl.trainer
 
+import com.trainingapp.domain.auth.TokenProvider
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.MockRequestHandleScope
@@ -46,8 +47,8 @@ class RemoteTrainerRepositoryTest {
         val engine = MockEngine { request -> requests += request; handler(request) }
     }
 
-    private fun repository(server: Server) =
-        RemoteTrainerRepository(TrainerApiClient("http://test", subject = { "demo-trainer" }, engine = HttpClient(server.engine)))
+    private fun repository(server: Server, tokens: TokenProvider = TokenProvider { "tok-1" }) =
+        RemoteTrainerRepository(TrainerApiClient("http://test", tokens = tokens, engine = HttpClient(server.engine)))
 
     private fun MockRequestHandleScope.token(n: Int = 1) = respond("""{"token":"tok-$n","userId":"t-1"}""", HttpStatusCode.OK, json)
 
@@ -76,15 +77,32 @@ class RemoteTrainerRepositoryTest {
     @Test
     fun rejectedTokenIsRenewedOnce() = runTest {
         var tokens = 0
+        val refreshes = mutableListOf<Boolean>()
         var calls = 0
-        val server = Server { request ->
-            if (request.url.encodedPath.endsWith("dev/token")) token(++tokens)
-            else if (++calls == 1) respond("""{"code":"UNAUTHENTICATED","message":"x"}""", HttpStatusCode.Unauthorized, json)
+        val server = Server { _ ->
+            if (++calls == 1) respond("""{"code":"UNAUTHENTICATED","message":"x"}""", HttpStatusCode.Unauthorized, json)
             else respond(dashboard, HttpStatusCode.OK, json)
         }
-        repository(server).load()
-        assertEquals(2, tokens)
+        repository(server, TokenProvider { force -> refreshes += force; "tok-${++tokens}" }).load()
+        assertEquals(listOf(false, true), refreshes)
         assertEquals("Bearer tok-2", server.requests.last().headers[HttpHeaders.Authorization])
+    }
+
+    @Test
+    fun aSecondRejectionIsDeniedWithoutALoop() = runTest {
+        val server = Server { _ -> respond("""{"code":"UNAUTHENTICATED","message":"x"}""", HttpStatusCode.Unauthorized, json) }
+        val error = assertFailsWith<TrainerException> { repository(server).load() }
+        assertEquals(Failure.Denied, error.failure)
+        assertEquals(2, server.requests.size)
+    }
+
+    @Test
+    fun signedOutIsDeniedAndARefreshWithoutNetworkIsOffline() = runTest {
+        val server = Server { _ -> respond(dashboard, HttpStatusCode.OK, json) }
+        assertEquals(Failure.Denied, assertFailsWith<TrainerException> { repository(server, TokenProvider.None).load() }.failure)
+        val offline = TokenProvider { throw IllegalStateException("no network") }
+        assertEquals(Failure.Offline, assertFailsWith<TrainerException> { repository(server, offline).load() }.failure)
+        assertTrue(server.requests.isEmpty())
     }
 
     @Test

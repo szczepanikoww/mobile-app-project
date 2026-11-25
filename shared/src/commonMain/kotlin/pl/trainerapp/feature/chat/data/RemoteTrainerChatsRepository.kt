@@ -50,11 +50,15 @@ class RemoteTrainerChatsRepository(
 
     private var snapshot: ConversationsSnapshot? = null
     private val names = mutableMapOf<String, String>()
+    private val activity = mutableMapOf<String, Instant?>()
 
     override suspend fun conversations(): ConversationsSnapshot = try {
         val now = clock.now()
         val rows = api.get<List<ConversationDto>>("trainer/conversations")
-        rows.forEach { names[it.clientId] = it.clientName }
+        rows.forEach {
+            names[it.clientId] = it.clientName
+            activity[it.clientId] = it.peerActiveAt
+        }
         ConversationsSnapshot(rows.map { it.toConversation(now) }, generatedAt = now, isOffline = false, lastUpdated = now)
             .also { snapshot = it }
     } catch (e: TrainerException) {
@@ -66,13 +70,16 @@ class RemoteTrainerChatsRepository(
         val messages = mutableListOf<MessageDto>()
         var afterSeq = 0L
         var lastReadSeq = 0L
+        var lastPeer: Pair<Long, Instant?>? = null
         while (true) {
             val page = api.get<ThreadDto>("trainer/conversations/$clientId/messages?afterSeq=$afterSeq&limit=$PAGE")
             lastReadSeq = page.lastReadSeq
+            lastPeer = page.peerLastReadSeq to page.peerLastReadAt
             messages += page.messages
             if (page.messages.size < PAGE) break
             afterSeq = page.messages.last().seq
         }
+        val peerReadSeq = lastPeer?.first ?: 0L
         val last = messages.maxOfOrNull { it.seq }
         if (last != null && last > lastReadSeq) {
             // A failed read marker must not hide the messages; the thread is marked on the next open.
@@ -92,7 +99,19 @@ class RemoteTrainerChatsRepository(
             }
         }
         val now = clock.now()
-        return ChatThread(clientId, names[clientId].orEmpty(), messages.sortedBy { it.seq }.map { it.toMessage() }, now, zone)
+        val ordered = messages.sortedBy { it.seq }
+        // "Seen" sits under my newest message the client has read (everything up to their read marker counts as read).
+        val seen = ordered.lastOrNull { it.mine && it.seq <= peerReadSeq }
+        return ChatThread(
+            relationshipId = clientId,
+            name = names[clientId].orEmpty(),
+            messages = ordered.map { it.toMessage() },
+            generatedAt = now,
+            zone = zone,
+            peerActiveAt = activity[clientId],
+            seenMessageId = seen?.id,
+            seenAt = if (seen != null) lastPeer?.second else null,
+        )
     }
 
     override suspend fun send(clientId: String, text: String): ChatMessage = post(clientId, text, emptyList())
@@ -116,6 +135,7 @@ class RemoteTrainerChatsRepository(
         lastFromMe = lastMessage?.mine ?: false,
         lastHasVideo = lastMessage?.attachmentMediaIds?.isNotEmpty() == true,
         unread = unread,
+        peerActiveAt = peerActiveAt,
     )
 
     private fun MessageDto.toMessage(): ChatMessage {

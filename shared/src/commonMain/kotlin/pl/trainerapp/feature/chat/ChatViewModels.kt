@@ -14,7 +14,7 @@ import pl.trainerapp.feature.chat.model.ChatMessage
 import pl.trainerapp.feature.chat.model.ChatRole
 import pl.trainerapp.feature.chat.model.ChatThread
 
-class TrainerChatListViewModel(private val repository: TrainerChatsRepository) : ViewModel() {
+class TrainerChatListViewModel(private val repository: ChatListRepository) : ViewModel() {
 
     private val _state = MutableStateFlow(ChatListUiState())
     val state: StateFlow<ChatListUiState> = _state.asStateFlow()
@@ -123,6 +123,9 @@ class ChatViewModel(
                         messages = thread.messages,
                         now = thread.generatedAt,
                         zone = thread.zone,
+                        peerActiveAt = thread.peerActiveAt,
+                        seenMessageId = thread.seenMessageId,
+                        seenAt = thread.seenAt,
                         isRefreshing = false,
                     )
                 }

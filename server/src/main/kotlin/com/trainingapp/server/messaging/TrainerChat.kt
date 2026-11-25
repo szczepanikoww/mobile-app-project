@@ -62,7 +62,13 @@ class TrainerChat(private val db: Db, private val clock: ServerClock) {
                         (Messages.conversationId eq conversation[Conversations.id]) and (Messages.seq greater lastRead) and
                             (Messages.senderId neq trainerId) and Messages.deletedAt.isNull()
                     }.count().toInt()
+                val peerId = rel[TrainerClients.clientId]
+                val peerRead = marker(conversation[Conversations.id], peerId)?.get(ReadMarkers.readAt)
+                val peerSent = Messages.selectAll()
+                    .where { (Messages.conversationId eq conversation[Conversations.id]) and (Messages.senderId eq peerId) }
+                    .orderBy(Messages.seq, SortOrder.DESC).limit(1).singleOrNull()?.get(Messages.createdAt)
                 ConversationDto(
+                    peerActiveAt = listOfNotNull(peerRead, peerSent).maxOrNull()?.toInstantK(),
                     clientId = rel[TrainerClients.id].toString(),
                     conversationId = conversation[Conversations.id].toString(),
                     clientName = if (rel[AppUsers.deletedAt] != null) "—" else rel[AppUsers.displayName],
@@ -76,8 +82,9 @@ class TrainerChat(private val db: Db, private val clock: ServerClock) {
     /** Messages with seq > [afterSeq], ascending. Reading does not mark the thread read. */
     suspend fun thread(trainerId: UUID, clientId: String, afterSeq: Long, limit: Int): ThreadDto = db.tx {
         val relationshipId = clientId.toUuid("clientId")
-        Access.activeRelationship(trainerId, relationshipId)
+        val relationship = Access.activeRelationship(trainerId, relationshipId)
         val conversation = conversation(relationshipId)
+        val peer = marker(conversation[Conversations.id], relationship[TrainerClients.clientId])
         val rows = Messages.selectAll()
             .where { (Messages.conversationId eq conversation[Conversations.id]) and (Messages.seq greater afterSeq.coerceAtLeast(0)) and Messages.deletedAt.isNull() }
             .orderBy(Messages.seq, SortOrder.ASC)
@@ -88,6 +95,8 @@ class TrainerChat(private val db: Db, private val clock: ServerClock) {
             clientId = clientId,
             messages = toDto(rows, trainerId),
             lastReadSeq = lastRead(conversation[Conversations.id], trainerId),
+            peerLastReadSeq = peer?.get(ReadMarkers.lastReadSeq) ?: 0L,
+            peerLastReadAt = peer?.get(ReadMarkers.readAt)?.toInstantK(),
         )
     }
 
@@ -169,10 +178,12 @@ class TrainerChat(private val db: Db, private val clock: ServerClock) {
                 it[ReadMarkers.conversationId] = conversationId
                 it[userId] = trainerId
                 it[lastReadSeq] = request.seq
+                it[readAt] = clock.now().toOffset()
             }
         } else if (request.seq > marker[ReadMarkers.lastReadSeq]) {
             ReadMarkers.update({ (ReadMarkers.conversationId eq conversationId) and (ReadMarkers.userId eq trainerId) }) {
                 it[lastReadSeq] = request.seq
+                it[readAt] = clock.now().toOffset()
             }
         }
     }
@@ -190,9 +201,11 @@ class TrainerChat(private val db: Db, private val clock: ServerClock) {
         return Conversations.selectAll().where { Conversations.relationshipId eq relationshipId }.single()
     }
 
-    private fun lastRead(conversationId: UUID, userId: UUID): Long =
+    private fun marker(conversationId: UUID, userId: UUID): ResultRow? =
         ReadMarkers.selectAll().where { (ReadMarkers.conversationId eq conversationId) and (ReadMarkers.userId eq userId) }
-            .singleOrNull()?.get(ReadMarkers.lastReadSeq) ?: 0L
+            .singleOrNull()
+
+    private fun lastRead(conversationId: UUID, userId: UUID): Long = marker(conversationId, userId)?.get(ReadMarkers.lastReadSeq) ?: 0L
 
     private fun toDto(rows: List<ResultRow>, viewer: UUID): List<MessageDto> {
         if (rows.isEmpty()) return emptyList()

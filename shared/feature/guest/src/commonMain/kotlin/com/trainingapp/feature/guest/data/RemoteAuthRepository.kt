@@ -3,11 +3,14 @@ package com.trainingapp.feature.guest.data
 import com.trainingapp.contract.account.CreateAccountRequest
 import com.trainingapp.contract.account.MeDto
 import com.trainingapp.contract.account.RoleDto
+import com.trainingapp.contract.account.UpdateMeRequest
 import com.trainingapp.contract.api.ApiErrorCodes
 import com.trainingapp.contract.text.SearchText
 import com.trainingapp.data.remote.ApiClient
 import com.trainingapp.data.remote.ApiHttpException
 import com.trainingapp.data.remote.ApiOfflineException
+import com.trainingapp.domain.auth.TokenProvider
+import com.trainingapp.feature.guest.model.AccountUpdateResult
 import com.trainingapp.feature.guest.model.AuthRepository
 import com.trainingapp.feature.guest.model.AuthResult
 import com.trainingapp.feature.guest.model.AuthSession
@@ -25,11 +28,11 @@ import kotlin.random.Random
  * session's [AuthSession.userId] is that subject (not the server's UUID), because the rest of the app derives its
  * tokens from it. No password is checked or stored (the dev token has none); it is only validated by the screens.
  *
- * [apiFor] builds a client whose token is read from the lambda, so sign-in can use the subject being signed in before
- * a session exists.
+ * [apiFor] builds a client for the given token source, so sign-in can use the subject being signed in before a
+ * session exists.
  */
 class RemoteAuthRepository(
-    private val apiFor: (token: () -> String?) -> ApiClient,
+    private val apiFor: (tokens: TokenProvider) -> ApiClient,
     initialSession: AuthSession? = null,
     private val termsVersion: String = DEFAULT_DOCUMENT_VERSION,
     private val privacyVersion: String = DEFAULT_DOCUMENT_VERSION,
@@ -39,7 +42,7 @@ class RemoteAuthRepository(
     override val session: StateFlow<AuthSession?> = state.asStateFlow()
 
     private var subject: String? = initialSession?.userId
-    private val api: ApiClient = apiFor { subject?.let { "dev.$it" } }
+    private val api: ApiClient = apiFor(TokenProvider.dev { subject })
 
     override suspend fun logIn(email: String, password: String): AuthResult {
         val identity = identityFor(normalize(email))
@@ -96,6 +99,28 @@ class RemoteAuthRepository(
         val current = state.value ?: return null
         if (role !in current.roles) return null
         return current.copy(activeRole = role).also { state.value = it }
+    }
+
+    override suspend fun updateDisplayName(name: String): AccountUpdateResult {
+        val current = state.value ?: return AccountUpdateResult.Unavailable
+        val me = try {
+            withSubject(current.userId) {
+                api.send(
+                    method = HttpMethod.Patch,
+                    path = "/v1/me",
+                    body = UpdateMeRequest(displayName = name.trim()),
+                    bodySerializer = UpdateMeRequest.serializer(),
+                    response = MeDto.serializer(),
+                )
+            }
+        } catch (e: ApiOfflineException) {
+            return AccountUpdateResult.Offline
+        } catch (e: ApiHttpException) {
+            return if (e.status == 422 || e.status == 400) AccountUpdateResult.Invalid else AccountUpdateResult.Unavailable
+        } ?: return AccountUpdateResult.Unavailable
+        val latest = state.value
+        if (latest?.userId == current.userId) state.value = latest.copy(displayName = me.displayName)
+        return AccountUpdateResult.Saved
     }
 
     /** `GET /v1/me` for [forSubject]; null when no account exists for it. */

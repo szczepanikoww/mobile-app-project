@@ -75,6 +75,8 @@
     <string name="availability_hint">Deklarowana przez trenerów. To nie są wolne terminy.</string>
     <string name="apply_filters">Zastosuj</string>
     <string name="search_gyms_placeholder">Nazwa siłowni lub dzielnica</string>
+    <string name="gyms_map_description">Mapa siłowni. Wybierz pinezkę, aby zobaczyć siłownię.</string>
+    <string name="gyms_map_no_position">Siłownie bez położenia (%1$d) są widoczne tylko na liście.</string>
     <string name="gyms_empty_title">Nie znaleziono siłowni</string>
     <string name="gyms_catalog_empty_body">Siłownie pojawią się tutaj, gdy trenerzy je wskażą.</string>
     <string name="distance_meters">%1$d m</string>
@@ -168,6 +170,12 @@
     <string name="failure_offline">Nie wysłano. Sprawdź połączenie.</string>
     <string name="failure_unavailable">Usługa jest niedostępna. Spróbuj ponownie później.</string>
     <string name="failure_google">Logowanie Google nie jest jeszcze dostępne.</string>
+    <string name="complete_account">Dokończ rejestrację</string>
+    <string name="complete_account_title">Dokończ zakładanie konta</string>
+    <string name="complete_account_body">Zalogowano jako %1$s. Podaj imię i nazwisko, wybierz rolę i zaakceptuj regulamin.</string>
+    <string name="complete_account_body_no_email">Zalogowano. Podaj imię i nazwisko, wybierz rolę i zaakceptuj regulamin.</string>
+    <string name="cancel_completion">Anuluj</string>
+    <string name="failure_too_many">Zbyt wiele prób. Odczekaj chwilę i spróbuj ponownie.</string>
     <string name="log_out">Wyloguj się</string>
     <plurals name="results_count">
         <item quantity="one">%d wynik</item>

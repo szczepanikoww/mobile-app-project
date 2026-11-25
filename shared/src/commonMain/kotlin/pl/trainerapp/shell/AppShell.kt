@@ -37,6 +37,7 @@ import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material3.Icon
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -127,6 +128,14 @@ fun TrainerShell(
     val noShowRecorded = stringResource(Res.string.check_in_recorded_no_show)
     val videoReviewed = stringResource(Res.string.video_reviewed_snackbar)
     var homeRefresh by remember { mutableStateOf(0) }
+    // "Change profile photo" (trainer profile): its progress as a snackbar.
+    val photoUpload = pl.trainer.ui.LocalProfilePhotoChange.current?.state
+    val photoMessages = mapOf(
+        pl.trainer.ui.PhotoUploadState.Uploading to stringResource(Res.string.profile_photo_uploading),
+        pl.trainer.ui.PhotoUploadState.Saved to stringResource(Res.string.profile_photo_saved),
+        pl.trainer.ui.PhotoUploadState.Failed to stringResource(Res.string.profile_photo_failed),
+    )
+    LaunchedEffect(photoUpload) { photoMessages[photoUpload]?.let { snackbarHostState.showSnackbar(it) } }
 
     val push: (TrainerRoute) -> Unit = { routeKeys = ArrayList(routeKeys + it.key) }
     val pop: () -> Unit = { routeKeys = ArrayList(routeKeys.dropLast(1)) }

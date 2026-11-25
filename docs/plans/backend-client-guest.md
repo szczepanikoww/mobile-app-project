@@ -49,7 +49,7 @@ Following architecture §5–§6 and database-design §1 and §7. Nothing here i
 | Jobs | `platform.outbox_event` written in the business transaction, `platform.job` polled with `SELECT … FOR UPDATE SKIP LOCKED` by the worker | database-design |
 | Payments | `PaymentProvider` interface; `FakePaymentProvider` (`payment.provider = 'fake'`, method `TEST_MODE`) first, then Stripe test mode (`'stripe'`) | *(proposal)* |
 | Push | FCM data messages ("refresh" only, never content); tokens in `platform.push_token` | architecture |
-| Local dev | `docker-compose.yml`: `postgres:16-alpine` (the image the DDL was verified on), MinIO, Firebase Auth emulator. Flyway migrates on server start in the `local` profile only. | *(proposal)* |
+| Local dev | `docker-compose.yml`: `postgres:16-alpine` (the image the DDL was verified on), MinIO. Flyway migrates on server start in the `local` profile only. | *(proposal)* |
 
 Note: database-design.md refers to `infrastructure-aws.md` (RDS, S3). That file is not in the repository yet, so hosting stays an open item (G-host).
 
@@ -351,7 +351,7 @@ Each slice ends with the app talking to the real local server and database for t
 | # | Slice | Contents | Done when |
 |---|---|---|---|
 | S0 | Foundations | `:server` module, Ktor skeleton, Flyway with **`V1__initial_schema.sql` = `schema-draft.sql`**, Exposed + HikariCP, owner/app DB roles, docker-compose, Testcontainers (`postgres:16-alpine`), SQLSTATE → error mapper (§3), request logging without bodies, outbox + job runner, CI job | `GET /health` in CI; V1 migrates in a test container; the database-design smoke checks run as integration tests |
-| S1 | Identity | IdP verification, `/v1/me`, `/v1/accounts` (+ `consent_record`), roles, push tokens, `FirebaseAuthRepository`, seed accounts matching the demo e-mails (`auth_subject` = seed id) | Log in / register / Google against the emulator; `AccountExists`, `InvalidCredentials`, `Offline` paths; register retry creates one user |
+| S1 | Identity | IdP verification, `/v1/me`, `/v1/accounts` (+ `consent_record`), roles, push tokens, `FirebaseAuthRepository`, seed accounts matching the demo e-mails (`auth_subject` = seed id) | Log in / register / Google against the real Firebase project; `AccountExists`, `InvalidCredentials`, `Offline` paths; register retry creates one user |
 | S2 | Public catalogue | migration with gaps G-1…G-7 (as agreed), the 6 catalogue endpoints, seed of the 12 synthetic trainers / 6 gyms, offers and policy versions, `RemoteGuestCatalogRepository` | Guest screens show server data; filter results equal `CatalogSearch` for the same fixtures (shared test cases); privacy test passes |
 | S3 | Client schedule (read) | schedule, booking options, slots from `availability_rule`/`calendar_block`, policy versions; enum mapper (C1) | B1/B2 render from the server with `serverNow`; slots never contain block titles |
 | S4 | Booking & reschedule | booking request (+ R1 relationship), withdraw, reschedule request, proposal answer, expiry job, dev routes for confirm/reject/propose | Acceptance test 1 (two concurrent confirms → one `23P01` → `409`); "original stays confirmed"; `reschedule_one_open`; idempotent booking retry |
@@ -377,7 +377,7 @@ Do not decide these silently while implementing.
 
 | # | Question | Proposal |
 |---|---|---|
-| G-auth | Identity provider (architecture §5 lists Firebase, Supabase, Keycloak) | Firebase Auth: free tier, emulator, Google sign-in and password reset included |
+| G-auth | Identity provider (architecture §5 lists Firebase, Supabase, Keycloak) | Firebase Auth: free tier, Google sign-in and password reset included |
 | G-host | Where does the server run for the course? `infrastructure-aws.md` is referenced by database-design but not in the repository | One EU host + managed Postgres 16 (RDS per database-design); local docker-compose for development |
 | R1 | Booking with a trainer the client has no relationship with (G1) | First booking request creates `trainer_client` `PENDING / CLIENT_REQUEST`; the trainer confirming activates it. Invite codes (`identity.invite_code`) later. |
 | R2 | What a client sees after a relationship ends | Past sessions, own workout logs and payments stay visible; chat read-only; no new requests |
@@ -401,7 +401,7 @@ App side (§11), started: `ApiClient` (Ktor client, CIO engine) and `BackendConf
 | Slice | Server status |
 |---|---|
 | S0 | Done: `:server` module, Flyway (V1 = `schema-draft.sql` unchanged), Exposed DSL + HikariCP, owner and DML-only roles (`R__grants.sql`), SQLSTATE mapper, request logging without bodies, outbox + job runner (`SKIP LOCKED`), docker-compose. |
-| S1 | Done for `dev` tokens and Firebase ID-token verification (JWKS). `/v1/me`, `/v1/accounts` (+ consents), client role, push tokens. Not tested against the Firebase emulator. |
+| S1 | Done for `dev` tokens and Firebase ID-token verification (JWKS). `/v1/me`, `/v1/accounts` (+ consents), client role, push tokens. Firebase sign-in is covered in docs/plans/firebase-auth.md. |
 | S2 | Done with V2 (gaps G-1…G-5 as a **proposal**); G-6…G-8 return null / false / []. 12 synthetic trainers and 6 gyms seeded. ETag / `Cache-Control`, rate limit. |
 | S3–S5 | Done: schedule, booking options, DST-safe slots, booking requests (R1, R4), withdraw, reschedule (client and trainer), proposal answers, quotes (R8) and cancellation with fee decisions, charges and package credits; dev routes for confirm / reject / propose / accept / trainer cancel / check-in / no-show. |
 | S6 | Done with `FakePaymentProvider` only (webhook path, signature, dedupe, out-of-order re-fetch, cash recording). Stripe test mode is not implemented. |

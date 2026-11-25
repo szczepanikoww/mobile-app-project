@@ -26,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -88,21 +89,35 @@ fun DetailHeader(
 fun initialsOf(name: String): String =
     name.trim().split(" ").filter { it.isNotBlank() }.take(2).map { it.first().uppercaseChar() }.joinToString("")
 
-/** Initials on the soft accent circle, as the client avatars in the clients view. */
+/**
+ * Initials on the soft accent circle, as the client avatars in the clients view, or the profile photo of [photoOf]
+ * (a user id or [pl.trainer.ui.MyPhoto]) when the app provides photos and there is one.
+ */
 @Composable
-fun Avatar(name: String, modifier: Modifier = Modifier, size: Dp = Layout.target) {
+fun Avatar(name: String, modifier: Modifier = Modifier, size: Dp = Layout.target, photoOf: String? = null) {
+    val photo = pl.trainer.ui.rememberProfilePhoto(photoOf)
     Box(
         modifier = modifier
             .size(size)
-            .background(SharedColors.softAccent, CircleShape)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
             .clearAndSetSemantics { },
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            initialsOf(name),
-            style = if (size >= Layout.target) MaterialTheme.typography.titleMedium else MaterialTheme.typography.labelLarge,
-            color = SharedColors.onSoftAccent,
-        )
+        if (photo != null) {
+            androidx.compose.foundation.Image(
+                photo,
+                contentDescription = null,
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                modifier = Modifier.matchParentSize(),
+            )
+        } else {
+            Text(
+                initialsOf(name),
+                style = if (size >= Layout.target) MaterialTheme.typography.titleMedium else MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+        }
     }
 }
 

@@ -74,6 +74,8 @@ data class AuthActions(
     val onSubmit: (String) -> Unit,
     val onGoogle: () -> Unit,
     val onBrowse: () -> Unit,
+    /** Leaves the account completion ([AuthUiState.completing]). */
+    val onCancelCompletion: () -> Unit = {},
 )
 
 @Composable
@@ -98,7 +100,14 @@ fun AuthScreen(state: AuthUiState, actions: AuthActions, termsVersion: String = 
     var password by remember { mutableStateOf("") }
     var termsSheet by remember { mutableStateOf(false) }
     val register = state.mode == AuthMode.Register
-    val submitLabel = stringResource(if (register) Res.string.create_account else Res.string.log_in)
+    val completing = state.completing
+    val submitLabel = stringResource(
+        when {
+            completing -> Res.string.complete_account
+            register -> Res.string.create_account
+            else -> Res.string.log_in
+        },
+    )
 
     Scaffold(
         containerColor = AppTheme.colors.background,
@@ -121,12 +130,26 @@ fun AuthScreen(state: AuthUiState, actions: AuthActions, termsVersion: String = 
                     .testTag("auth-form"),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xxl),
             ) {
-                SegmentedTabs(
-                    options = listOf(stringResource(Res.string.log_in), stringResource(Res.string.create_account)),
-                    selectedIndex = if (register) 1 else 0,
-                    onSelect = { actions.onModeChange(if (it == 1) AuthMode.Register else AuthMode.LogIn) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                if (completing) {
+                    // The identity provider already knows the e-mail; only our account is missing (F4).
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                        Text(stringResource(Res.string.complete_account_title), style = AppTheme.type.sectionTitle, color = AppTheme.colors.text,
+                            modifier = Modifier.semantics { heading() })
+                        Text(
+                            if (state.email.isNotBlank()) stringResource(Res.string.complete_account_body, state.email)
+                            else stringResource(Res.string.complete_account_body_no_email),
+                            style = AppTheme.type.body,
+                            color = AppTheme.colors.textSecondary,
+                        )
+                    }
+                } else {
+                    SegmentedTabs(
+                        options = listOf(stringResource(Res.string.log_in), stringResource(Res.string.create_account)),
+                        selectedIndex = if (register) 1 else 0,
+                        onSelect = { actions.onModeChange(if (it == 1) AuthMode.Register else AuthMode.LogIn) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
 
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
                     if (register) {
@@ -138,7 +161,7 @@ fun AuthScreen(state: AuthUiState, actions: AuthActions, termsVersion: String = 
                             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
                         )
                     }
-                    AppTextField(
+                    if (!completing) AppTextField(
                         value = state.email,
                         onValueChange = { actions.onEmailChange(it, password) },
                         label = stringResource(Res.string.field_email),
@@ -150,7 +173,7 @@ fun AuthScreen(state: AuthUiState, actions: AuthActions, termsVersion: String = 
                             imeAction = ImeAction.Next,
                         ),
                     )
-                    PasswordField(
+                    if (!completing) PasswordField(
                         value = password,
                         onValueChange = { password = it; actions.onPasswordChange(it) },
                         label = stringResource(Res.string.field_password),
@@ -203,16 +226,21 @@ fun AuthScreen(state: AuthUiState, actions: AuthActions, termsVersion: String = 
                         enabled = !state.googleSubmitting,
                         icon = if (register) Icons.AutoMirrored.Outlined.ArrowForward else Icons.AutoMirrored.Outlined.Login,
                     )
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
+                    if (!completing) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
                         HorizontalDivider(Modifier.weight(1f), color = AppTheme.colors.outline)
                         Text(stringResource(Res.string.divider_or), style = AppTheme.type.compactBody, color = AppTheme.colors.textSecondary)
                         HorizontalDivider(Modifier.weight(1f), color = AppTheme.colors.outline)
                     }
-                    // D10: the button stays; the demo explains that Google sign-in is not connected yet.
-                    TonalButton(stringResource(Res.string.continue_google), onClick = actions.onGoogle, modifier = Modifier.fillMaxWidth(),
-                        loading = state.googleSubmitting, enabled = !state.submitting)
-                    AppTextButton(stringResource(Res.string.browse_without_account), onClick = actions.onBrowse, modifier = Modifier.fillMaxWidth(),
-                        enabled = !state.busy)
+                    if (completing) {
+                        AppTextButton(stringResource(Res.string.cancel_completion), onClick = actions.onCancelCompletion,
+                            modifier = Modifier.fillMaxWidth(), enabled = !state.busy)
+                    } else {
+                        // D10: the button stays; without Google sign-in configured it explains that it is not available.
+                        TonalButton(stringResource(Res.string.continue_google), onClick = actions.onGoogle, modifier = Modifier.fillMaxWidth(),
+                            loading = state.googleSubmitting, enabled = !state.submitting)
+                        AppTextButton(stringResource(Res.string.browse_without_account), onClick = actions.onBrowse, modifier = Modifier.fillMaxWidth(),
+                            enabled = !state.busy)
+                    }
                 }
                 Spacer(Modifier.height(Spacing.l))
             }
@@ -235,6 +263,7 @@ private fun AuthFailure.text(): String = stringResource(
         AuthFailure.Offline -> Res.string.failure_offline
         AuthFailure.Unavailable -> Res.string.failure_unavailable
         AuthFailure.GoogleUnavailable -> Res.string.failure_google
+        AuthFailure.TooManyAttempts -> Res.string.failure_too_many
     },
 )
 

@@ -180,6 +180,8 @@ private fun GymSummaryDto.toModel() = GymSummary(
     hoursSummary = hoursSummary,
     distanceMeters = distanceMeters,
     rating = rating?.let { Rating(it.average, it.count) },
+    latitude = latitude,
+    longitude = longitude,
 )
 
 private fun TrainerProfileDto.toModel() = TrainerProfile(

@@ -14,8 +14,19 @@ import com.trainingapp.data.plan.FakePlanRemoteDataSource
 import com.trainingapp.data.plan.LocalPlanRepository
 import com.trainingapp.data.plan.PlanRemoteDataSource
 import com.trainingapp.data.plan.PublishedPlanExerciseUsage
+import com.trainingapp.data.auth.FirebaseAuthApi
+import com.trainingapp.data.auth.FirebaseTokenProvider
+import com.trainingapp.data.auth.GoogleIdTokenSource
+import com.trainingapp.data.auth.IdentityConfig
+import com.trainingapp.data.auth.InMemoryTokenStore
+import com.trainingapp.data.auth.TokenStore
+import com.trainingapp.app.photos.exerciseSourceId
 import com.trainingapp.data.remote.ApiClient
 import com.trainingapp.data.remote.BackendConfig
+import com.trainingapp.data.remote.HttpEngines
+import io.ktor.client.engine.HttpClientEngine
+import com.trainingapp.domain.auth.TokenProvider
+import com.trainingapp.feature.guest.data.FirebaseAuthRepository
 import com.trainingapp.feature.guest.data.RemoteAuthRepository
 import com.trainingapp.app.remote.ApiClientAdapter
 import com.trainingapp.app.remote.client.RemoteTodayWorkoutSource
@@ -40,11 +51,13 @@ import com.trainingapp.domain.media.MediaRepository
 import com.trainingapp.domain.plan.PlanRepository
 import com.trainingapp.feature.guest.data.DemoAccounts
 import com.trainingapp.feature.guest.guestModule
+import com.trainingapp.feature.guest.model.AccountUpdateResult
 import com.trainingapp.feature.guest.model.AuthRepository
 import com.trainingapp.feature.guest.model.AuthSession
 import com.trainingapp.feature.guest.model.GuestCatalogRepository
 import com.trainingapp.feature.guest.model.TrainerProfile
 import com.trainingapp.feature.client.clientModule
+import com.trainingapp.feature.client.presentation.ClientAccount
 import pl.trainer.data.AdvancingDemoClock
 import pl.trainer.data.CatalogTrainer
 import pl.trainer.data.ClientIdentity
@@ -123,7 +136,22 @@ interface AppPlatform {
 
     /** Which server to use (`trainer.backend`). The default keeps every demo source, so no server is needed. */
     val backend: BackendConfig get() = BackendConfig.Demo
+
+    /** How users sign in when [backend] is a server (`trainer.auth`, docs/plans/firebase-auth.md §8). */
+    val identity: IdentityConfig get() = IdentityConfig.Dev
+
+    /** Where a Firebase session survives restarts. Read once at start-up; Android encrypts it with the Keystore. */
+    fun createTokenStore(): TokenStore = InMemoryTokenStore()
+
+    /** Google sign-in (Android Credential Manager); null where the platform has none. */
+    val googleIdTokens: GoogleIdTokenSource? get() = null
+
+    /** A new HTTP engine for the backend and Firebase clients. Android uses OkHttp (see [HttpEngines]). */
+    fun createHttpEngine(): HttpClientEngine = HttpEngines.default()
 }
+
+/** The token the trainer API client sends: the dev subject locally, the Firebase session otherwise. */
+val TrainerTokens = named("trainerTokens")
 
 /** The demo trainer whose synthetic data the trainer views show. Signing in as the demo trainer maps to this id. */
 object DemoTrainer : CurrentUser {
@@ -162,6 +190,16 @@ private class RemoteCurrentClient(private val auth: AuthRepository, private val 
     override val clientId: String get() = session?.userId.orEmpty()
     override val firstName: String get() = session?.displayName?.substringBefore(' ').orEmpty()
     override val trainerRelationshipId: String get() = context.relationshipId.orEmpty()
+}
+
+/** The client's own name, saved through [auth]; the session (and so the shell's header) updates on success. */
+private class SessionClientAccount(private val auth: AuthRepository) : ClientAccount {
+    override suspend fun saveDisplayName(name: String): ClientAccount.SaveResult = when (auth.updateDisplayName(name)) {
+        AccountUpdateResult.Saved -> ClientAccount.SaveResult.Saved
+        AccountUpdateResult.Offline -> ClientAccount.SaveResult.Offline
+        AccountUpdateResult.Invalid -> ClientAccount.SaveResult.Invalid
+        AccountUpdateResult.Unavailable -> ClientAccount.SaveResult.Failed
+    }
 }
 
 /** A public trainer profile from the guest catalogue, as the demo server needs it for a booking request. */
@@ -206,14 +244,18 @@ fun appModule(platform: AppPlatform) = module {
     // With a server address the trainer features use the trainer API (docs/features/trainer-backend.md §8);
     // without one they keep the demo data and fakes.
     val apiUrl = platform.trainerApiUrl?.takeIf { it.isNotBlank() }
-    if (apiUrl != null) single { TrainerApiClient(apiUrl, subject = { get<CurrentUser>().trainerId }) }
+    // `dev` sign-in: the signed-in trainer's subject, or the demo trainer (as before). The Firebase modes replace it
+    // with the Firebase session in [remoteModule].
+    single<TokenProvider>(TrainerTokens) { TokenProvider.dev { get<CurrentUser>().trainerId } }
+    if (apiUrl != null) single { TrainerApiClient(apiUrl, tokens = get(TrainerTokens)) }
 
     single<SqlDriver> { platform.createDriver() }
     single { createTrainingDatabase(get()) }
     single<NetworkMonitor> { platform.networkMonitor }
     single<CurrentUser> { SessionCurrentUser(get()) }
     // The app is Polish only, whatever the device language is.
-    single<AppLanguage> { AppLanguage { "pl" } }
+    // The UI language (English for now, see MainActivity); server texts and exercise names follow it.
+    single<AppLanguage> { AppLanguage { pl.trainer.ui.DateFormats.defaultLanguage() } }
     single<IdGenerator> { IdGenerator.Uuids }
     single<TimeSource> { TimeSource.System }
     single(AppScope) { CoroutineScope(SupervisorJob() + Dispatchers.Default) }
@@ -235,6 +277,8 @@ fun appModule(platform: AppPlatform) = module {
     }
     single<PlanRepository> { LocalPlanRepository(get(), get(), get(), platform.ioDispatcher) }
     single<ExerciseUsage> { PublishedPlanExerciseUsage(get()) }
+    // Exercise photos bundled with the app, for Home and other screens (LocalExercisePhotos).
+    single { com.trainingapp.app.photos.BundledExercisePhotos(get()) }
 
     single<LocalFiles> { platform.localFiles }
     single<MediaRemoteDataSource> {
@@ -282,6 +326,8 @@ fun appModule(platform: AppPlatform) = module {
 
     // Client workout logging (docs/features/workout-logging-video.md). Local only: no sync in this phase.
     single<CurrentClient> { SessionCurrentClient(get(), get()) }
+    // "Edytuj dane" on the client profile: saved through the sign-in session (`PATCH /v1/me` or the demo session).
+    single<ClientAccount> { SessionClientAccount(get()) }
     single<WorkoutRepository> { LocalWorkoutRepository(get(), platform.ioDispatcher) }
     single<MeasurementRepository> { LocalMeasurementRepository(get(), platform.ioDispatcher) }
     // Integration point: the plan assignment flow replaces this demo source.
@@ -321,18 +367,44 @@ private fun seedDemoClient(koin: org.koin.core.Koin) {
  * definitions override the demo bindings. Connected so far: the public catalogue (guest views); sign-in, sessions,
  * wallet, workouts and chat still use the demo sources (docs/plans/backend-client-guest.md §11).
  */
-fun remoteModule(backend: BackendConfig, io: CoroutineDispatcher = Dispatchers.Default) = module {
+fun remoteModule(
+    backend: BackendConfig,
+    io: CoroutineDispatcher = Dispatchers.Default,
+    identity: IdentityConfig = IdentityConfig.Dev,
+    googleIdTokens: GoogleIdTokenSource? = null,
+    httpEngine: () -> HttpClientEngine = HttpEngines::default,
+) = module {
     val baseUrl = backend.baseUrl!!
-    // Until an identity provider exists the server accepts `dev.<subject>` tokens (decision TB2); the session's
-    // userId is the auth subject in remote mode.
-    single {
-        val auth = lazy { get<AuthRepository>() }
-        ApiClient(baseUrl, language = { get<AppLanguage>().current() }, token = { auth.value.session.value?.userId?.let { "dev.$it" } })
-    }
-    single<AuthRepository> {
-        RemoteAuthRepository(apiFor = { token -> ApiClient(baseUrl, language = { get<AppLanguage>().current() }, token = token) })
+    // The session's userId is the auth subject in remote mode: the dev subject or the Firebase UID.
+    when (identity) {
+        // `dev`: the server accepts `dev.<subject>` tokens (decision TB2); no password is checked.
+        IdentityConfig.Dev -> {
+            single {
+                val auth = lazy { get<AuthRepository>() }
+                ApiClient(baseUrl, httpEngine(), language = { get<AppLanguage>().current() }, tokens = TokenProvider.dev { auth.value.session.value?.userId })
+            }
+            single<AuthRepository> {
+                RemoteAuthRepository(apiFor = { tokens -> ApiClient(baseUrl, httpEngine(), language = { get<AppLanguage>().current() }, tokens = tokens) })
+            }
+        }
+        // Firebase Authentication (docs/plans/firebase-auth.md §6): one session gives the token to both API clients.
+        is IdentityConfig.Firebase -> {
+            single { FirebaseAuthApi(identity.firebase, httpEngine(), nowMillis = { get<TimeSource>().nowEpochMs() }) }
+            single { FirebaseTokenProvider(get(), get(), nowMillis = { get<TimeSource>().nowEpochMs() }) }
+            single<TokenProvider>(TrainerTokens) { get<FirebaseTokenProvider>() }
+            single { ApiClient(baseUrl, httpEngine(), language = { get<AppLanguage>().current() }, tokens = get<FirebaseTokenProvider>()) }
+            single { FirebaseAuthRepository(get(), get(), get(), google = googleIdTokens) }
+            single<AuthRepository> { get<FirebaseAuthRepository>() }
+        }
     }
     single<GuestCatalogRepository> { RemoteGuestCatalogRepository(get()) }
+    // Profile photos (`/v1/me/photo`, `/v1/users/{id}/photo`): shown in both shells, changed from the account menu.
+    single { com.trainingapp.app.photos.RemoteProfilePhotos(get()) }
+    // Exercise photos for the server's plans: their exercise ids are resolved through `/v1/exercises`.
+    single {
+        val api: ApiClient = get()
+        com.trainingapp.app.photos.BundledExercisePhotos(get(), remoteSourceId = { id -> api.exerciseSourceId(id) })
+    }
 
     // Client workouts: today's plan day from the server; local logs and measurements are synced to it.
     single { LocalWorkoutSyncStore(get(), io) }
@@ -404,8 +476,23 @@ private fun startClientContextSync(koin: org.koin.core.Koin) {
 fun initKoin(platform: AppPlatform, platformDeclaration: KoinAppDeclaration = {}) = startKoin {
     platformDeclaration()
     modules(appModule(platform), workoutBuilderModule, guestModule, workoutLoggingModule, clientModule)
-    if (platform.backend.isRemote) modules(remoteModule(platform.backend, platform.ioDispatcher))
+    if (platform.backend.isRemote) {
+        modules(module { single<TokenStore> { platform.createTokenStore() } })
+        modules(remoteModule(platform.backend, platform.ioDispatcher, platform.identity, platform.googleIdTokens, platform::createHttpEngine))
+    }
 }.also {
     // Synthetic history only for the demo; with a server the history comes from the client's workout logs there.
-    if (!platform.backend.isRemote) seedDemoClient(it.koin) else { startWorkoutSync(it.koin); startClientContextSync(it.koin) }
+    if (!platform.backend.isRemote) {
+        seedDemoClient(it.koin)
+    } else {
+        startWorkoutSync(it.koin)
+        startClientContextSync(it.koin)
+        if (platform.identity is IdentityConfig.Firebase) revalidateRestoredSession(it.koin)
+    }
+}
+
+/** A session restored from storage is confirmed with the server in the background (roles may have changed). */
+private fun revalidateRestoredSession(koin: org.koin.core.Koin) {
+    val auth = koin.get<FirebaseAuthRepository>()
+    koin.get<CoroutineScope>(AppScope).launch { runCatching { auth.revalidate() } }
 }

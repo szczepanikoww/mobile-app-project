@@ -1,5 +1,6 @@
 package pl.trainer
 
+import com.trainingapp.domain.auth.TokenProvider
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -47,7 +48,7 @@ class RemoteFeatureRepositoriesTest {
                 else respond(body, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json"))
             }
         }
-        fun api() = TrainerApiClient("http://test", subject = { "demo-trainer" }, engine = HttpClient(engine))
+        fun api() = TrainerApiClient("http://test", tokens = TokenProvider.dev { "demo-trainer" }, engine = HttpClient(engine))
     }
 
     private val session = """{"id":"s-1","clientId":"rel-1","trainerId":"t-1","start":"2026-11-12T08:00:00Z","end":"2026-11-12T09:00:00Z",
@@ -86,14 +87,14 @@ class RemoteFeatureRepositoriesTest {
             if (request.url.encodedPath.endsWith("dev/token")) respond("""{"token":"tok","userId":"t-1"}""", HttpStatusCode.OK, json)
             else if (online) respond(home, HttpStatusCode.OK, json) else throw RuntimeException("no network")
         }
-        val repo = RemoteTrainerHomeRepository(TrainerApiClient("http://test", { "demo-trainer" }, HttpClient(engine)))
+        val repo = RemoteTrainerHomeRepository(TrainerApiClient("http://test", TokenProvider.dev { "demo-trainer" }, HttpClient(engine)))
         val fresh = repo.load()
         online = false
         val cached = repo.load()
         assertTrue(cached.isOffline)
         assertEquals(fresh.summary, cached.summary)
 
-        val none = RemoteTrainerHomeRepository(TrainerApiClient("http://test", { "demo-trainer" }, HttpClient(MockEngine { throw RuntimeException("no network") })))
+        val none = RemoteTrainerHomeRepository(TrainerApiClient("http://test", TokenProvider.dev { "demo-trainer" }, HttpClient(MockEngine { throw RuntimeException("no network") })))
         assertEquals(Failure.Offline, assertFailsWith<TrainerException> { none.load() }.failure)
     }
 

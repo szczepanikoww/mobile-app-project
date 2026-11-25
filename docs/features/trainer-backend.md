@@ -24,7 +24,7 @@ curl -s -X POST localhost:8080/api/v1/dev/token -H 'Content-Type: application/js
 curl -s localhost:8080/api/v1/trainer/dashboard -H "Authorization: Bearer <token>"
 ```
 
-Demo subjects (`DemoSeed`): `demo-trainer` (Michał Kowalczyk, also holds the client role), `demo-client` (Katarzyna Nowak), `demo-trainer-only`, and the public trainers `tr-*`. All are fictional. The client API accepts `Authorization: Bearer dev.<subject>`; the trainer API needs the JWT from `/api/v1/dev/token`. In the app, log in with `trener@example.com` (any password of at least 8 characters): it maps to `demo-trainer`.
+Demo subjects (`DemoSeed`): `demo-trainer` (Michał Kowalczyk, also holds the client role), `demo-client` (Katarzyna Nowak), `demo-trainer-only`, and the public trainers `tr-*`. All are fictional. Both APIs accept the same token: `Authorization: Bearer dev.<subject>` in `AUTH_MODE=dev`, a Firebase ID token otherwise ([firebase-auth plan](../plans/firebase-auth.md)). `/api/v1/dev/token` (dev only) returns `dev.<subject>`. In the app, log in with `trener@example.com` (any password of at least 8 characters): it maps to `demo-trainer`.
 
 Tests run both suites (the client/guest tests use embedded PostgreSQL; the trainer API tests use Testcontainers, so Docker must be running):
 
@@ -38,8 +38,8 @@ Tests run both suites (the client/guest tests use embedded PostgreSQL; the train
 |---|---|---|
 | `PORT` | 8080 | HTTP port |
 | `DB_URL`, `DB_APP_USER`, `DB_OWNER_USER`, ... | local docker compose | PostgreSQL (RDS on AWS); read by `ServerConfig`, shared with the client API |
-| `AUTH_MODE` | `dev` | `dev`: the server issues demo tokens. Anything else disables `/dev/token`. (`ServerConfig`) |
-| `JWT_SECRET` / `JWT_ISSUER` / `JWT_AUDIENCE` | dev values | Token verification; also signs media links |
+| `AUTH_MODE` | `dev` | Shared with the client API: `dev` (`dev.<subject>`) or `firebase`. Anything but `dev` disables `/dev/token`. |
+| `MEDIA_SIGNING_KEY` | dev value (falls back to `JWT_SECRET`) | Signs media links. Tokens are verified by `AUTH_MODE` (above), not by this key |
 | `DATA_KEY_ID` / `DATA_KEY` | dev key | AES-256 key (base64, 32 bytes) for private columns |
 | `MEDIA_DIR` / `PUBLIC_BASE_URL` | `build/media` / `http://localhost:8080` | Local media storage and link base |
 | `RUN_WORKER` | true | Request expiry and outbox publishing |
@@ -53,7 +53,7 @@ The trainer API's own `DB_USER`, `DB_PASSWORD` and `DEV_SEED` are no longer used
 | Package | Contents |
 |---|---|
 | `platform` | Config, `Db.tx` (one transaction per command), error mapping, outbox, clock, encryption |
-| `auth` | JWT, `Caller` (roles from our DB, never from the token), `Access` (relationship + grant checks), `AuditLog` |
+| `auth` | Bearer token verification (shared `TokenVerifier`), `Caller` (roles from our DB, never from the token), `Access` (relationship + grant checks), `AuditLog` |
 | `db` | Exposed table objects for every table and view of the schema |
 | `scheduling` | Dashboard, blocks, availability, session lifecycle (`TrainerSessions`) |
 | `catalogue` | Versioned cancellation policies, price list, trainer profile |
@@ -106,7 +106,7 @@ Conventions: a "client id" is the trainer–client **relationship id** (as in th
 ## 7. Not done yet
 
 - Trainer notifications in the app stay on demo data (no table in the schema).
-- Identity provider (sign-in uses dev tokens: `dev.<subject>` for `/v1`, the dev JWT for `/api/v1`); the session is not kept across app restarts.
+- Identity provider: sign-in uses Firebase (`AUTH_MODE=firebase`) or, in dev, `dev.<subject>` tokens on both APIs; see [docs/plans/firebase-auth.md](../plans/firebase-auth.md).
 - Persistent outbox for technique-video messages (retries are lost if the process dies); WebSocket live updates (screens refresh instead); a server-side "video reviewed" marker; the client chat unread badge.
 - Workout sync gaps: `assignedPlanId` is not sent, logs edited on another device are not merged.
 - Real identity provider, Stripe test mode, invoices, push notifications (FCM), WebSocket chat, S3 storage and video processing (the local processor marks uploads READY at once), HTTP range requests for video seeking.

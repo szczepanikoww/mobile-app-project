@@ -114,6 +114,9 @@ data class GymSummary(
     /** Fixture distance in the demo; null when location is unknown (D6). */
     val distanceMeters: Int?,
     val rating: Rating?,
+    /** WGS84 position for the map; null when unknown (the gym is then listed but not pinned). */
+    val latitude: Double? = null,
+    val longitude: Double? = null,
 )
 
 /** One opening window. [close] earlier than or equal to [open] means the window runs past midnight. */

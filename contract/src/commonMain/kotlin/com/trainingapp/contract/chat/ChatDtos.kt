@@ -19,6 +19,8 @@ data class ConversationDto(
     val unread: Int,
     /** False when the relationship has ended: history stays readable, new messages are refused. */
     val canSend: Boolean,
+    /** The counterpart's latest sign of life (a message sent or a thread read); null when there is none. */
+    val peerActiveAt: IsoInstant? = null,
 )
 
 @Serializable
@@ -37,7 +39,14 @@ data class MessageDto(
 )
 
 @Serializable
-data class MessagesDto(val messages: List<MessageDto>, val lastSeq: Long, val lastReadSeq: Long)
+data class MessagesDto(
+    val messages: List<MessageDto>,
+    val lastSeq: Long,
+    val lastReadSeq: Long,
+    /** How far the other party has read, and when they last caught up: the "Seen 14:32" receipt. */
+    val peerLastReadSeq: Long = 0,
+    val peerLastReadAt: IsoInstant? = null,
+)
 
 /**
  * `POST /v1/conversations/{relationshipId}/messages`. Resending the same [id] returns the stored message. A technique

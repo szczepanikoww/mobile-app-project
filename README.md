@@ -46,9 +46,12 @@ The app uses the demo data by default. With a running server, `-Ptrainer.backend
 ```sh
 ./gradlew :desktopApp:run "-Ptrainer.backend=local"        # server at localhost:8080
 ./gradlew :androidApp:installDebug "-Ptrainer.backend=local"   # emulator reaches the computer at 10.0.2.2:8080
+./gradlew :androidApp:installDebug "-Ptrainer.backend=local" "-Ptrainer.auth=firebase"   # real Firebase project
 ```
 
 Any `http(s)://` URL works instead of `local`. Connected: sign-in (dev accounts), the public catalogue, every trainer view (calendar, requests, clients, policy, home, finance, profile, notifications, chat, plans, exercises, media) and every client view (sessions, booking/reschedule/cancel with quotes, wallet, today's workout, workout and measurement sync, chat, technique videos). Log in with `trener@example.com` (trainer), `klient@example.com` (client) or `trener-klient@example.com` (both roles), any password of at least 8 characters; they map to the server's `demo-trainer` and `demo-client` accounts.
+
+**Firebase sign-in** ([plan](docs/plans/firebase-auth.md)): `-Ptrainer.auth` selects `dev` (default, above), or `firebase` (the real project). Run the server with the matching `AUTH_MODE`. For `firebase`, put the project's settings in `local.properties` (not committed): `firebase.apiKey=<Web API key>`, `firebase.projectId=<Project ID>` (read by `:server:run`) and, for Google sign-in, `firebase.webClientId=<Web client ID>`. `trainer.auth` can live there too; the app build and `:server:run` both read it. Without an API key the build falls back to `dev`. Desktop supports `firebase` without Google sign-in and keeps the session in memory only.
 
 ## Guest views and demo accounts
 

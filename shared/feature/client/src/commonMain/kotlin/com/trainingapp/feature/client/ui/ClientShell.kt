@@ -11,17 +11,13 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Chat
-import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.automirrored.outlined.ShowChart
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
@@ -31,24 +27,25 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.trainingapp.designsystem.component.AppBottomNavigation
 import com.trainingapp.designsystem.component.DetailHeader
-import com.trainingapp.designsystem.component.InitialsAvatar
+import com.trainingapp.designsystem.component.PersonPortrait
 import com.trainingapp.designsystem.component.NavItem
 import com.trainingapp.designsystem.component.TopLevelHeader
 import com.trainingapp.designsystem.theme.AppTheme
 import com.trainingapp.designsystem.theme.Sizes
+import com.trainingapp.feature.client.presentation.ClientProfileViewModel
 import com.trainingapp.feature.client.presentation.ClientRoute
 import com.trainingapp.feature.client.presentation.ClientScheduleViewModel
 import com.trainingapp.feature.client.presentation.ClientShellViewModel
@@ -57,16 +54,22 @@ import com.trainingapp.feature.client.presentation.ScheduleMessage
 import com.trainingapp.feature.client.presentation.TodayWorkoutViewModel
 import com.trainingapp.feature.client.presentation.WalletViewModel
 import com.trainingapp.feature.client.resources.*
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import pl.trainer.domain.ClientSession
+import pl.trainer.ui.LocalProfilePhotoChange
+import pl.trainer.ui.MyPhoto
+import pl.trainer.ui.PhotoUploadState
 import pl.trainer.ui.PlatformBackHandler
 
 /** What the client shell needs from the app: other features' entry points and the session actions. */
 data class ClientShellActions(
     /** A1: resumes the workout in progress or starts today's plan (the centre action, D3). */
     val onStartWorkout: () -> Unit,
-    /** A6, provided by the Android host; null hides the chat icon. */
+    /** A6: the conversation with the client's trainer (session details, home); null hides those entries. */
     val onOpenChat: (() -> Unit)?,
+    /** The conversation list ("Wiadomości") behind the message icon in the top bar; null hides the icon. */
+    val onOpenMessages: (() -> Unit)? = onOpenChat,
     /** The public trainer list (guest views), for a client without a trainer. */
     val onFindTrainer: () -> Unit,
     /** Shown only when the signed-in session holds both roles. Replaces the back stack with the trainer shell. */
@@ -92,8 +95,10 @@ fun ClientShell(
     actions: ClientShellActions,
     progressTab: @Composable () -> Unit,
     chatUnread: Int = 0,
+    profile: ClientProfileViewModel,
 ) {
     val shellState by shell.state.collectAsStateWithLifecycle()
+    val profileState by profile.state.collectAsStateWithLifecycle()
     val scheduleState by schedule.state.collectAsStateWithLifecycle()
     val walletState by wallet.state.collectAsStateWithLifecycle()
     val workoutState by workout.state.collectAsStateWithLifecycle()
@@ -126,6 +131,23 @@ fun ClientShell(
             snackbar.showSnackbar(messages.getValue(message))
         }
     }
+    val photoMessages = mapOf(
+        PhotoUploadState.Uploading to stringResource(Res.string.photo_uploading),
+        PhotoUploadState.Saved to stringResource(Res.string.photo_saved),
+        PhotoUploadState.Failed to stringResource(Res.string.photo_failed),
+    )
+    // "Change profile photo" comes from the app (LocalProfilePhotoChange); its progress shows as a snackbar.
+    val photoUpload = LocalProfilePhotoChange.current?.state
+    LaunchedEffect(photoUpload) { photoMessages[photoUpload]?.let { snackbar.showSnackbar(it) } }
+    val nameSaved = stringResource(Res.string.profile_name_saved)
+    val savedScope = rememberCoroutineScope()
+    LaunchedEffect(profileState.saved) {
+        if (profileState.saved) {
+            // Shown outside this effect: clearing the flag restarts the effect, which would cancel the snackbar.
+            savedScope.launch { snackbar.showSnackbar(nameSaved) }
+            profile.dismissSaved()
+        }
+    }
     val paymentPending = stringResource(Res.string.message_payment_pending)
     LaunchedEffect(walletState.paymentSubmitted) {
         if (walletState.paymentSubmitted) {
@@ -136,17 +158,20 @@ fun ClientShell(
 
     val openSession: (String) -> Unit = { shell.open(ClientRoute.SessionDetail(it)) }
     val openWallet: () -> Unit = { shell.select(ClientTab.Wallet) }
+    val scope = rememberCoroutineScope()
+    val notAvailable = stringResource(Res.string.settings_not_available)
     val workoutLabel = stringResource(if (workoutState.inProgress) Res.string.resume_workout else Res.string.start_workout)
 
     Scaffold(
         containerColor = AppTheme.colors.background,
         topBar = {
-            if (route != null) {
-                DetailHeader(stringResource(Res.string.session_details), onBack = { shell.back() }, backEnabled = !scheduleState.submitting)
-            } else {
-                TopLevelHeader(stringResource(shellState.tab.title())) {
-                    actions.onOpenChat?.let { chat -> ChatButton(chatUnread, chat) }
-                    AccountMenu(initials, actions)
+            when (route) {
+                is ClientRoute.SessionDetail ->
+                    DetailHeader(stringResource(Res.string.session_details), onBack = { shell.back() }, backEnabled = !scheduleState.submitting)
+                ClientRoute.Profile -> DetailHeader(stringResource(Res.string.profile_title), onBack = { shell.back() })
+                null -> TopLevelHeader(stringResource(shellState.tab.title())) {
+                    actions.onOpenMessages?.let { messages -> MessagesButton(chatUnread, messages) }
+                    ProfileButton(initials) { shell.open(ClientRoute.Profile) }
                 }
             }
         },
@@ -190,6 +215,18 @@ fun ClientShell(
                             )
                         }
                     }
+                    ClientRoute.Profile -> ClientProfileContent(
+                        displayName = displayName,
+                        initials = initials,
+                        trainers = scheduleState.schedule?.trainers,
+                        actions = ClientProfileActions(
+                            onEditDetails = { profile.openEditor(displayName) },
+                            onSwitchToTrainer = actions.onSwitchToTrainer,
+                            onLogOut = actions.onLogOut,
+                            onFindTrainer = actions.onFindTrainer,
+                            onUnavailable = { scope.launch { snackbar.showSnackbar(notAvailable) } },
+                        ),
+                    )
                     null -> tabs.SaveableStateProvider(shellState.tab.name) {
                         when (shellState.tab) {
                             ClientTab.Start -> ClientHomeContent(
@@ -206,6 +243,7 @@ fun ClientShell(
                                     onFindTrainer = actions.onFindTrainer,
                                     onOpenWallet = openWallet,
                                     onRetry = schedule::reload,
+                                    onOpenCalendar = { shell.select(ClientTab.Calendar) },
                                 ),
                             )
                             ClientTab.Calendar -> ClientCalendarContent(
@@ -236,10 +274,12 @@ fun ClientShell(
         BookingRequestSheet(
             state = sheet,
             trainers = scheduleState.schedule?.trainers.orEmpty(),
+            today = scheduleState.today,
             submitting = scheduleState.submitting,
             offline = scheduleState.offline,
             actions = BookingSheetActions(
                 onTrainer = schedule::bookingTrainer,
+                onChangeTrainer = schedule::bookingChangeTrainer,
                 onDate = schedule::bookingDate,
                 onSlot = schedule::bookingSlot,
                 onPlace = schedule::bookingPlace,
@@ -276,6 +316,14 @@ fun ClientShell(
         )
     }
     scheduleState.policy?.let { policy -> PolicySheet(policy, onDismiss = schedule::closePolicy) }
+    profileState.editor?.let { editor ->
+        EditNameSheet(
+            state = editor,
+            onChange = profile::changeName,
+            onSave = profile::save,
+            onDismiss = profile::closeEditor,
+        )
+    }
     walletState.payment?.let { sheet ->
         PaymentSheet(
             state = sheet,
@@ -303,8 +351,8 @@ private fun ClientTab.icon() = when (this) {
 }
 
 @Composable
-private fun ChatButton(unread: Int, onClick: () -> Unit) {
-    val description = if (unread > 0) stringResource(Res.string.chat_unread, unread) else stringResource(Res.string.chat)
+private fun MessagesButton(unread: Int, onClick: () -> Unit) {
+    val description = if (unread > 0) stringResource(Res.string.messages_unread, unread) else stringResource(Res.string.messages)
     IconButton(onClick = onClick, modifier = Modifier.semantics { contentDescription = description }) {
         BadgedBox(badge = { if (unread > 0) Badge { Text(unread.toString()) } }) {
             Icon(Icons.AutoMirrored.Outlined.Chat, contentDescription = null)
@@ -312,33 +360,16 @@ private fun ChatButton(unread: Int, onClick: () -> Unit) {
     }
 }
 
-/** The avatar opens a short menu: switch to the trainer role (only with both roles) and log out. No bell (D4). */
+/** The avatar opens "Profil" with the profile and the app settings, as on the trainer side. No bell (D4). */
 @Composable
-private fun AccountMenu(initials: String, actions: ClientShellActions) {
-    var open by remember { mutableStateOf(false) }
-    val label = stringResource(Res.string.account_menu)
-    Box {
-        Box(
-            Modifier
-                .sizeIn(minWidth = Sizes.minTouchTarget, minHeight = Sizes.minTouchTarget)
-                .clip(CircleShape)
-                .clickable(role = Role.Button, onClickLabel = label) { open = true }
-                .semantics { contentDescription = label },
-            contentAlignment = Alignment.Center,
-        ) { InitialsAvatar(initials) }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            actions.onSwitchToTrainer?.let { switch ->
-                DropdownMenuItem(
-                    text = { Text(stringResource(Res.string.switch_to_trainer)) },
-                    leadingIcon = { Icon(Icons.Outlined.SwapHoriz, null) },
-                    onClick = { open = false; switch() },
-                )
-            }
-            DropdownMenuItem(
-                text = { Text(stringResource(Res.string.log_out)) },
-                leadingIcon = { Icon(Icons.AutoMirrored.Outlined.Logout, null) },
-                onClick = { open = false; actions.onLogOut() },
-            )
-        }
-    }
+private fun ProfileButton(initials: String, onClick: () -> Unit) {
+    val label = stringResource(Res.string.profile_open)
+    Box(
+        Modifier
+            .sizeIn(minWidth = Sizes.minTouchTarget, minHeight = Sizes.minTouchTarget)
+            .clip(CircleShape)
+            .clickable(role = Role.Button, onClickLabel = label, onClick = onClick)
+            .semantics { contentDescription = label },
+        contentAlignment = Alignment.Center,
+    ) { PersonPortrait(initials, size = 40.dp, photoOf = MyPhoto) }
 }

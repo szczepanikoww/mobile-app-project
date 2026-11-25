@@ -40,5 +40,7 @@ object ReadMarkers : Table("messaging.read_marker") {
     val conversationId = javaUUID("conversation_id")
     val userId = javaUUID("user_id")
     val lastReadSeq = long("last_read_seq")
+    /** When the marker last moved forward: the "seen at" time shown to the other party. */
+    val readAt = tstz("read_at")
     override val primaryKey = PrimaryKey(conversationId, userId)
 }

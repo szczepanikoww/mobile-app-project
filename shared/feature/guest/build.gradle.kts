@@ -34,6 +34,10 @@ kotlin {
             implementation(libs.koin.compose)
             implementation(libs.koin.composeViewmodel)
         }
+        androidMain.dependencies {
+            // OpenStreetMap tiles for the gyms map; no API key needed.
+            implementation(libs.osmdroid)
+        }
         commonTest.dependencies {
             implementation(kotlin("test"))
             implementation(libs.kotlinx.coroutines.test)

@@ -13,7 +13,9 @@ import com.trainingapp.server.common.Ids
 import com.trainingapp.server.common.conflict
 import com.trainingapp.server.common.invalid
 import com.trainingapp.server.common.notFound
+import com.trainingapp.server.common.dbNow
 import com.trainingapp.server.common.toKotlin
+import com.trainingapp.server.common.toOffset
 import com.trainingapp.server.db.Db
 import com.trainingapp.server.db.SqlState
 import com.trainingapp.server.db.attempt
@@ -64,6 +66,11 @@ class MessagingService(private val db: Db, private val identity: IdentityService
             val rel = byRel.getValue(row[Conversations.relationshipId])
             val conversationId = row[Conversations.id]
             val lastRead = lastRead(conversationId, user.id)
+            val peerId = counterpart(rel, user)
+            val peerRead = marker(conversationId, peerId)?.get(ReadMarkers.readAt)
+            val peerSent = Messages.selectAll()
+                .where { (Messages.conversationId eq conversationId) and (Messages.senderId eq peerId) }
+                .orderBy(Messages.seq, SortOrder.DESC).limit(1).singleOrNull()?.get(Messages.createdAt)
             ConversationDto(
                 relationshipId = rel.id.toString(),
                 counterpart = refs.getValue(counterpart(rel, user)),
@@ -72,16 +79,24 @@ class MessagingService(private val db: Db, private val identity: IdentityService
                     (Messages.conversationId eq conversationId) and (Messages.senderId neq user.id) and (Messages.seq greater lastRead)
                 }.count().toInt(),
                 canSend = rel.isActive,
+                peerActiveAt = listOfNotNull(peerRead, peerSent).maxOrNull()?.toKotlin(),
             )
         }
     }
 
     suspend fun messages(user: CurrentUser, relationshipId: Uuid, afterSeq: Long, limit: Int): MessagesDto = db.tx {
-        val (_, conversation) = partyConversation(user, relationshipId)
+        val (relationship, conversation) = partyConversation(user, relationshipId)
         val conversationId = conversation[Conversations.id]
+        val peer = marker(conversationId, counterpart(relationship, user))
         val rows = Messages.selectAll().where { (Messages.conversationId eq conversationId) and (Messages.seq greater afterSeq) }
             .orderBy(Messages.seq, SortOrder.ASC).limit(limit.coerceIn(1, 500)).toList()
-        MessagesDto(toDtos(rows), conversation[Conversations.lastSeq], lastRead(conversationId, user.id))
+        MessagesDto(
+            messages = toDtos(rows),
+            lastSeq = conversation[Conversations.lastSeq],
+            lastReadSeq = lastRead(conversationId, user.id),
+            peerLastReadSeq = peer?.get(ReadMarkers.lastReadSeq) ?: 0,
+            peerLastReadAt = peer?.get(ReadMarkers.readAt)?.toKotlin(),
+        )
     }
 
     /**
@@ -154,7 +169,11 @@ class MessagingService(private val db: Db, private val identity: IdentityService
         if (current == null) {
             ReadMarkers.insertIgnore { it[ReadMarkers.conversationId] = conversationId; it[userId] = user.id; it[lastReadSeq] = capped }
         } else if (capped > current[ReadMarkers.lastReadSeq]) {
-            ReadMarkers.update({ (ReadMarkers.conversationId eq conversationId) and (ReadMarkers.userId eq user.id) }) { it[lastReadSeq] = capped }
+            // read_at is the moment the reader caught up; it is what the sender sees as "Seen at".
+            ReadMarkers.update({ (ReadMarkers.conversationId eq conversationId) and (ReadMarkers.userId eq user.id) }) {
+                it[lastReadSeq] = capped
+                it[readAt] = dbNow().toOffset()
+            }
         }
     }
 
@@ -174,9 +193,12 @@ class MessagingService(private val db: Db, private val identity: IdentityService
         return relationship to conversation
     }
 
-    private fun JdbcTransaction.lastRead(conversationId: Uuid, userId: Uuid): Long =
+    private fun JdbcTransaction.marker(conversationId: Uuid, userId: Uuid): ResultRow? =
         ReadMarkers.selectAll().where { (ReadMarkers.conversationId eq conversationId) and (ReadMarkers.userId eq userId) }
-            .singleOrNull()?.get(ReadMarkers.lastReadSeq) ?: 0
+            .singleOrNull()
+
+    private fun JdbcTransaction.lastRead(conversationId: Uuid, userId: Uuid): Long =
+        marker(conversationId, userId)?.get(ReadMarkers.lastReadSeq) ?: 0
 
     private fun JdbcTransaction.toDtos(rows: List<ResultRow>): List<MessageDto> {
         if (rows.isEmpty()) return emptyList()

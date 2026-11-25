@@ -27,6 +27,7 @@ import com.trainingapp.domain.workout.WorkoutLog
 import com.trainingapp.domain.workout.WorkoutLogReducer
 import com.trainingapp.domain.workout.WorkoutRepository
 import com.trainingapp.domain.workout.setFields
+import com.trainingapp.feature.workoutbuilder.common.ExercisePickerCoordinator
 import com.trainingapp.feature.workoutbuilder.media.VideoPickResult
 import com.trainingapp.feature.workoutlogging.rest.RestAlarm
 import com.trainingapp.feature.workoutlogging.rest.RestTimerNotifier
@@ -50,6 +51,9 @@ data class FieldKey(val setId: String, val field: SetField)
 sealed interface LiveDialog {
     data class ConfirmFinish(val uncheckedSets: Int) : LiveDialog
     data object ConfirmDiscard : LiveDialog
+
+    /** Removing an exercise that already has ticked sets loses them, so it is confirmed. */
+    data class ConfirmRemoveExercise(val exerciseEntryId: String, val completedSets: Int) : LiveDialog
     data object VideoSource : LiveDialog
 
     /** One line before the first system prompt for notifications. */
@@ -100,6 +104,9 @@ sealed interface LiveWorkoutEvent {
 
     /** Ask the platform for notification permission (the UI owns the system prompt). */
     data object RequestNotificationPermission : LiveWorkoutEvent
+
+    /** Open the exercise library in pick mode; the selection comes back through [ExercisePickerCoordinator]. */
+    data class PickExercises(val requestKey: String) : LiveWorkoutEvent
 }
 
 /**
@@ -117,6 +124,7 @@ class LiveWorkoutViewModel(
     private val time: TimeSource,
     private val ids: IdGenerator,
     language: AppLanguage,
+    private val picker: ExercisePickerCoordinator = ExercisePickerCoordinator(),
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(LiveWorkoutUiState(languageTag = language.current()))
@@ -134,6 +142,9 @@ class LiveWorkoutViewModel(
     private var notificationsGranted = true
     private var loadJob: Job? = null
 
+    /** The client's stored workouts, for "Poprzednio" of exercises added while logging. */
+    private var history: List<WorkoutLog> = emptyList()
+
     init {
         viewModelScope.launch {
             for (log in pendingSaves) {
@@ -147,6 +158,10 @@ class LiveWorkoutViewModel(
             // Technique videos linked to sets and the trainer's exercise demo videos.
             media.observeAll().collect { assets -> _state.update { s -> s.copy(media = assets) } }
         }
+        viewModelScope.launch {
+            // Exercises picked in the library for this workout ("Dodaj ćwiczenie").
+            picker.results.collect { consumePicked() }
+        }
         load()
     }
 
@@ -159,7 +174,7 @@ class LiveWorkoutViewModel(
                 val today = if (active == null) todaySource.today(client.clientId) else null
                 val exerciseIds = active?.exercises?.map { it.exerciseId } ?: today?.day?.exercises?.map { it.exerciseId }.orEmpty()
                 val exercises = exerciseIds.distinct().mapNotNull { exerciseRepository.getExercise(it) }.associateBy { it.id }
-                val history = workouts.history(client.clientId)
+                val history = workouts.history(client.clientId).also { history = it }
                 val previous = exerciseIds.distinct().mapNotNull { id ->
                     PreviousPerformance.lastWorkingSet(id, history, excludeWorkoutId = active?.id)?.let { id to it }
                 }.toMap()
@@ -182,6 +197,7 @@ class LiveWorkoutViewModel(
                 if (restored != null) {
                     if (restored != active) enqueueSave(restored)
                     applyAlarm(RestAlarmPlanner.onRestore(restored, time.nowEpochMs()), restored)
+                    consumePicked()
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -218,6 +234,73 @@ class LiveWorkoutViewModel(
         )
         _state.update { it.copy(phase = LivePhase.Active, log = log, starting = false) }
         enqueueSave(log)
+    }
+
+    /**
+     * Starts an independent workout without a plan (D6), as in Strong: it starts empty and exercises are added while
+     * logging. Also offered when today has a plan. [name] is the localized default name.
+     */
+    fun startEmpty(name: String) {
+        val s = _state.value
+        if (s.starting || s.log != null || s.phase == LivePhase.Loading || s.phase == LivePhase.LoadFailed) return
+        val log = WorkoutLogReducer.startEmpty(id = ids.newId(), clientId = client.clientId, name = name, nowEpochMs = time.nowEpochMs())
+        _state.update { it.copy(phase = LivePhase.Active, log = log) }
+        enqueueSave(log)
+        onAddExerciseClick()
+    }
+
+    /** "Dodaj ćwiczenie": opens the library picker for this workout. */
+    fun onAddExerciseClick() {
+        val log = _state.value.log ?: return
+        viewModelScope.launch { _events.send(LiveWorkoutEvent.PickExercises(pickRequestKey(log.id))) }
+    }
+
+    fun onRemoveExerciseClick(exerciseEntryId: String) {
+        val exercise = _state.value.log?.exercise(exerciseEntryId) ?: return
+        val done = exercise.completedSets.size
+        if (done > 0) {
+            _state.update { it.copy(dialog = LiveDialog.ConfirmRemoveExercise(exerciseEntryId, done)) }
+        } else {
+            removeExercise(exerciseEntryId)
+        }
+    }
+
+    fun confirmRemoveExercise() {
+        val dialog = _state.value.dialog as? LiveDialog.ConfirmRemoveExercise ?: return
+        _state.update { it.copy(dialog = null) }
+        removeExercise(dialog.exerciseEntryId)
+    }
+
+    private fun removeExercise(exerciseEntryId: String) {
+        val setIds = _state.value.log?.exercise(exerciseEntryId)?.sets?.map { it.id }?.toSet().orEmpty()
+        _state.update { s -> s.copy(drafts = s.drafts.filterKeys { it.setId !in setIds }, invalid = s.invalid.filterNot { it.setId in setIds }.toSet()) }
+        mutateLog { WorkoutLogReducer.removeExercise(it, exerciseEntryId) }
+    }
+
+    /** Adds the exercises picked for the current workout, once. */
+    private fun consumePicked() {
+        val log = _state.value.log ?: return
+        val picked = picker.consume(pickRequestKey(log.id)) ?: return
+        viewModelScope.launch {
+            try {
+                val known = _state.value.exercises
+                val loaded = picked.distinct().filterNot { it in known }.mapNotNull { exerciseRepository.getExercise(it) }.associateBy { it.id }
+                val exercises = known + loaded
+                val previous = picked.distinct().filterNot { it in _state.value.previous }.mapNotNull { id ->
+                    PreviousPerformance.lastWorkingSet(id, history, excludeWorkoutId = log.id)?.let { id to it }
+                }.toMap()
+                _state.update { it.copy(exercises = it.exercises + loaded, previous = it.previous + previous) }
+                mutateLog { current ->
+                    WorkoutLogReducer.addExercises(current, picked, exercises.mapValues { it.value.trackingType }, ids)
+                }
+                runCatching { exerciseRepository.markUsed(picked) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // The library could not be read: add them with the default tracking type rather than lose the pick.
+                mutateLog { current -> WorkoutLogReducer.addExercises(current, picked, emptyMap(), ids) }
+            }
+        }
     }
 
     fun onFieldChange(setId: String, field: SetField, text: String) {
@@ -274,6 +357,11 @@ class LiveWorkoutViewModel(
 
     fun onFinishClick() {
         val log = _state.value.log ?: return
+        // Nothing logged: there is nothing to summarize, so finishing means discarding.
+        if (log.exercises.isEmpty()) {
+            _state.update { it.copy(dialog = LiveDialog.ConfirmDiscard) }
+            return
+        }
         val unchecked = log.allSets.count { !it.isCompleted }
         if (unchecked > 0) _state.update { it.copy(dialog = LiveDialog.ConfirmFinish(unchecked)) } else confirmFinish()
     }
@@ -431,6 +519,9 @@ class LiveWorkoutViewModel(
         super.onCleared()
     }
 }
+
+/** The picker request of one workout's "Dodaj ćwiczenie". Distinct from the plan editor's keys. */
+internal fun pickRequestKey(workoutLogId: String) = "live-workout|$workoutLogId"
 
 /** Which required values a set is missing. */
 internal object WorkoutFormatsCheck {

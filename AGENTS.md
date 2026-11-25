@@ -40,7 +40,7 @@ Health integrations (Garmin/Health Connect and Apple Health) and iOS are later w
 
 **The target is a minimal, calm, practical fitness app. Users should immediately understand what matters and what they can do next.**
 
-- Stitch establishes the visual direction, not a screen-by-screen implementation specification. Keep its light surfaces, warm orange accents, strong hierarchy, and rounded components; simplify its content, oversized imagery, repeated controls and decorative effects.
+- Stitch establishes the visual direction, not a screen-by-screen implementation specification. Keep its light surfaces, calm teal accents (changed from the reference orange), strong hierarchy, and rounded components; simplify its content, oversized imagery, repeated controls and decorative effects.
 - Give each screen one clear purpose and one dominant next action where appropriate. Repeated row actions are allowed; competing full-width primary actions are not the default.
 - Show essential information first. Put advanced fields and secondary actions in detail views, expandable sections, menus or sheets.
 - Use whitespace, typography and grouping before adding containers, borders or shadows. Do not wrap every row in a separate card or nest cards unnecessarily.
@@ -62,16 +62,16 @@ The values below are a repository baseline derived from the linked Stitch refere
 | Main text | `#0F172A` | Titles and primary content. |
 | Secondary text | `#565E74` | Supporting information. |
 | Outline | `#E2E8F0` | Subtle separators and boundaries. |
-| Brand accent | `#FF6B00` | Highlights, selected accents and accent containers. |
-| Strong brand | `#A04100` | Readable brand text and filled primary controls. |
-| Soft accent / text | `#FFF0E6` / `#572000` | Tinted brand surfaces with dark text. |
+| Brand accent | `#14B8A6` | Highlights, selected accents and accent containers. |
+| Strong brand | `#0F766E` | Readable brand text and filled primary controls. |
+| Soft accent / text | `#CCFBF1` / `#134E4A` | Tinted brand surfaces with dark text. |
 | Success / container | `#15803D` / `#DCFCE7` | Confirmed, completed or successfully saved states. |
 | Warning | `#D97706` | Attention indicators; check contrast for text. |
 | Error accent | `#EF4444` | Error indicators; not an automatic text/background pair. |
 | Error container / text | `#FFDAD6` / `#93000A` | Readable error messages and destructive context. |
 
 - Use semantic theme roles rather than hard-coded hex values inside feature screens. Centralize any additional foreground/container pairs.
-- Bright orange with small white text does not provide sufficient contrast. Use white on the strong brand color, or dark text on a suitable orange/tinted container, verified for contrast.
+- The bright brand accent with small white text does not provide sufficient contrast. Use white on the strong brand color, or dark text on a suitable tinted container, verified for contrast.
 - Status must have a label or icon as well as color. Keep brand emphasis distinct from warning and error semantics.
 - Start with the light reference. If the app supports dark mode, use the shared dark theme consistently; do not invent it separately for a feature.
 

@@ -494,6 +494,8 @@ data class ConversationDto(
     val clientName: String,
     val lastMessage: MessageDto? = null,
     val unread: Int,
+    /** The client's latest sign of life (a message sent or a thread read); null when there is none. Drives the "active" dot. */
+    val peerActiveAt: ApiInstant? = null,
 )
 
 @Serializable
@@ -520,7 +522,15 @@ data class SendMessageRequest(
 )
 
 @Serializable
-data class ThreadDto(val conversationId: String, val clientId: String, val messages: List<MessageDto>, val lastReadSeq: Long)
+data class ThreadDto(
+    val conversationId: String,
+    val clientId: String,
+    val messages: List<MessageDto>,
+    val lastReadSeq: Long,
+    /** How far the other party has read, and when they last caught up: the "Seen 14:32" receipt. */
+    val peerLastReadSeq: Long = 0,
+    val peerLastReadAt: ApiInstant? = null,
+)
 
 @Serializable
 data class MarkReadRequest(val seq: Long)

@@ -38,9 +38,7 @@ fun ExerciseImage(exercise: Exercise?, size: Dp, shape: Shape = AppShapes.thumbn
 fun ExerciseImage(exercise: Exercise?, modifier: Modifier, shape: Shape = AppShapes.thumbnail) {
     val sourceId = exercise?.takeIf { it.images.isNotEmpty() }?.sourceId
     val bitmap by produceState<ImageBitmap?>(null, sourceId) {
-        value = sourceId?.let { id ->
-            runCatching { Res.readBytes("files/exercise_images/$id.jpg").decodeToImageBitmap() }.getOrNull()
-        }
+        value = sourceId?.let { loadExerciseImage(it) }
     }
     val image = bitmap
     if (image != null) {
@@ -51,3 +49,7 @@ fun ExerciseImage(exercise: Exercise?, modifier: Modifier, shape: Shape = AppSha
         }
     }
 }
+
+/** The bundled start-position photo of a library exercise ([Exercise.sourceId]), or null when there is none. */
+suspend fun loadExerciseImage(sourceId: String): ImageBitmap? =
+    runCatching { Res.readBytes("files/exercise_images/$sourceId.jpg").decodeToImageBitmap() }.getOrNull()

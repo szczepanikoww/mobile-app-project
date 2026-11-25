@@ -14,7 +14,7 @@ import androidx.compose.runtime.remember
 fun AppTheme(content: @Composable () -> Unit) {
     val family = androidx.compose.ui.text.font.FontFamily.SansSerif
     val typography = remember(family) { appTypography(family) }
-    val colors = LightAppColors
+    val colors = if (pl.trainer.ui.LocalClubPalette.current) ClubAppColors else LightAppColors
     CompositionLocalProvider(
         LocalAppColors provides colors,
         LocalAppTypography provides typography,
