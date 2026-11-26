@@ -353,4 +353,15 @@
     <string name="video_error_unreadable">Nie udało się odczytać tego pliku wideo.</string>
     <string name="video_play">Odtwórz wideo wzorcowe</string>
     <string name="video_desktop_playback">Odtwarzanie wideo działa w aplikacji na Androida.</string>
+    <string name="trainer_note_title">From the trainer</string>
+    <string name="trainer_note_label">Your note for this exercise</string>
+    <string name="trainer_note_empty">Add your own cues for this exercise. Only you and your plans use them.</string>
+    <string name="trainer_note_add">Add note</string>
+    <string name="trainer_note_edit">Edit note</string>
+    <string name="trainer_note_save">Save</string>
+    <string name="trainer_note_cancel">Cancel</string>
+    <string name="trainer_video_add">Add your video</string>
+    <string name="trainer_video_replace">Replace video</string>
+    <string name="trainer_video_remove">Remove video</string>
+    <string name="trainer_note_failed">Couldn't save. Check the connection and try again.</string>
 </resources>

@@ -212,3 +212,13 @@ object PersonalRecordView : Table("training.personal_record") {
     val reps = integer("reps").nullable()
     val completedAt = tstz("completed_at").nullable()
 }
+
+/** The trainer's own note and video on an exercise, global or own ("Od trenera"). */
+object ExerciseTrainerNotes : Table("training.exercise_trainer_note") {
+    val trainerId = javaUUID("trainer_id")
+    val exerciseId = javaUUID("exercise_id")
+    val note = text("note")
+    val demoMediaId = javaUUID("demo_media_id").nullable()
+    val updatedAt = tstz("updated_at")
+    override val primaryKey = PrimaryKey(trainerId, exerciseId)
+}

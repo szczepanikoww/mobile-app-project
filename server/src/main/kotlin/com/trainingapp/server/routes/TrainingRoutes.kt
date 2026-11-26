@@ -33,6 +33,10 @@ fun Route.trainingRoutes(db: Db, clock: ServerClock, callers: CallerResolver, au
     put("/exercises/{id}") {
         call.respond(training.upsertExercise(call.trainerId(), call.uuidParam("id"), call.receive<UpsertExerciseRequest>()))
     }
+    get("/exercises/{id}/note") { call.respond(training.exerciseNote(call.trainerId(), call.uuidParam("id"))) }
+    put("/exercises/{id}/note") {
+        call.respond(training.saveExerciseNote(call.trainerId(), call.uuidParam("id"), call.receive<com.trainingapp.contract.exercise.TrainerExerciseNoteDto>()))
+    }
     post("/exercises/{id}/hide") { call.respond(training.setExerciseHidden(call.trainerId(), call.uuidParam("id"), true)) }
     post("/exercises/{id}/unhide") { call.respond(training.setExerciseHidden(call.trainerId(), call.uuidParam("id"), false)) }
 

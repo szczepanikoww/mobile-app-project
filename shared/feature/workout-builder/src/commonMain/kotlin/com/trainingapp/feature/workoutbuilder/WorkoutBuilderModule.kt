@@ -58,6 +58,6 @@ val workoutBuilderModule = module {
         )
     }
     viewModel { (destination: ExerciseBrowserDestination) -> ExerciseBrowserViewModel(destination, get(), get(), get()) }
-    viewModel { (destination: ExerciseDetailDestination) -> ExerciseDetailViewModel(destination, get(), get(), get(), get(), get(), get()) }
+    viewModel { (destination: ExerciseDetailDestination) -> ExerciseDetailViewModel(destination, get(), get(), get(), get(), get(), get(), get()) }
     viewModel { (destination: ExerciseFormDestination) -> ExerciseFormViewModel(destination, get(), get(), get(), get(), get(), get(), get(), get()) }
 }

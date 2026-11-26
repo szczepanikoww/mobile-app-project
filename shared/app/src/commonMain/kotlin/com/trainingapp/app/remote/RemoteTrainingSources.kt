@@ -186,3 +186,18 @@ class RemotePlanAssigner(private val api: TrainerApiClient) {
         if (e.failure == Failure.Conflict || e.failure == Failure.Load || e.failure == Failure.Denied) null else throw e
     }
 }
+
+/** The trainer's "Od trenera" note and video on an exercise (`trainer/exercises/{id}/note`). */
+class RemoteTrainerExerciseNotes(private val api: TrainerApiClient) : com.trainingapp.domain.exercise.TrainerExerciseNotes {
+    override suspend fun load(exerciseId: String): com.trainingapp.domain.exercise.TrainerExerciseNote =
+        api.get<com.trainingapp.contract.exercise.TrainerExerciseNoteDto>("trainer/exercises/$exerciseId/note").toModel()
+
+    override suspend fun save(note: com.trainingapp.domain.exercise.TrainerExerciseNote): com.trainingapp.domain.exercise.TrainerExerciseNote =
+        api.send<com.trainingapp.contract.exercise.TrainerExerciseNoteDto, com.trainingapp.contract.exercise.TrainerExerciseNoteDto>(
+            HttpMethod.Put, "trainer/exercises/${note.exerciseId}/note",
+            com.trainingapp.contract.exercise.TrainerExerciseNoteDto(note.exerciseId, note.note, note.demoMediaId),
+        ).toModel()
+
+    private fun com.trainingapp.contract.exercise.TrainerExerciseNoteDto.toModel() =
+        com.trainingapp.domain.exercise.TrainerExerciseNote(exerciseId, note, demoMediaId)
+}

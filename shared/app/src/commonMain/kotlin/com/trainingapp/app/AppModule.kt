@@ -285,6 +285,10 @@ fun appModule(platform: AppPlatform) = module {
     single<TimeSource> { TimeSource.System }
     single(AppScope) { CoroutineScope(SupervisorJob() + Dispatchers.Default) }
 
+    // "Od trenera" on exercises: the trainer API with a server, otherwise kept in memory (workout builder).
+    single<com.trainingapp.domain.exercise.TrainerExerciseNotes> {
+        if (apiUrl != null) com.trainingapp.app.remote.RemoteTrainerExerciseNotes(get()) else com.trainingapp.domain.exercise.InMemoryTrainerExerciseNotes()
+    }
     single<ExerciseRemoteDataSource> { if (apiUrl != null) RemoteExerciseRemoteDataSource(get()) else FakeExerciseRemoteDataSource(get(), latencyMs = 800) }
     single<ExerciseRepository> {
         LocalExerciseRepository(

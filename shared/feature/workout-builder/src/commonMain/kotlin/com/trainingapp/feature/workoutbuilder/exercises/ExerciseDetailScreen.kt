@@ -42,6 +42,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.outlined.Videocam
+import com.trainingapp.designsystem.component.AppTextField
+import com.trainingapp.feature.workoutbuilder.media.VideoPickResult
+import com.trainingapp.feature.workoutbuilder.media.rememberVideoPicker
+import com.trainingapp.feature.workoutbuilder.resources.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.heading
@@ -111,6 +119,9 @@ fun ExerciseDetailScreen(
         onSetHidden = viewModel::setHidden,
         onRetrySync = viewModel::retrySync,
         onRetryVideo = viewModel::retryVideoUpload,
+        onSaveNote = viewModel::saveNote,
+        onVideoPicked = { result -> if (result is VideoPickResult.Picked) viewModel.setVideo(result.video) },
+        onRemoveVideo = viewModel::removeVideo,
         onAddToDay = {
             viewModel.addToDay()
             onAddedToDay()
@@ -128,6 +139,9 @@ fun ExerciseDetailContent(
     onRetrySync: () -> Unit,
     onAddToDay: () -> Unit,
     onRetryVideo: () -> Unit = {},
+    onSaveNote: (String) -> Unit = {},
+    onVideoPicked: (VideoPickResult) -> Unit = {},
+    onRemoveVideo: () -> Unit = {},
 ) {
     val content = state as? ExerciseDetailUiState.Content
     Scaffold(
@@ -174,7 +188,14 @@ fun ExerciseDetailContent(
                 onRetrySync,
                 Modifier.padding(padding),
                 video = state.video,
-                onRetryVideo = if (state.isOwner) onRetryVideo else null,
+                onRetryVideo = if (state.isOwner || state.trainerNote?.demoMediaId != null) onRetryVideo else null,
+                trainerNote = {
+                    // "Od trenera": on library exercises (an own exercise has its notes and video in its form).
+                    val note = state.trainerNote
+                    if (note != null && !state.exercise.isCustom) {
+                        TrainerNoteSection(note, state.noteSaving, state.noteFailed, onSaveNote, onVideoPicked, onRemoveVideo)
+                    }
+                },
             )
         }
     }
@@ -188,6 +209,7 @@ private fun ExerciseDetailBody(
     modifier: Modifier,
     video: MediaAsset? = null,
     onRetryVideo: (() -> Unit)? = null,
+    trainerNote: @Composable () -> Unit = {},
 ) {
     val colors = AppTheme.colors
     Column(
@@ -227,6 +249,8 @@ private fun ExerciseDetailBody(
         }
         if (exercise.isHidden) InlineMessage(stringResource(Res.string.detail_hidden), tone = MessageTone.Info)
 
+        trainerNote()
+
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
             SectionHeader(stringResource(Res.string.detail_muscles))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
@@ -257,6 +281,55 @@ private fun ExerciseDetailBody(
                 }
             }
         }
+    }
+}
+
+/**
+ * "Od trenera": the trainer's own note and video on a library exercise. The video is shown at the top of the screen,
+ * before the library images; here it can be added, replaced or removed.
+ */
+@Composable
+private fun TrainerNoteSection(
+    note: com.trainingapp.domain.exercise.TrainerExerciseNote,
+    saving: Boolean,
+    failed: Boolean,
+    onSave: (String) -> Unit,
+    onVideoPicked: (VideoPickResult) -> Unit,
+    onRemoveVideo: () -> Unit,
+) {
+    var editing by remember(note) { mutableStateOf(false) }
+    var draft by remember(note) { mutableStateOf(note.note) }
+    val picker = rememberVideoPicker(onVideoPicked)
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+        SectionHeader(stringResource(Res.string.trainer_note_title))
+        if (editing) {
+            AppTextField(value = draft, onValueChange = { draft = it.take(2000) }, label = stringResource(Res.string.trainer_note_label), singleLine = false)
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                PrimaryButton(stringResource(Res.string.trainer_note_save), onClick = { onSave(draft); editing = false }, loading = saving)
+                AppTextButton(stringResource(Res.string.trainer_note_cancel), onClick = { draft = note.note; editing = false })
+            }
+        } else {
+            Text(
+                note.note.ifBlank { stringResource(Res.string.trainer_note_empty) },
+                style = AppTheme.type.body,
+                color = if (note.note.isBlank()) AppTheme.colors.textSecondary else AppTheme.colors.text,
+            )
+            AppTextButton(
+                stringResource(if (note.note.isBlank()) Res.string.trainer_note_add else Res.string.trainer_note_edit),
+                onClick = { editing = true },
+                icon = Icons.Outlined.Edit,
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+            AppTextButton(
+                stringResource(if (note.demoMediaId == null) Res.string.trainer_video_add else Res.string.trainer_video_replace),
+                onClick = { picker.pickFromGallery() },
+                enabled = !saving,
+                icon = Icons.Outlined.Videocam,
+            )
+            if (note.demoMediaId != null) AppTextButton(stringResource(Res.string.trainer_video_remove), onClick = onRemoveVideo, enabled = !saving)
+        }
+        if (failed) InlineMessage(stringResource(Res.string.trainer_note_failed), tone = MessageTone.Error)
     }
 }
 
