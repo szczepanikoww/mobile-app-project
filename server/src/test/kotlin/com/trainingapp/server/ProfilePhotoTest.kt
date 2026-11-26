@@ -3,6 +3,9 @@ package com.trainingapp.server
 import com.trainingapp.server.identity.PictureDownloader
 import com.trainingapp.server.identity.ProfilePhotoService
 import io.ktor.client.request.get
+import io.ktor.client.request.post
+import io.ktor.client.request.delete
+import io.ktor.client.call.body
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.readRawBytes
@@ -38,6 +41,25 @@ class ProfilePhotoTest : ApiTest() {
         assertEquals(HttpStatusCode.OK, client.get("/v1/users/${trainer.id}/photo") { auth("photo-stranger") }.status)
         assertEquals(HttpStatusCode.NotFound, client.get("/v1/users/$clientId/photo") { auth("photo-stranger") }.status)
         assertEquals(HttpStatusCode.Unauthorized, client.get("/v1/users/$clientId/photo").status)
+    }
+
+    @Test
+    fun `a trainer adds and removes gallery photos, up to nine, visible like the profile photo`() = api { client ->
+        val trainer = fixtures.trainer("gallery-trainer")
+        fixtures.client("gallery-stranger")
+        val ids = (1..9).map {
+            val added = client.post("/v1/me/gallery") { auth("gallery-trainer"); contentType(ContentType.Image.JPEG); setBody(jpeg) }
+            assertEquals(HttpStatusCode.Created, added.status)
+            added.body<Map<String, String>>().getValue("id")
+        }
+        assertEquals(HttpStatusCode.UnprocessableEntity, client.post("/v1/me/gallery") { auth("gallery-trainer"); contentType(ContentType.Image.JPEG); setBody(jpeg) }.status)
+        val listed = client.get("/v1/users/${trainer.id}/gallery") { auth("gallery-stranger") }.body<List<String>>()
+        assertEquals(ids, listed)
+        assertContentEquals(jpeg, client.get("/v1/users/${trainer.id}/gallery/${ids.first()}") { auth("gallery-stranger") }.readRawBytes())
+        // Only the owner removes a photo.
+        assertEquals(HttpStatusCode.NotFound, client.delete("/v1/me/gallery/${ids.first()}") { auth("gallery-stranger") }.status)
+        assertEquals(HttpStatusCode.NoContent, client.delete("/v1/me/gallery/${ids.first()}") { auth("gallery-trainer") }.status)
+        assertEquals(8, client.get("/v1/users/${trainer.id}/gallery") { auth("gallery-trainer") }.body<List<String>>().size)
     }
 
     @Test

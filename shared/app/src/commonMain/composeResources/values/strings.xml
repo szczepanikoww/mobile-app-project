@@ -51,4 +51,10 @@
     <string name="plan_tailor">Rozpisz dla tej sesji</string>
     <string name="plan_tailor_hint">„Rozpisz dla tej sesji” otworzy kopię planu do zmiany. Szablon zostaje bez zmian.</string>
     <string name="plan_assigned_to_session">Plan „%1$s” przypisany do sesji: %2$s</string>
+    <string name="gallery_title">Zdjęcia</string>
+    <string name="gallery_empty">Dodaj zdjęcia, które pokażą Cię podopiecznym.</string>
+    <string name="gallery_add">Dodaj zdjęcie</string>
+    <string name="gallery_remove">Usuń zdjęcie</string>
+    <string name="gallery_full">Masz już %1$d zdjęć. Usuń jedno, żeby dodać nowe.</string>
+    <string name="gallery_failed">Nie udało się zapisać zdjęcia. Spróbuj ponownie.</string>
 </resources>

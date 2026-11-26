@@ -96,6 +96,7 @@ fun TrainerShell(actions: WorkoutNavigationActions) {
         )
     }
     val assigner = remember(api) { api?.let { RemotePlanAssigner(it) } }
+    val gallery: com.trainingapp.app.photos.RemoteProfileGallery? = getKoin().getOrNull()
     val share = rememberShareAction()
     AppTheme {
         val trainer: TrainerViewModel = viewModel {
@@ -139,6 +140,8 @@ fun TrainerShell(actions: WorkoutNavigationActions) {
                 )
             },
             plansTab = { TrainerPlansTab(actions) },
+            // "Zdjęcia" in the profile: needs the server (photos are stored there).
+            profileExtras = gallery?.let { g -> { com.trainingapp.app.photos.ProfileGallerySection(g) } },
             onLogOut = actions.onLogOut,
             videoCard = AppTechniqueVideoCard,
         )

@@ -152,6 +152,31 @@ fun Route.accountRoutes(s: Services) = authenticate(AUTH_API) {
         val me = call.currentUser(s.identity).id
         call.respondPhoto(s.photos.photo(me, me))
     }
+    // The gallery ("Zdjęcia"): the same visibility as the profile photo.
+    get("/v1/users/{id}/gallery") {
+        call.respond(s.photos.gallery(call.currentUser(s.identity).id, call.pathUuid("id", "user")))
+    }
+    get("/v1/users/{id}/gallery/{photoId}") {
+        call.respondPhoto(s.photos.galleryPhoto(call.currentUser(s.identity).id, call.pathUuid("id", "user"), call.pathUuid("photoId", "photo")))
+    }
+    get("/v1/me/gallery") {
+        val me = call.currentUser(s.identity).id
+        call.respond(s.photos.gallery(me, me))
+    }
+    get("/v1/me/gallery/{photoId}") {
+        val me = call.currentUser(s.identity).id
+        call.respondPhoto(s.photos.galleryPhoto(me, me, call.pathUuid("photoId", "photo")))
+    }
+    post("/v1/me/gallery") {
+        val user = call.currentUser(s.identity)
+        val length = call.request.headers[HttpHeaders.ContentLength]?.toLongOrNull()
+        if (length != null && length > ProfilePhotoService.MAX_BYTES) throw invalid("photo")
+        call.respond(HttpStatusCode.Created, mapOf("id" to s.photos.addToGallery(user.id, call.receive<ByteArray>())))
+    }
+    delete("/v1/me/gallery/{photoId}") {
+        s.photos.removeFromGallery(call.currentUser(s.identity).id, call.pathUuid("photoId", "photo"))
+        call.respond(HttpStatusCode.NoContent)
+    }
     get("/v1/users/{id}/photo") {
         call.respondPhoto(s.photos.photo(call.currentUser(s.identity).id, call.pathUuid("id", "photo")))
     }

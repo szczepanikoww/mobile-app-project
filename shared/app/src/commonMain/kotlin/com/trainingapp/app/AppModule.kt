@@ -429,6 +429,7 @@ fun remoteModule(
     single<GuestCatalogRepository> { RemoteGuestCatalogRepository(get()) }
     // Profile photos (`/v1/me/photo`, `/v1/users/{id}/photo`): shown in both shells, changed from the account menu.
     single { com.trainingapp.app.photos.RemoteProfilePhotos(get()) }
+    single { com.trainingapp.app.photos.RemoteProfileGallery(get()) }
     // Exercise photos for the server's plans: their exercise ids are resolved through `/v1/exercises`.
     single {
         val api: ApiClient = get()

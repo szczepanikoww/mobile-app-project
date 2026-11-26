@@ -11,6 +11,8 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.javatime.timestampWithTimeZone
 import org.jetbrains.exposed.v1.jdbc.insertIgnore
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.upsert
 import org.slf4j.LoggerFactory
@@ -33,6 +35,16 @@ object ProfilePhotosTable : Table("identity.profile_photo") {
 }
 
 data class ProfilePhoto(val contentType: String, val bytes: ByteArray, val version: Long)
+
+/** `identity.profile_gallery_photo` (V10): photos about the user beyond the profile photo. */
+object GalleryPhotosTable : Table("identity.profile_gallery_photo") {
+    val id = uuid("id")
+    val userId = uuid("user_id")
+    val contentType = text("content_type")
+    val bytes = binary("bytes")
+    val createdAt = timestampWithTimeZone("created_at")
+    override val primaryKey = PrimaryKey(id)
+}
 
 /** Downloads a Google account picture. Returns null on any failure; tests replace it. */
 fun interface PictureDownloader {
@@ -65,14 +77,16 @@ class ProfilePhotoService(private val db: Db, private val downloader: PictureDow
     /** Subjects whose Google picture was already tried in this process, so a failing URL is not fetched on every `/me`. */
     private val googleAttempted = ConcurrentHashMap.newKeySet<Uuid>()
 
+    /** Self, any trainer (their public face), or the other side of a trainer–client relationship. */
+    private fun org.jetbrains.exposed.v1.jdbc.JdbcTransaction.visible(viewer: Uuid, target: Uuid): Boolean = viewer == target ||
+        TrainerProfiles.selectAll().where { TrainerProfiles.userId eq target }.any() ||
+        TrainerClients.selectAll().where {
+            ((TrainerClients.trainerId eq viewer) and (TrainerClients.clientId eq target)) or
+                ((TrainerClients.trainerId eq target) and (TrainerClients.clientId eq viewer))
+        }.any()
+
     suspend fun photo(viewer: Uuid, target: Uuid): ProfilePhoto = db.tx {
-        val visible = viewer == target ||
-            TrainerProfiles.selectAll().where { TrainerProfiles.userId eq target }.any() ||
-            TrainerClients.selectAll().where {
-                ((TrainerClients.trainerId eq viewer) and (TrainerClients.clientId eq target)) or
-                    ((TrainerClients.trainerId eq target) and (TrainerClients.clientId eq viewer))
-            }.any()
-        val row = if (visible) ProfilePhotosTable.selectAll().where { ProfilePhotosTable.userId eq target }.singleOrNull() else null
+        val row = if (visible(viewer, target)) ProfilePhotosTable.selectAll().where { ProfilePhotosTable.userId eq target }.singleOrNull() else null
         row ?: throw notFound("photo")
         ProfilePhoto(row[ProfilePhotosTable.contentType], row[ProfilePhotosTable.bytes], row[ProfilePhotosTable.updatedAt].toInstant().toEpochMilli())
     }
@@ -90,6 +104,45 @@ class ProfilePhotoService(private val db: Db, private val downloader: PictureDow
                 it[updatedAt] = dbNow().toOffset()
             }
         }
+    }
+
+    /** The ids of [target]'s gallery photos, oldest first; empty when the viewer may not see them. */
+    suspend fun gallery(viewer: Uuid, target: Uuid): List<String> = db.tx {
+        if (!visible(viewer, target)) return@tx emptyList()
+        GalleryPhotosTable.selectAll().where { GalleryPhotosTable.userId eq target }
+            .orderBy(GalleryPhotosTable.createdAt).map { it[GalleryPhotosTable.id].toString() }
+    }
+
+    suspend fun galleryPhoto(viewer: Uuid, target: Uuid, photoId: Uuid): ProfilePhoto = db.tx {
+        val row = if (visible(viewer, target)) {
+            GalleryPhotosTable.selectAll().where { (GalleryPhotosTable.id eq photoId) and (GalleryPhotosTable.userId eq target) }.singleOrNull()
+        } else null
+        row ?: throw notFound("photo")
+        ProfilePhoto(row[GalleryPhotosTable.contentType], row[GalleryPhotosTable.bytes], row[GalleryPhotosTable.createdAt].toInstant().toEpochMilli())
+    }
+
+    /** Adds a photo to the caller's gallery (at most [MAX_GALLERY]); returns its id. */
+    suspend fun addToGallery(user: Uuid, bytes: ByteArray): String {
+        if (bytes.isEmpty() || bytes.size > MAX_BYTES) throw invalid("photo")
+        val type = imageType(bytes) ?: throw invalid("photo")
+        return db.tx {
+            val count = GalleryPhotosTable.selectAll().where { GalleryPhotosTable.userId eq user }.count()
+            if (count >= MAX_GALLERY) throw invalid("gallery_full")
+            val id = com.trainingapp.server.common.Ids.v7()
+            GalleryPhotosTable.insert {
+                it[GalleryPhotosTable.id] = id
+                it[userId] = user
+                it[contentType] = type
+                it[GalleryPhotosTable.bytes] = bytes
+                it[createdAt] = dbNow().toOffset()
+            }
+            id.toString()
+        }
+    }
+
+    suspend fun removeFromGallery(user: Uuid, photoId: Uuid) = db.tx {
+        val removed = GalleryPhotosTable.deleteWhere { (GalleryPhotosTable.id eq photoId) and (GalleryPhotosTable.userId eq user) }
+        if (removed == 0) throw notFound("photo")
     }
 
     /**
@@ -119,6 +172,7 @@ class ProfilePhotoService(private val db: Db, private val downloader: PictureDow
 
     companion object {
         const val MAX_BYTES = 2 * 1024 * 1024
+        const val MAX_GALLERY = 9
 
         /** Google's picture URL at 256 px, or null for anything that is not an https Google picture. */
         fun googlePictureUrl(raw: String): String? {
