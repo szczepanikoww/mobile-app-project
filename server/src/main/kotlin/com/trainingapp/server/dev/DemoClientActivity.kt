@@ -270,10 +270,10 @@ class DemoClientActivity(private val s: Services) {
     private data class LoggedExercise(val exerciseId: Uuid?, val planned: String?, val sets: List<LoggedSet>)
 
     private fun JdbcTransaction.seedWorkouts(assignmentId: Uuid, versionId: Uuid, today: LocalDate, now: Instant) {
-        val squat = id("ex-squat")
-        val bench = id("ex-bench")
-        val row = id("ex-row")
-        val plank = id("ex-plank")
+        val squat = DemoSeed.exSquat
+        val bench = DemoSeed.exBench
+        val row = DemoSeed.exRow
+        val plank = DemoSeed.exPlank
         val daysAgo = listOf(40, 37, 33, 30, 26, 23, 19, 16, 12, 9, 5, 2)
         daysAgo.forEachIndexed { index, ago ->
             val week = index / 2 // 0..5: loads go up a little every week
@@ -378,12 +378,12 @@ class DemoClientActivity(private val s: Services) {
             tags = listOf("Siła", "Hipertrofia"),
             days = listOf(
                 PlanDayDto("v2-day-a", "Dzień A — przysiad", listOfNotNull(
-                    exercise("v2-a1", id("ex-squat"), 180, listOf(PlannedSetDto("v2-a1-w", SetType.WARM_UP, 8, 8, 40_000)) + List(3) { working("v2-a1-$it", 5, 87.5) },
+                    exercise("v2-a1", DemoSeed.exSquat, 180, listOf(PlannedSetDto("v2-a1-w", SetType.WARM_UP, 8, 8, 40_000)) + List(3) { working("v2-a1-$it", 5, 87.5) },
                         note = "Pełny zakres, kolana na zewnątrz."),
-                    exercise("v2-a2", id("ex-bench"), 150, List(3) { working("v2-a2-$it", 6, 62.5, 8) }),
+                    exercise("v2-a2", DemoSeed.exBench, 150, List(3) { working("v2-a2-$it", 6, 62.5, 8) }),
                     exercise("v2-a3", lib("Seated_Cable_Rows"), 90, List(3) { working("v2-a3-$it", 10, 45.0, 12) }),
                     exercise("v2-a4", lib("Side_Lateral_Raise"), 60, List(3) { working("v2-a4-$it", 12, 8.0, 15) }, accessory = true),
-                    exercise("v2-a5", id("ex-plank"), 60, listOf(PlannedSetDto("v2-a5-1", SetType.WORKING, durationSeconds = 60)), accessory = true),
+                    exercise("v2-a5", DemoSeed.exPlank, 60, listOf(PlannedSetDto("v2-a5-1", SetType.WORKING, durationSeconds = 60)), accessory = true),
                 )),
                 PlanDayDto("v2-day-b", "Dzień B — martwy ciąg", listOfNotNull(
                     exercise("v2-b1", lib("Barbell_Deadlift"), 180, List(3) { working("v2-b1-$it", 5, 115.0) }, note = "Nagraj ostatnią serię z boku."),
@@ -394,7 +394,7 @@ class DemoClientActivity(private val s: Services) {
                 PlanDayDto("v2-day-c", "Dzień C — objętość", listOfNotNull(
                     exercise("v2-c1", lib("Romanian_Deadlift"), 120, List(3) { working("v2-c1-$it", 8, 80.0, 10) }),
                     exercise("v2-c2", lib("Incline_Dumbbell_Press"), 90, List(3) { working("v2-c2-$it", 10, 20.0, 12) }),
-                    exercise("v2-c3", id("ex-row"), 90, List(3) { working("v2-c3-$it", 10, 57.5) }),
+                    exercise("v2-c3", DemoSeed.exRow, 90, List(3) { working("v2-c3-$it", 10, 57.5) }),
                     exercise("v2-c4", lib("Barbell_Hip_Thrust"), 90, List(3) { working("v2-c4-$it", 10, 80.0, 12) }),
                     exercise("v2-c5", lib("Triceps_Pushdown"), 60, List(3) { working("v2-c5-$it", 12, 20.0, 15) }, accessory = true),
                 )),

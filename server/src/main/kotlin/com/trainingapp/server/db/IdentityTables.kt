@@ -46,6 +46,8 @@ object TrainerClients : Table("identity.trainer_client") {
     val createdAt = tstz("created_at")
     val startedAt = tstz("started_at").nullable()
     val endedAt = tstz("ended_at").nullable()
+    /** Set while the trainer keeps the client in the archive; the relationship itself is unchanged. */
+    val archivedAt = tstz("archived_at").nullable()
     override val primaryKey = PrimaryKey(id)
 }
 

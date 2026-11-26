@@ -245,6 +245,8 @@ private fun AuthSession.clientIdentity(): ClientIdentity? = takeIf { Role.Client
  * the server contract and add latency so the pending and saving states are visible.
  */
 fun appModule(platform: AppPlatform) = module {
+    // A plan the trainer is writing out for one session, until the editor assigns it (TrainerPlans.kt).
+    single { PendingSessionPlan() }
     // With a server address the trainer features use the trainer API (docs/features/trainer-backend.md §8);
     // without one they keep the demo data and fakes.
     val apiUrl = platform.trainerApiUrl?.takeIf { it.isNotBlank() }

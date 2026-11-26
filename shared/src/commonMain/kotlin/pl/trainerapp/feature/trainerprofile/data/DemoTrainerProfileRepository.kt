@@ -74,4 +74,20 @@ class DemoTrainerProfileRepository(private val latencyMillis: Long = 500) : Trai
     override suspend fun saveAvailability(days: List<AvailabilityDay>) {
         snapshot = snapshot.copy(availability = days)
     }
+
+    private var gyms = pl.trainerapp.feature.trainerprofile.model.GymSelection(
+        all = listOf(
+            pl.trainerapp.feature.trainerprofile.model.GymOption("g1", "Studio Centrum", "ul. Marszałkowska 10, Warszawa"),
+            pl.trainerapp.feature.trainerprofile.model.GymOption("g2", "Siłownia Wola", "ul. Wolska 40, Warszawa"),
+            pl.trainerapp.feature.trainerprofile.model.GymOption("g3", "Klub Mokotów", "ul. Puławska 99, Warszawa"),
+        ),
+        selected = setOf("g1", "g2"),
+    )
+
+    override suspend fun gyms() = gyms.also { delay(latencyMillis) }
+
+    override suspend fun saveGyms(ids: Set<String>) {
+        delay(latencyMillis)
+        gyms = gyms.copy(selected = ids)
+    }
 }

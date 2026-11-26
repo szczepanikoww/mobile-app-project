@@ -1,0 +1,88 @@
+<resources>
+    <!-- Trainer redesign (docs/plans/trainer-redesign.md) -->
+    <string name="nav_plans">Plany</string>
+    <string name="block_time">Zablokuj czas</string>
+    <string name="action_messages">Wiadomości</string>
+    <string name="new_session_hint">Umów sesję z podopiecznym</string>
+    <string name="invite_row_hint">Wyślij swój link do aplikacji</string>
+
+    <string name="start_greeting">Cześć, %1$s</string>
+    <string name="start_greeting_plain">Cześć</string>
+    <string name="start_next_session">Następna sesja</string>
+    <string name="start_in_progress">Trwa teraz</string>
+    <string name="start_next_in">Następna · za %1$d min</string>
+    <string name="start_no_sessions">Brak zaplanowanych sesji</string>
+    <string name="start_no_sessions_body">Umów sesję z podopiecznym, a pojawi się tutaj.</string>
+    <string name="start_requests">Wymaga reakcji</string>
+    <string name="start_requests_none">Brak próśb</string>
+    <string name="start_requests_count">Prośby o termin: %1$d</string>
+    <string name="start_payments">Wpłaty w tym tygodniu</string>
+    <string name="start_payments_failed">Nie udało się wczytać wpłat.</string>
+    <string name="start_history">Historia sesji</string>
+    <string name="start_history_to_mark">Do oznaczenia: %1$d</string>
+    <string name="start_history_all_marked">Wszystkie oznaczone</string>
+
+    <string name="requests_empty">Wszystko załatwione</string>
+    <string name="requests_empty_body">Nowe prośby o sesję i o przełożenie pojawią się tutaj.</string>
+    <string name="request_kind_booking">Prośba o sesję</string>
+    <string name="request_kind_reschedule">Prośba o przełożenie</string>
+    <string name="request_kind_reschedule_from">Przełożenie z %1$s</string>
+
+    <string name="history_screen_empty">Brak minionych sesji</string>
+    <string name="history_screen_empty_body">Odbyte sesje pojawią się tutaj. Zaznaczysz przy nich obecność.</string>
+    <string name="attendance_title">Obecność</string>
+    <string name="attendance_present">Odbyła się</string>
+    <string name="attendance_no_show">Nieobecność</string>
+    <string name="attendance_present_for">Odbyła się: %1$s</string>
+    <string name="attendance_no_show_for">Nieobecność: %1$s</string>
+    <string name="attendance_present_title">Sesja się odbyła?</string>
+    <string name="attendance_present_body">Sesja zostanie oznaczona jako odbyta.</string>
+    <string name="attendance_no_show_title">Podopieczny nie przyszedł?</string>
+    <string name="attendance_no_show_body">Sesja zostanie oznaczona jako nieobecność.</string>
+
+    <string name="payments_empty">Brak wpłat w tym tygodniu</string>
+    <string name="payments_empty_body">Wpłaty za sesje opłacone kartą pojawią się tutaj.</string>
+
+    <string name="calendar_free">Wolne %1$s</string>
+
+    <string name="session_plan_title">Plan na tę sesję</string>
+    <string name="session_comment_title">Komentarz</string>
+    <string name="session_comment_label">Notatka do tej sesji</string>
+    <string name="session_comment_private">Widzisz ją tylko Ty.</string>
+    <string name="session_comment_save">Zapisz komentarz</string>
+
+    <string name="client_chat">Czat</string>
+    <string name="default_plan_title">Plan domyślny</string>
+    <string name="client_sessions">Sesje</string>
+    <string name="client_sessions_upcoming">Nadchodzące</string>
+    <string name="client_sessions_past">Poprzednie</string>
+    <string name="archive_client">Przenieś do archiwum</string>
+    <string name="archive_client_title">Przenieść do archiwum?</string>
+    <string name="archive_client_body">Podopieczny zniknie z bieżącej listy. Sesje i plany zostają, a w każdej chwili możesz go przywrócić.</string>
+    <string name="archived_client_body">Ten podopieczny jest w archiwum.</string>
+    <string name="restore_client">Przywróć podopiecznego</string>
+
+    <string name="invite_sheet_body">Wyślij link osobie, którą trenujesz. Po założeniu konta dołączy do Twoich podopiecznych.</string>
+    <string name="invite_link_label">Twój link</string>
+    <string name="invite_code">Kod: %1$s</string>
+    <string name="invite_share">Udostępnij link</string>
+    <string name="invite_copy">Kopiuj link</string>
+    <string name="invite_copied">Skopiowano</string>
+    <string name="invite_new_link">Wygeneruj nowy link</string>
+    <string name="invite_new_link_title">Wygenerować nowy link?</string>
+    <string name="invite_new_link_body">Obecny link przestanie działać. Osoby, które już dołączyły, zostają Twoimi podopiecznymi.</string>
+    <string name="invite_failed">Nie udało się pobrać linku.</string>
+    <string name="invite_message">Dołącz do moich podopiecznych w aplikacji treningowej:</string>
+
+    <string name="profile_gyms_title">Moje siłownie</string>
+    <string name="profile_gyms_hint">Podpowiadamy je jako miejsce nowej sesji.</string>
+    <string name="profile_gyms_none">Nie wybrano jeszcze siłowni.</string>
+    <string name="profile_gyms_choose">Wybierz siłownie</string>
+    <string name="profile_gyms_save">Zapisz</string>
+    <string name="profile_gyms_failed">Nie udało się zapisać siłowni.</string>
+    <string name="profile_cancel">Anuluj</string>
+    <string name="profile_hours_hint">Dotknij dnia, aby zmienić godziny pracy.</string>
+    <string name="profile_hours_from">Od</string>
+    <string name="profile_hours_to">Do</string>
+    <string name="profile_hours_failed">Nie udało się zapisać godzin. Wpisz je jako 08:00 i 16:00.</string>
+</resources>

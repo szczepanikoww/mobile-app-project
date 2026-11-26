@@ -113,6 +113,7 @@ fun App(
         // The assignment API is the trainer API; without a server the dialog explains that it is not connected.
         val planAssigner: RemotePlanAssigner? = getKoin().getOrNull<TrainerApiClient>()?.let { remember(it) { RemotePlanAssigner(it) } }
         val startDestination = remember { startDestinationFor(initialSession ?: auth.session.value) }
+        val pendingSessionPlan: PendingSessionPlan = koinInject()
 
         // After sign-in, sign-out or a role switch the whole back stack is replaced, so Back never returns to Auth,
         // the guest views or the other role's shell.
@@ -154,13 +155,31 @@ fun App(
                     onOpenPlans = { navController.navigate(PlanLibraryDestination) },
                     onOpenExercises = { navController.navigate(ExerciseBrowserDestination()) },
                     onLogOut = logOut,
+                    onOpenDraft = { draftId -> navController.navigate(PlanEditorDestination(draftId = draftId)) },
                 )
                 if (host != null) host(actions) else TrainerShell(actions)
             }
             workoutBuilderGraph(
                 navController = navController,
                 onAssignToClient = { templateId, version ->
-                    if (planAssigner != null) assignPlan = PlanToAssign(templateId, version) else showAssignInfo = true
+                    // A plan written out for one session goes straight to that client and session.
+                    val forSession = pendingSessionPlan.target
+                    when {
+                        planAssigner == null -> showAssignInfo = true
+                        forSession != null -> scope.launch {
+                            val assigned = runCatching {
+                                planAssigner.assign(forSession.clientId, templateId, version, sessionId = forSession.sessionId)
+                            }.getOrNull()
+                            if (assigned != null) {
+                                pendingSessionPlan.target = null
+                                assignedMessage = assigned.name to forSession.clientName
+                                navController.popBackStack<TrainerHomeDestination>(inclusive = false)
+                            } else {
+                                assignPlan = PlanToAssign(templateId, version)
+                            }
+                        }
+                        else -> assignPlan = PlanToAssign(templateId, version)
+                    }
                 },
             )
             guestGraph(

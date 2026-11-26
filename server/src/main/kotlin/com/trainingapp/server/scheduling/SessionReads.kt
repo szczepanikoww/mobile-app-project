@@ -72,6 +72,7 @@ object SessionReads {
             initials = initialsOf(name),
             status = RelationshipStatus.valueOf(this[TrainerClients.status]),
             hasOverduePayment = overdue,
+            archived = this[TrainerClients.archivedAt] != null,
         )
     }
 

@@ -63,6 +63,8 @@ object AppColors {
     val waitingText = Color(0xFF603B8E)
     val completedSurface = Color(0xFFE9EEF2)
     val completedText = Color(0xFF3D5368)
+    /** The request dot on the brand fill (selected day of the week strip). */
+    val attentionOnBrand = Color(0xFFFCD34D)
 }
 
 /**

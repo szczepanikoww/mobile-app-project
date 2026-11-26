@@ -32,4 +32,23 @@
     <string name="assign_load_failed">Nie udało się pobrać listy podopiecznych.</string>
     <string name="assign_done">Plan „%1$s” przypisany: %2$s</string>
     <string name="assign_retry">Spróbuj ponownie</string>
+    <string name="plans_my_plans">Moje plany</string>
+    <string name="plans_my_plans_empty">Utwórz pierwszy plan treningowy.</string>
+    <string name="plans_my_plans_count">Planów: %1$d</string>
+    <string name="plans_new_plan">Nowy plan</string>
+    <string name="plans_plan_summary">Dni: %1$d · ćwiczenia: %2$d</string>
+    <string name="plans_library">Biblioteka ćwiczeń</string>
+    <string name="plans_library_body">Baza ćwiczeń i Twoje własne ćwiczenia z wideo</string>
+    <string name="plan_none">Brak planu</string>
+    <string name="plan_default_hint">Nowe sesje dostają kopię tego planu.</string>
+    <string name="plan_session_hint">Plan rozpisany na ten trening.</string>
+    <string name="plan_session_default">Plan domyślny: %1$s</string>
+    <string name="plan_choose">Wybierz plan</string>
+    <string name="plan_change">Zmień plan</string>
+    <string name="plan_pick_title">Plan domyślny</string>
+    <string name="plan_pick_session_title">Plan na tę sesję</string>
+    <string name="plan_pick_empty">Nie masz jeszcze zapisanych planów. Utwórz plan w zakładce Plany.</string>
+    <string name="plan_tailor">Rozpisz dla tej sesji</string>
+    <string name="plan_tailor_hint">„Rozpisz dla tej sesji” otworzy kopię planu do zmiany. Szablon zostaje bez zmian.</string>
+    <string name="plan_assigned_to_session">Plan „%1$s” przypisany do sesji: %2$s</string>
 </resources>

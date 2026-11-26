@@ -58,6 +58,8 @@ object Sessions : Table("scheduling.session") {
     val requestedAt = tstz("requested_at")
     val confirmedAt = tstz("confirmed_at").nullable()
     val closedAt = tstz("closed_at").nullable()
+    /** The trainer's private comment on the session; never sent to the client. */
+    val trainerComment = text("trainer_comment").nullable()
     override val primaryKey = PrimaryKey(id)
 }
 

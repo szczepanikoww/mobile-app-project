@@ -51,7 +51,8 @@ class TrainerUiTest {
             setContent { TrainerApp(model) }
             waitUntil { !model.state.value.loading }
             model.navigate(Route.SessionDetail("s4"))
-            onNodeWithText("Obecny potwierdzony termin").assertExists()
+            // The confirmed time stays on the card; the asked-for time is shown apart from it.
+            onNodeWithText("16:00 – 17:00").assertExists()
             onNodeWithText("Proponowany termin").assertExists()
             capture("reschedule-pl")
             onNodeWithText("Akceptuj prośbę").performScrollTo().performClick()
@@ -85,6 +86,8 @@ class TrainerUiTest {
         try {
             setContent { CompositionLocalProvider(LocalDensity provides Density(1f, 2f)) { TrainerApp(model) } }
             waitUntil { !model.state.value.loading }
+            capture("start-small-font200-pl")
+            onNodeWithText("Kalendarz").performClick()
             capture("calendar-small-font200-pl")
             onNodeWithTag("calendar-list").performScrollToNode(hasText("Katarzyna Nowak"))
             capture("calendar-session-font200-pl")
@@ -115,6 +118,9 @@ class TrainerUiTest {
             onNodeWithText("Nie masz dostępu").assertExists()
             model.scenario(DemoScenario.Empty)
             waitUntil { !model.state.value.loading }
+            onNodeWithText("Brak zaplanowanych sesji").assertExists()
+            capture("empty-start-pl")
+            model.destination(Destination.Calendar)
             onNodeWithText("Dziś jest miejsce na sesję").assertExists()
             capture("empty-calendar-pl")
             model.destination(Destination.Clients)
@@ -128,39 +134,59 @@ class TrainerUiTest {
     }
 
     @Test fun cleanNavigationArchiveAndSingleAddMenu() = runDesktopComposeUiTest(width = 390, height = 844) {
-        val model = TrainerViewModel(DemoTrainerRepository(0))
+        val model = TrainerViewModel(DemoTrainerRepository(0), pl.trainer.data.DemoInviteLinks(0))
         val store = ViewModelStore().also { it.put("test", model) }
         try {
             setContent { TrainerApp(model) }
             waitUntil { !model.state.value.loading }
-            onNodeWithText("Twój plan").assertExists()
-            onNodeWithText("Kalendarz").assertIsSelected()
-            onNodeWithText("Start").performClick()
+            // Start: the greeting, the next session and the three widgets; four tabs, no Finance.
+            onNodeWithText("Cześć").assertExists()
             onNode(hasText("Start") and hasClickAction()).assertIsSelected()
-            onNodeWithText("Otwórz kalendarz").performClick()
-            onNodeWithText("Finanse").performClick()
-            onNode(hasText("Finanse") and hasClickAction()).assertIsSelected()
+            onNodeWithText("Wymaga reakcji").assertExists()
+            onNodeWithText("Historia sesji").assertExists()
+            onNodeWithText("Finanse").assertDoesNotExist()
+            capture("start-pl")
+            onNodeWithText("Plany").performClick()
+            onNode(hasText("Plany") and hasClickAction()).assertIsSelected()
+            // The plus: session, block time and invite (last); nothing about plans.
             onNodeWithContentDescription("Dodaj").performClick()
+            onNodeWithText("Zablokuj czas").assertExists()
+            onNodeWithText("Zaproś podopiecznego").assertExists()
             onNodeWithText("Dodaj sesję").performClick()
             onNodeWithText("Podopieczny").assertExists()
             onNodeWithContentDescription("Dodaj").assertDoesNotExist()
             onNodeWithContentDescription("Wstecz").performClick()
-            onNodeWithText("Otwórz kalendarz").performClick()
             onAllNodes(hasText("demo", substring = true, ignoreCase = true)).assertCountEquals(0)
-            onNodeWithContentDescription("Dodaj").performClick()
-            onNodeWithText("Dostępność").assertExists()
-            onNodeWithText("Dodaj sesję").assertExists()
-            onNodeWithText("Dostępność").performClick()
-            onNodeWithText("Dodaj blokadę").assertExists()
             model.destination(Destination.Clients)
-            onNodeWithText("Twoi podopieczni").assertExists()
-            onNodeWithText("Aktywna współpraca").assertDoesNotExist()
-            onNodeWithText("Zaległa płatność: nie").assertDoesNotExist()
+            onNodeWithText("Zaległa płatność", substring = true).assertDoesNotExist()
             onNodeWithText("Piotr Lewandowski").assertDoesNotExist()
             onNodeWithText("Archiwum").performClick()
             onNodeWithText("Piotr Lewandowski").assertExists()
             capture("clients-archive-pl")
             onNodeWithText("Katarzyna Nowak").assertDoesNotExist()
+            // The invite sheet (plus → last option) shows the permanent link.
+            onNodeWithContentDescription("Dodaj").performClick()
+            onNodeWithText("Zaproś podopiecznego").performClick()
+            waitUntil { model.state.value.invite.link != null }
+            onNodeWithText("Wygeneruj nowy link").assertExists()
+        } finally { store.clear() }
+    }
+
+    @Test fun startWidgetsOpenRequestsAndHistoryWithAttendance() = runDesktopComposeUiTest(width = 390, height = 844) {
+        val model = TrainerViewModel(DemoTrainerRepository(0))
+        val store = ViewModelStore().also { it.put("test", model) }
+        try {
+            setContent { TrainerApp(model) }
+            waitUntil { !model.state.value.loading }
+            onNodeWithText("Wymaga reakcji").performClick()
+            onNodeWithText("Anna Zielińska").assertExists()
+            capture("requests-pl")
+            onAllNodesWithText("Akceptuj prośbę")[0].performClick()
+            waitUntil { model.state.value.openRequests.none { it.id == "s2" } }
+            onNodeWithContentDescription("Wstecz").performClick()
+            model.navigate(Route.History)
+            capture("history-pl")
+            onAllNodesWithText("Odbyła się").onFirst().assertExists()
         } finally { store.clear() }
     }
 
@@ -170,13 +196,12 @@ class TrainerUiTest {
         try {
             setContent { TrainerApp(model) }
             waitUntil { !model.state.value.loading }
+            model.destination(Destination.Calendar)
             model.date(kotlinx.datetime.LocalDate(2026, 10, 29))
             onNodeWithTag("calendar-list").performScrollToNode(hasText("Marek Wiśniewski"))
-            onNodeWithText("Prośba o zmianę terminu").assertExists()
-            onNodeWithText("Obecnie: 28 paź · 16:00").assertExists()
+            onNodeWithText("Przełożenie z", substring = true).assertExists()
             capture("calendar-proposal-pl")
             onNodeWithText("Marek Wiśniewski").performClick()
-            onNodeWithText("Obecny potwierdzony termin").assertExists()
             onNodeWithText("16:00 – 17:00").assertExists()
             model.back()
             val session = model.state.value.data!!.sessions.first { it.id == "s1" }
@@ -188,7 +213,7 @@ class TrainerUiTest {
             onNodeWithText("Oczekuje na klienta").assertExists()
             capture("calendar-waiting-pl")
             model.date(kotlinx.datetime.LocalDate(2026, 10, 26))
-            onNodeWithTag("calendar-list").performScrollToNode(hasText("Zrealizowana"))
+            onNodeWithTag("calendar-list").performScrollToNode(hasContentDescription("Odbyła się"))
             capture("calendar-completed-pl")
         } finally { store.clear() }
     }
@@ -201,7 +226,7 @@ class TrainerUiTest {
         try {
             setContent { TrainerApp(model, showNavigation = false, createRequest = create.value, onMainRouteChanged = { mainRoute = it }) }
             waitUntil { !model.state.value.loading && mainRoute }
-            onNodeWithText("Twój plan").assertExists()
+            onNodeWithText("Cześć").assertExists()
             onNodeWithText("Finanse").assertDoesNotExist()
             runOnIdle { create.value++ }
             onNodeWithText("Dodaj sesję").performClick()
@@ -209,7 +234,7 @@ class TrainerUiTest {
             onNodeWithText("Podopieczny").assertExists()
             onNodeWithContentDescription("Wstecz").performClick()
             waitUntil { mainRoute }
-            onNodeWithText("Twój plan").assertExists()
+            onNodeWithText("Cześć").assertExists()
         } finally { store.clear() }
     }
 

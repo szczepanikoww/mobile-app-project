@@ -2,6 +2,7 @@ package pl.trainer.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -86,7 +87,14 @@ private fun RowScope.NavItem(item: SharedNavItem) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Layout.tiny, Alignment.CenterVertically),
     ) {
-        Icon(item.icon, null, Modifier.size(24.dp), tint = tint)
+        // The active tab's icon sits on a soft accent pill (shared with the client shell).
+        Box(
+            Modifier.background(if (active) MaterialTheme.colorScheme.primaryContainer else androidx.compose.ui.graphics.Color.Transparent, Layout.pill)
+                .padding(horizontal = Layout.padding, vertical = Layout.tiny),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(item.icon, null, Modifier.size(24.dp), tint = tint)
+        }
         Text(item.label, color = tint,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             style = MaterialTheme.typography.labelMedium.copy(fontWeight = if (active) FontWeight.Bold else FontWeight.Medium))

@@ -2,6 +2,9 @@ package pl.trainerapp.feature.trainerprofile.data
 
 import com.trainingapp.contract.api.AvailabilityDto
 import com.trainingapp.contract.api.AvailabilityRuleDto
+import com.trainingapp.contract.api.GymDto
+import pl.trainerapp.feature.trainerprofile.model.GymOption
+import pl.trainerapp.feature.trainerprofile.model.GymSelection
 import com.trainingapp.contract.api.OfferDto
 import com.trainingapp.contract.api.OfferKind
 import com.trainingapp.contract.api.SaveOfferRequest
@@ -115,6 +118,29 @@ class RemoteTrainerProfileRepository(
         )
         api.send<SaveOfferRequest, OfferDto>(HttpMethod.Post, "trainer/offers", request)
         if (old != null) api.command(HttpMethod.Post, "trainer/offers/${old.id}/archive")
+    }
+
+    override suspend fun gyms(): GymSelection {
+        val all = api.get<List<GymDto>>("trainer/gyms")
+        val profile = api.get<TrainerProfileDto>("trainer/profile")
+        return GymSelection(
+            all = all.map { GymOption(it.id, it.name, listOf(it.street, it.city).filter { part -> part.isNotBlank() }.joinToString(", ")) },
+            selected = profile.gymIds.toSet(),
+        )
+    }
+
+    override suspend fun saveGyms(ids: Set<String>) {
+        val current = api.get<TrainerProfileDto>("trainer/profile")
+        val body = SaveTrainerProfileRequest(
+            displayName = current.displayName,
+            headline = current.headline,
+            bio = current.bio,
+            specialties = current.specialties,
+            isPublic = current.isPublic,
+            sessionBufferMinutes = current.sessionBufferMinutes,
+            gymIds = ids.toList(),
+        )
+        api.send<SaveTrainerProfileRequest, TrainerProfileDto>(HttpMethod.Put, "trainer/profile", body)
     }
 
     override suspend fun saveSettings(settings: TrainerSettings) {

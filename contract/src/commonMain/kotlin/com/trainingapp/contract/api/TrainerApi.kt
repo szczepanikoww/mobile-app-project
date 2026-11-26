@@ -74,6 +74,8 @@ data class ClientSummaryDto(
     val status: RelationshipStatus,
     /** The only financial fact the client list shows (CLAUDE.md §7). */
     val hasOverduePayment: Boolean,
+    /** The trainer moved the client to the archive; reversible, the relationship stays active. */
+    val archived: Boolean = false,
 )
 
 @Serializable
@@ -90,6 +92,8 @@ data class TrainerDashboardDto(
     /** The latest private note per client id, written by this trainer. */
     val notes: Map<String, String>,
     val serverNow: ApiInstant,
+    /** The trainer's private comment per session id (only sessions that have one). */
+    val sessionComments: Map<String, String> = emptyMap(),
 )
 
 @Serializable
@@ -259,6 +263,10 @@ data class NoteDto(val id: String, val body: String, val createdAt: ApiInstant, 
 @Serializable
 data class SaveNoteRequest(val body: String)
 
+/** The trainer's private comment on a session; an empty [body] removes it. */
+@Serializable
+data class SessionCommentRequest(val body: String)
+
 /**
  * Private information the client enters about themself; the trainer reads it with the client's
  * HEALTH_QUESTIONNAIRE grant (decision: client-entered, see docs/features/trainer-backend.md). Dates `YYYY-MM-DD`.
@@ -280,7 +288,15 @@ data class ClientInformationDto(
 data class InviteDto(val code: String, val expiresAt: ApiInstant, val maxUses: Int, val usedCount: Int)
 
 @Serializable
-data class CreateInviteRequest(val validDays: Int = 7, val maxUses: Int = 1)
+data class CreateInviteRequest(val validDays: Int = 7, val maxUses: Int = 1) {
+    companion object {
+        /** The trainer's permanent invite link: these exact values; revoked by generating a new one. */
+        const val PERMANENT_DAYS = 3650
+        const val PERMANENT_USES = 10_000
+
+        fun permanent() = CreateInviteRequest(PERMANENT_DAYS, PERMANENT_USES)
+    }
+}
 
 // ---------------------------------------------------------------- profile and price list
 

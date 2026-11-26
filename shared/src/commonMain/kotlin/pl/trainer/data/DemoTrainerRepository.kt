@@ -32,7 +32,7 @@ class DemoTrainerRepository(
             DemoScenario.Error -> throw TrainerException(Failure.Load)
             DemoScenario.Denied -> throw TrainerException(Failure.Denied)
             DemoScenario.Empty -> return TrainerDashboard(emptyList(), emptyList(), emptyList())
-            else -> return store.transaction(changes = false) { dashboard() }
+            else -> return store.transaction(changes = false) { dashboard() }.copy(now = serverNow())
         }
     }
 
@@ -44,7 +44,7 @@ class DemoTrainerRepository(
             DemoScenario.Error -> throw TrainerException(Failure.Save)
             else -> Unit
         }
-        return store.transaction { block(); dashboard() }
+        return store.transaction { block(); dashboard() }.copy(now = serverNow())
     }
 
     private fun DemoSchedulingStore.current(id: String, revision: Int): Session {
@@ -147,6 +147,17 @@ class DemoTrainerRepository(
     override suspend fun saveNote(clientId: String, note: String) = change {
         if (data.clients.none { it.id == clientId && it.active }) throw TrainerException(Failure.Denied)
         data = data.copy(notes = data.notes + (clientId to note))
+    }
+
+    override suspend fun setArchived(clientId: String, archived: Boolean) = change {
+        if (data.clients.none { it.id == clientId }) throw TrainerException(Failure.Conflict)
+        data = data.copy(clients = data.clients.map { if (it.id == clientId) it.copy(active = !archived, archived = archived) else it })
+    }
+
+    override suspend fun saveSessionComment(sessionId: String, comment: String) = change {
+        if (data.sessions.none { it.id == sessionId && trainerOf(it) == DemoTrainerId }) throw TrainerException(Failure.Conflict)
+        val text = comment.trim()
+        data = data.copy(sessionComments = if (text.isEmpty()) data.sessionComments - sessionId else data.sessionComments + (sessionId to text))
     }
 
     override suspend fun loadClientInformation(clientId: String): ClientInformation {
@@ -252,3 +263,14 @@ fun demoDashboard() = TrainerDashboard(
         requestedAt = it.requestedAt ?: if (it.status == SessionStatus.Requested) at(28, 9) else null) },
     blocks = listOf(AvailabilityBlock("b1", at(28, 12), at(28, 13))),
 )
+
+/** The demo trainer's invite link: a fixed code; "new link" changes it in memory. */
+class DemoInviteLinks(private val latencyMillis: Long = 250) : pl.trainer.domain.InviteLinkSource {
+    private var generation = 1
+
+    private fun link() = "TRENER${generation.toString().padStart(3, '0')}".let { pl.trainer.domain.InviteLink(it, pl.trainer.domain.InviteBaseUrl + it) }
+
+    override suspend fun current(): pl.trainer.domain.InviteLink { delay(latencyMillis); return link() }
+
+    override suspend fun regenerate(): pl.trainer.domain.InviteLink { delay(latencyMillis); generation++; return link() }
+}

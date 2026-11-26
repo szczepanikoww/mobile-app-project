@@ -434,6 +434,13 @@ class TrainerSessions(private val db: Db, private val clock: ServerClock) {
         Sessions.selectAll().where { (Sessions.id eq sessionId) and (Sessions.trainerId eq trainerId) }.singleOrNull()
             ?: notFound("Session not found")
 
+    /** Saves the trainer's private comment on an own session (any status); a blank body removes it. */
+    suspend fun saveComment(trainerId: UUID, sessionId: UUID, request: com.trainingapp.contract.api.SessionCommentRequest): Unit = db.tx {
+        if (request.body.length > 2000) invalid("Comment too long")
+        lockOwnSession(trainerId, sessionId)
+        Sessions.update({ Sessions.id eq sessionId }) { it[trainerComment] = request.body.trim().ifBlank { null } }
+    }
+
     private fun lockOwnSession(trainerId: UUID, sessionId: UUID): ResultRow =
         Sessions.selectAll().where { (Sessions.id eq sessionId) and (Sessions.trainerId eq trainerId) }.forUpdate().singleOrNull()
             ?: notFound("Session not found")

@@ -1,0 +1,88 @@
+<resources>
+    <!-- Trainer redesign (docs/plans/trainer-redesign.md) -->
+    <string name="nav_plans">Plans</string>
+    <string name="block_time">Block time</string>
+    <string name="action_messages">Messages</string>
+    <string name="new_session_hint">Book a session with a trainee</string>
+    <string name="invite_row_hint">Send your link to the app</string>
+
+    <string name="start_greeting">Hi, %1$s</string>
+    <string name="start_greeting_plain">Hi</string>
+    <string name="start_next_session">Next session</string>
+    <string name="start_in_progress">In progress</string>
+    <string name="start_next_in">Next · in %1$d min</string>
+    <string name="start_no_sessions">No sessions planned</string>
+    <string name="start_no_sessions_body">Book a session with a trainee and it will show up here.</string>
+    <string name="start_requests">Needs your reply</string>
+    <string name="start_requests_none">No requests</string>
+    <string name="start_requests_count">Time requests: %1$d</string>
+    <string name="start_payments">Payments this week</string>
+    <string name="start_payments_failed">Payments could not be loaded.</string>
+    <string name="start_history">Session history</string>
+    <string name="start_history_to_mark">To mark: %1$d</string>
+    <string name="start_history_all_marked">All marked</string>
+
+    <string name="requests_empty">All done</string>
+    <string name="requests_empty_body">New booking and reschedule requests will show up here.</string>
+    <string name="request_kind_booking">Booking request</string>
+    <string name="request_kind_reschedule">Reschedule request</string>
+    <string name="request_kind_reschedule_from">Move from %1$s</string>
+
+    <string name="history_screen_empty">No past sessions</string>
+    <string name="history_screen_empty_body">Past sessions show up here, where you mark attendance.</string>
+    <string name="attendance_title">Attendance</string>
+    <string name="attendance_present">Took place</string>
+    <string name="attendance_no_show">No-show</string>
+    <string name="attendance_present_for">Took place: %1$s</string>
+    <string name="attendance_no_show_for">No-show: %1$s</string>
+    <string name="attendance_present_title">Did the session take place?</string>
+    <string name="attendance_present_body">The session will be marked as completed.</string>
+    <string name="attendance_no_show_title">Trainee didn't come?</string>
+    <string name="attendance_no_show_body">The session will be marked as a no-show.</string>
+
+    <string name="payments_empty">No payments this week</string>
+    <string name="payments_empty_body">Card payments for sessions will show up here.</string>
+
+    <string name="calendar_free">Free %1$s</string>
+
+    <string name="session_plan_title">Plan for this session</string>
+    <string name="session_comment_title">Comment</string>
+    <string name="session_comment_label">Note for this session</string>
+    <string name="session_comment_private">Only you can see it.</string>
+    <string name="session_comment_save">Save comment</string>
+
+    <string name="client_chat">Chat</string>
+    <string name="default_plan_title">Default plan</string>
+    <string name="client_sessions">Sessions</string>
+    <string name="client_sessions_upcoming">Upcoming</string>
+    <string name="client_sessions_past">Past</string>
+    <string name="archive_client">Move to archive</string>
+    <string name="archive_client_title">Move to archive?</string>
+    <string name="archive_client_body">The trainee leaves your current list. Sessions and plans stay, and you can restore them any time.</string>
+    <string name="archived_client_body">This trainee is in the archive.</string>
+    <string name="restore_client">Restore trainee</string>
+
+    <string name="invite_sheet_body">Send the link to the person you train. Once they sign up, they join your trainees.</string>
+    <string name="invite_link_label">Your link</string>
+    <string name="invite_code">Code: %1$s</string>
+    <string name="invite_share">Share link</string>
+    <string name="invite_copy">Copy link</string>
+    <string name="invite_copied">Copied</string>
+    <string name="invite_new_link">Generate a new link</string>
+    <string name="invite_new_link_title">Generate a new link?</string>
+    <string name="invite_new_link_body">The current link stops working. People who already joined stay your trainees.</string>
+    <string name="invite_failed">The link could not be loaded.</string>
+    <string name="invite_message">Join my trainees in the training app:</string>
+
+    <string name="profile_gyms_title">My gyms</string>
+    <string name="profile_gyms_hint">They are suggested as the place of a new session.</string>
+    <string name="profile_gyms_none">No gyms chosen yet.</string>
+    <string name="profile_gyms_choose">Choose gyms</string>
+    <string name="profile_gyms_save">Save</string>
+    <string name="profile_gyms_failed">The gyms could not be saved.</string>
+    <string name="profile_cancel">Cancel</string>
+    <string name="profile_hours_hint">Tap a day to change your working hours.</string>
+    <string name="profile_hours_from">From</string>
+    <string name="profile_hours_to">To</string>
+    <string name="profile_hours_failed">The hours could not be saved. Enter them like 08:00 and 16:00.</string>
+</resources>

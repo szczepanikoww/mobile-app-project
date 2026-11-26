@@ -1,6 +1,9 @@
 package com.trainingapp.server.scheduling
 
 import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.isNotNull
+import org.jetbrains.exposed.v1.core.inList
+import com.trainingapp.server.db.Sessions
 import com.trainingapp.contract.api.AvailabilityDto
 import com.trainingapp.contract.api.AvailabilityRuleDto
 import com.trainingapp.contract.api.CalendarBlockDto
@@ -55,8 +58,14 @@ class TrainerCalendar(private val db: Db, private val clock: ServerClock) {
             blocks = SessionReads.blocks(trainerId, start, end),
             notes = latestNotes(trainerId),
             serverNow = now,
+            sessionComments = sessionComments(trainerId, sessions.map { UUID.fromString(it.id) }),
         )
     }
+
+    private fun sessionComments(trainerId: UUID, ids: List<UUID>): Map<String, String> =
+        if (ids.isEmpty()) emptyMap() else Sessions.selectAll()
+            .where { (Sessions.trainerId eq trainerId) and (Sessions.id inList ids) and Sessions.trainerComment.isNotNull() }
+            .associate { it[Sessions.id].toString() to it[Sessions.trainerComment]!! }
 
     /** The newest non-deleted note per relationship, written by this trainer (notes are visible to the author only). */
     private fun latestNotes(trainerId: UUID): Map<String, String> =

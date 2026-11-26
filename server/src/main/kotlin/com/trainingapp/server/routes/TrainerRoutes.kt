@@ -78,6 +78,10 @@ fun Route.trainerRoutes(services: TrainerServices) {
                 post("/complete") {
                     call.respond(services.sessions.complete(call.trainerId(), call.uuidParam("id"), call.receive<RevisionRequest>()))
                 }
+                put("/comment") {
+                    services.sessions.saveComment(call.trainerId(), call.uuidParam("id"), call.receive<com.trainingapp.contract.api.SessionCommentRequest>())
+                    call.respond(HttpStatusCode.NoContent)
+                }
                 post("/no-show") {
                     call.respond(services.sessions.noShow(call.trainerId(), call.uuidParam("id"), call.receive<RevisionRequest>()))
                 }

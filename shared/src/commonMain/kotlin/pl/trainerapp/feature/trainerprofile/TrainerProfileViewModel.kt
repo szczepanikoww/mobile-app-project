@@ -20,6 +20,7 @@ class TrainerProfileViewModel(private val repository: TrainerProfileRepository) 
 
     init {
         refresh()
+        loadGyms()
     }
 
     fun onAction(action: TrainerProfileAction) {
@@ -30,6 +31,54 @@ class TrainerProfileViewModel(private val repository: TrainerProfileRepository) 
             TrainerProfileAction.SaveProfile -> saveProfile()
             is TrainerProfileAction.SetSetting -> setSetting(action.key, action.enabled)
             is TrainerProfileAction.SetDayEnabled -> setDayEnabled(action.index, action.enabled)
+            is TrainerProfileAction.SetDayHours -> setDayHours(action.index, action.hours)
+            is TrainerProfileAction.SaveGyms -> saveGyms(action.ids)
+        }
+    }
+
+    private fun loadGyms() {
+        viewModelScope.launch {
+            try {
+                val gyms = repository.gyms()
+                _state.update { it.copy(gyms = gyms, gymsFailed = false) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _state.update { it.copy(gymsFailed = true) }
+            }
+        }
+    }
+
+    private fun saveGyms(ids: Set<String>) {
+        val previous = _state.value.gyms ?: return
+        if (_state.value.gymsSaving) return
+        _state.update { it.copy(gyms = previous.copy(selected = ids), gymsSaving = true, gymsFailed = false) }
+        viewModelScope.launch {
+            try {
+                repository.saveGyms(ids)
+                _state.update { it.copy(gymsSaving = false) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Never show gyms that were not stored.
+                _state.update { it.copy(gyms = previous, gymsSaving = false, gymsFailed = true) }
+            }
+        }
+    }
+
+    private fun setDayHours(index: Int, hours: String) {
+        val previous = _state.value.availability
+        if (index !in previous.indices) return
+        val updated = previous.mapIndexed { i, day -> if (i == index) day.copy(enabled = true, hours = hours.trim()) else day }
+        _state.update { it.copy(availability = updated, availabilityFailed = false) }
+        viewModelScope.launch {
+            try {
+                repository.saveAvailability(updated)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _state.update { it.copy(availability = previous, availabilityFailed = true) }
+            }
         }
     }
 
@@ -135,19 +184,24 @@ class TrainerProfileViewModel(private val repository: TrainerProfileRepository) 
     private fun setDayEnabled(index: Int, enabled: Boolean) {
         val previous = _state.value.availability
         if (index !in previous.indices) return
-        val updated = previous.mapIndexed { i, day -> if (i == index) day.copy(enabled = enabled) else day }
-        _state.update { it.copy(availability = updated) }
+        // A day switched on without hours starts with a usual working day; the trainer can change it.
+        val updated = previous.mapIndexed { i, day ->
+            if (i != index) day else day.copy(enabled = enabled, hours = if (enabled && !day.hours.contains(':')) DefaultHours else day.hours)
+        }
+        _state.update { it.copy(availability = updated, availabilityFailed = false) }
         viewModelScope.launch {
             try {
                 repository.saveAvailability(updated)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _state.update { it.copy(availability = previous) }
+                _state.update { it.copy(availability = previous, availabilityFailed = true) }
             }
         }
     }
 }
+
+private const val DefaultHours = "08:00 – 16:00"
 
 private fun TrainerSettings.with(key: SettingKey, enabled: Boolean) = when (key) {
     SettingKey.NotifyMessages -> copy(notifyMessages = enabled)

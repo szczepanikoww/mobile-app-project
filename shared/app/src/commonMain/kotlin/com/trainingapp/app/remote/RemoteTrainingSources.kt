@@ -164,12 +164,25 @@ private suspend fun readLocalFile(path: String): ByteArray = withContext(Dispatc
  */
 class RemotePlanAssigner(private val api: TrainerApiClient) {
     @OptIn(kotlin.uuid.ExperimentalUuidApi::class)
-    suspend fun assign(clientId: String, templateId: String, versionNumber: Int, operationId: String = kotlin.uuid.Uuid.random().toString()): AssignedPlanDto {
+    suspend fun assign(
+        clientId: String,
+        templateId: String,
+        versionNumber: Int,
+        operationId: String = kotlin.uuid.Uuid.random().toString(),
+        sessionId: String? = null,
+    ): AssignedPlanDto {
         val version = api.get<PlanVersionDto>("trainer/plans/$templateId/versions/$versionNumber")
         return api.send<AssignPlanRequest, AssignedPlanDto>(
             HttpMethod.Post,
             "trainer/clients/$clientId/assigned-plan",
-            AssignPlanRequest(planVersionId = version.id, operationId = operationId),
+            AssignPlanRequest(planVersionId = version.id, sessionId = sessionId, operationId = operationId),
         )
+    }
+
+    /** The client's current plan from this trainer, or null when there is none. */
+    suspend fun activePlan(clientId: String): AssignedPlanDto? = try {
+        api.get<AssignedPlanDto>("trainer/clients/$clientId/assigned-plan")
+    } catch (e: TrainerException) {
+        if (e.failure == Failure.Conflict || e.failure == Failure.Load || e.failure == Failure.Denied) null else throw e
     }
 }
