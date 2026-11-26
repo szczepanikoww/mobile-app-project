@@ -204,4 +204,14 @@
     <string name="shortcut_sessions">Moje sesje</string>
     <string name="shortcut_chat">Napisz do trenera</string>
     <string name="shortcut_package">Mój pakiet</string>
+<string name="join_with_code">Mam kod od trenera</string>
+    <string name="join_with_code_hint">Kod jest w linku zaproszenia od trenera.</string>
+    <string name="join_code_label">Kod zaproszenia</string>
+    <string name="join_action">Dołącz</string>
+    <string name="join_code_required">Wpisz kod.</string>
+    <string name="join_code_not_found">Ten kod jest nieprawidłowy albo już wygasł. Poproś trenera o nowy link.</string>
+    <string name="join_code_offline">Brak połączenia. Spróbuj ponownie, gdy będziesz online.</string>
+    <string name="join_code_failed">Nie udało się dołączyć. Spróbuj ponownie.</string>
+    <string name="join_code_unavailable">Dołączanie kodem działa po połączeniu z serwerem.</string>
+    <string name="join_done">Dołączono do trenera: %1$s</string>
 </resources>

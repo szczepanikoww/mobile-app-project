@@ -97,6 +97,9 @@ fun App(
     host: (@Composable (WorkoutNavigationActions) -> Unit)? = null,
     openLiveWorkoutRequest: Int = 0,
     addToCalendar: ((ClientSession) -> Unit)? = null,
+    /** The code of an invite link that opened the app; offered to the client once they are signed in. */
+    inviteCode: String? = null,
+    onInviteCodeConsumed: () -> Unit = {},
 ) {
     // Client and guest views use the club palette; the trainer's shell keeps the teal one (one switch, at the root).
     val themeAuth: AuthRepository = koinInject()
@@ -218,6 +221,8 @@ fun App(
                             },
                             onLogOut = logOut,
                             onAddToCalendar = addToCalendar,
+                            pendingInviteCode = inviteCode,
+                            onInviteCodeConsumed = onInviteCodeConsumed,
                         ),
                         // A3 as a tab: the shell owns the header and the bottom navigation.
                         progressTab = {

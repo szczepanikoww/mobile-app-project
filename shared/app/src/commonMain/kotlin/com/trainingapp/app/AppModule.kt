@@ -206,6 +206,25 @@ private class SessionClientAccount(private val auth: AuthRepository) : ClientAcc
     }
 }
 
+/** The session-backed account plus joining a trainer with an invite code (`POST /v1/client/invites/{code}/redeem`). */
+private class RemoteClientAccount(private val session: ClientAccount, private val api: ClientApi) : ClientAccount by session {
+    override suspend fun joinTrainer(code: String): ClientAccount.JoinResult = try {
+        val joined = api.send<Unit, com.trainingapp.contract.account.JoinedTrainerDto>(
+            io.ktor.http.HttpMethod.Post, "v1/client/invites/${code.trim().uppercase()}/redeem",
+            response = com.trainingapp.contract.account.JoinedTrainerDto.serializer(),
+        )
+        if (joined != null) ClientAccount.JoinResult.Joined(joined.trainerName) else ClientAccount.JoinResult.Failed
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (e: pl.trainer.data.remote.client.ClientApiOfflineException) {
+        ClientAccount.JoinResult.Offline
+    } catch (e: pl.trainer.data.remote.client.ClientApiHttpException) {
+        if (e.status == 404) ClientAccount.JoinResult.NotFound else ClientAccount.JoinResult.Failed
+    } catch (e: Exception) {
+        ClientAccount.JoinResult.Failed
+    }
+}
+
 /** A public trainer profile from the guest catalogue, as the demo server needs it for a booking request. */
 private fun TrainerProfile.toCatalogTrainer() = CatalogTrainer(
     id = summary.id,
@@ -422,6 +441,8 @@ fun remoteModule(
     // Client sessions, requests, cancellations and wallet (`/v1/client`). One update counter, so a cancellation
     // fee also refreshes the wallet.
     single<ClientApi> { ApiClientAdapter(get()) }
+    // "I have a code from my trainer" needs the server: the remote account adds it to the session-backed one.
+    single<ClientAccount> { RemoteClientAccount(SessionClientAccount(get()), get()) }
     single(ClientUpdates) { MutableStateFlow(0L) }
     single<ClientScheduleRepository> {
         val auth: AuthRepository = get()

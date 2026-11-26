@@ -204,4 +204,14 @@
     <string name="shortcut_sessions">My sessions</string>
     <string name="shortcut_chat">Message your trainer</string>
     <string name="shortcut_package">My package</string>
+<string name="join_with_code">I have a code from my trainer</string>
+    <string name="join_with_code_hint">The code is in your trainer's invite link.</string>
+    <string name="join_code_label">Invite code</string>
+    <string name="join_action">Join</string>
+    <string name="join_code_required">Enter the code.</string>
+    <string name="join_code_not_found">This code is not valid or has expired. Ask your trainer for a new link.</string>
+    <string name="join_code_offline">You're offline. Try again when you're connected.</string>
+    <string name="join_code_failed">Couldn't join. Try again.</string>
+    <string name="join_code_unavailable">Joining with a code needs the server connection.</string>
+    <string name="join_done">You joined your trainer: %1$s</string>
 </resources>

@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.AddAPhoto
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material3.Icon
@@ -60,6 +61,8 @@ data class ClientProfileActions(
     val onSwitchToTrainer: (() -> Unit)?,
     val onLogOut: () -> Unit,
     val onFindTrainer: () -> Unit,
+    /** "Mam kod od trenera". */
+    val onJoinWithCode: () -> Unit = {},
     /** Options whose features do not exist yet (password change, terms). */
     val onUnavailable: () -> Unit,
 )
@@ -148,6 +151,7 @@ private fun ProfileTab(
                     }
                 }
             }
+            ActionRow(Icons.Outlined.Key, stringResource(Res.string.join_with_code), actions.onJoinWithCode, subtitle = stringResource(Res.string.join_with_code_hint))
         }
     }
 }
@@ -181,6 +185,42 @@ private fun SettingsTab(actions: ClientProfileActions) {
         icon = Icons.AutoMirrored.Outlined.Logout,
         modifier = Modifier.fillMaxWidth(),
     )
+}
+
+/** "Mam kod od trenera": the code from the trainer's invite; joining waits for the server. */
+@Composable
+internal fun JoinTrainerSheet(
+    state: com.trainingapp.feature.client.presentation.JoinState,
+    onChange: (String) -> Unit,
+    onJoin: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AppBottomSheet(onDismiss = onDismiss, title = stringResource(Res.string.join_with_code)) {
+        val error = when (state.error) {
+            com.trainingapp.feature.client.presentation.JoinError.Required -> stringResource(Res.string.join_code_required)
+            com.trainingapp.feature.client.presentation.JoinError.NotFound -> stringResource(Res.string.join_code_not_found)
+            com.trainingapp.feature.client.presentation.JoinError.Offline -> stringResource(Res.string.join_code_offline)
+            com.trainingapp.feature.client.presentation.JoinError.Failed -> stringResource(Res.string.join_code_failed)
+            com.trainingapp.feature.client.presentation.JoinError.Unavailable -> stringResource(Res.string.join_code_unavailable)
+            null -> null
+        }
+        AppTextField(
+            value = state.code,
+            onValueChange = onChange,
+            label = stringResource(Res.string.join_code_label),
+            error = error,
+            supportingText = stringResource(Res.string.join_with_code_hint),
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters, imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { onJoin() }),
+        )
+        PrimaryButton(
+            text = stringResource(Res.string.join_action),
+            onClick = onJoin,
+            enabled = state.code.isNotBlank(),
+            loading = state.joining,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
 }
 
 /**

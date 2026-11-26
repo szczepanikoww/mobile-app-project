@@ -40,6 +40,36 @@ class ClientProfileViewModelTest {
     @AfterTest
     fun tearDown() = Dispatchers.resetMain()
 
+    private class JoiningAccount(private val result: ClientAccount.JoinResult) : ClientAccount {
+        val codes = mutableListOf<String>()
+        override suspend fun saveDisplayName(name: String) = ClientAccount.SaveResult.Saved
+        override suspend fun joinTrainer(code: String): ClientAccount.JoinResult { codes += code; return result }
+    }
+
+    @Test
+    fun `an invite code joins the trainer and a wrong one keeps the sheet with the code`() = runTest(dispatcher) {
+        val wrong = ClientProfileViewModel(JoiningAccount(ClientAccount.JoinResult.NotFound))
+        wrong.openJoin("abc 123")
+        assertEquals("ABC 123", wrong.state.value.join?.code)
+        wrong.changeJoinCode("abc-123")
+        wrong.submitJoin()
+        runCurrent()
+        assertEquals("ABC123", wrong.state.value.join?.code)
+        assertEquals(com.trainingapp.feature.client.presentation.JoinError.NotFound, wrong.state.value.join?.error)
+
+        val account = JoiningAccount(ClientAccount.JoinResult.Joined("Anna Trener"))
+        val vm = ClientProfileViewModel(account)
+        vm.openJoin()
+        vm.submitJoin()
+        assertEquals(com.trainingapp.feature.client.presentation.JoinError.Required, vm.state.value.join?.error)
+        vm.changeJoinCode("trener001")
+        vm.submitJoin()
+        runCurrent()
+        assertEquals(listOf("TRENER001"), account.codes)
+        assertNull(vm.state.value.join)
+        assertEquals("Anna Trener", vm.state.value.joinedTrainer)
+    }
+
     @Test
     fun `an empty or too long name is not sent`() = runTest(dispatcher) {
         val account = FakeAccount()

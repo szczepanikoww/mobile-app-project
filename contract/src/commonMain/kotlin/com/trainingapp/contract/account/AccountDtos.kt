@@ -2,6 +2,10 @@ package com.trainingapp.contract.account
 
 import kotlinx.serialization.Serializable
 
+/** The trainer a client joined with an invite code ("Mam kod od trenera"). */
+@Serializable
+data class JoinedTrainerDto(val trainerId: String, val trainerName: String, val relationshipId: String)
+
 /** A role is held when its profile row exists (G4). The active role is chosen in the app only. */
 @Serializable
 enum class RoleDto { TRAINER, CLIENT }

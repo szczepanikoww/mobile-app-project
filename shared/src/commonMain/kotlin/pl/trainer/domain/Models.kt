@@ -183,8 +183,11 @@ interface InviteLinkSource {
 
 private val LineBreak = 10.toChar().toString()
 
-/** Where invite links point. The client-side "join" screen that opens them is not built yet (integration gap). */
-const val InviteBaseUrl = "https://trainingapp.example/join/"
+/**
+ * Where invite links point: the app's own scheme, which opens "I have a code from my trainer" with the code filled
+ * in (Android). A web address can replace it once the project has a domain; the code works on its own too.
+ */
+const val InviteBaseUrl = "trainingapp://join/"
 
 /** A full fee waiver with an optional reason the client can see. */
 data class FeeWaiver(val reason: String? = null)

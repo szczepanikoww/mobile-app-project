@@ -77,6 +77,9 @@ data class ClientShellActions(
     val onLogOut: () -> Unit,
     /** The Android calendar insert intent (G5, D6); null on desktop. */
     val onAddToCalendar: ((ClientSession) -> Unit)? = null,
+    /** The code of an invite link that opened the app; the "Mam kod od trenera" sheet starts with it. */
+    val pendingInviteCode: String? = null,
+    val onInviteCodeConsumed: () -> Unit = {},
 )
 
 /**
@@ -224,6 +227,7 @@ fun ClientShell(
                             onSwitchToTrainer = actions.onSwitchToTrainer,
                             onLogOut = actions.onLogOut,
                             onFindTrainer = actions.onFindTrainer,
+                            onJoinWithCode = { profile.openJoin() },
                             onUnavailable = { scope.launch { snackbar.showSnackbar(notAvailable) } },
                         ),
                     )
@@ -316,6 +320,21 @@ fun ClientShell(
         )
     }
     scheduleState.policy?.let { policy -> PolicySheet(policy, onDismiss = schedule::closePolicy) }
+    profileState.join?.let { join ->
+        JoinTrainerSheet(state = join, onChange = profile::changeJoinCode, onJoin = profile::submitJoin, onDismiss = profile::closeJoin)
+    }
+    val joinedMessage = profileState.joinedTrainer?.let { stringResource(Res.string.join_done, it) }
+    LaunchedEffect(joinedMessage) {
+        if (joinedMessage != null) {
+            profile.dismissJoined()
+            schedule.reload()
+            snackbar.showSnackbar(joinedMessage)
+        }
+    }
+    // An invite link opened the app: the sheet starts with its code.
+    LaunchedEffect(actions.pendingInviteCode) {
+        actions.pendingInviteCode?.let { code -> profile.openJoin(code); actions.onInviteCodeConsumed() }
+    }
     profileState.editor?.let { editor ->
         EditNameSheet(
             state = editor,

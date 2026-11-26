@@ -170,6 +170,45 @@ class IdentityService(private val db: Db) {
         PushTokens.deleteWhere { (PushTokens.token eq token) and (PushTokens.userId eq user.id) }
     }
 
+    /**
+     * The client joins the trainer of an invite code: an active relationship with the default grants, as if the
+     * trainer had confirmed a first booking. Joining a trainer the client already has is idempotent and does not use
+     * the code again. An unknown, expired or used-up code is NOT_FOUND; the trainer's own code is INVALID.
+     */
+    suspend fun redeemInvite(client: CurrentUser, code: String): com.trainingapp.contract.account.JoinedTrainerDto = db.tx {
+        val normalized = code.trim().uppercase()
+        if (normalized.isEmpty() || normalized.length > 32) throw invalid("code")
+        val now = dbNow().toOffset()
+        val invite = InviteCodes.selectAll().where { InviteCodes.code eq normalized }
+            .forUpdate(org.jetbrains.exposed.v1.core.vendors.ForUpdateOption.ForUpdate).singleOrNull()
+            ?.takeIf { it[InviteCodes.expiresAt] > now && it[InviteCodes.usedCount] < it[InviteCodes.maxUses] }
+            ?: throw com.trainingapp.server.common.notFound("invite")
+        val trainerId = invite[InviteCodes.trainerId]
+        if (trainerId == client.id) throw invalid("code")
+        val existing = openRelationship(trainerId, client.id)
+        val relationship = when {
+            existing?.status == RelationshipStatus.ACTIVE -> existing
+            existing != null -> existing.also { activate(it.id) }
+            else -> {
+                val id = Ids.v7()
+                TrainerClients.insert {
+                    it[TrainerClients.id] = id
+                    it[TrainerClients.trainerId] = trainerId
+                    it[TrainerClients.clientId] = client.id
+                    it[status] = RelationshipStatus.PENDING
+                    it[origin] = "INVITE_CODE"
+                }
+                activate(id)
+                Relationship(id, trainerId, client.id, RelationshipStatus.ACTIVE)
+            }
+        }
+        if (existing?.status != RelationshipStatus.ACTIVE) {
+            InviteCodes.update({ InviteCodes.code eq normalized }) { it[usedCount] = invite[InviteCodes.usedCount] + 1 }
+        }
+        val name = AppUsers.selectAll().where { AppUsers.id eq trainerId }.single()[AppUsers.displayName]
+        com.trainingapp.contract.account.JoinedTrainerDto(trainerId.toString(), name, relationship.id.toString())
+    }
+
     // ----- Used by other modules inside their transactions -----
 
     fun JdbcTransaction.relationship(id: Uuid): Relationship? =
