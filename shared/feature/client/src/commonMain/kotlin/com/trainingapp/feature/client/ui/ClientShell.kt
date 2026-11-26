@@ -222,12 +222,15 @@ fun ClientShell(
                         displayName = displayName,
                         initials = initials,
                         trainers = scheduleState.schedule?.trainers,
+                        gyms = profileState.gyms,
+                        gymsFailed = profileState.gymsFailed,
                         actions = ClientProfileActions(
                             onEditDetails = { profile.openEditor(displayName) },
                             onSwitchToTrainer = actions.onSwitchToTrainer,
                             onLogOut = actions.onLogOut,
                             onFindTrainer = actions.onFindTrainer,
                             onJoinWithCode = { profile.openJoin() },
+                            onSaveGyms = profile::saveGyms,
                             onUnavailable = { scope.launch { snackbar.showSnackbar(notAvailable) } },
                         ),
                     )

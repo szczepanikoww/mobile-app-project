@@ -1,5 +1,13 @@
 package com.trainingapp.feature.client.ui
 
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.Checkbox
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -63,6 +71,8 @@ data class ClientProfileActions(
     val onFindTrainer: () -> Unit,
     /** "Mam kod od trenera". */
     val onJoinWithCode: () -> Unit = {},
+    /** "Moje siłownie": saves the chosen gym ids. */
+    val onSaveGyms: (Set<String>) -> Unit = {},
     /** Options whose features do not exist yet (password change, terms). */
     val onUnavailable: () -> Unit,
 )
@@ -80,6 +90,8 @@ fun ClientProfileContent(
     trainers: List<TrainerRef>?,
     actions: ClientProfileActions,
     modifier: Modifier = Modifier,
+    gyms: com.trainingapp.feature.client.presentation.ClientGyms? = null,
+    gymsFailed: Boolean = false,
 ) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
     Column(
@@ -96,6 +108,7 @@ fun ClientProfileContent(
         )
         if (tab == 0) {
             ProfileTab(displayName, initials, isAlsoTrainer = actions.onSwitchToTrainer != null, trainers, actions)
+            if (gyms != null) ClientGymsSection(gyms, gymsFailed, actions.onSaveGyms)
         } else {
             SettingsTab(actions)
         }
@@ -185,6 +198,47 @@ private fun SettingsTab(actions: ClientProfileActions) {
         icon = Icons.AutoMirrored.Outlined.Logout,
         modifier = Modifier.fillMaxWidth(),
     )
+}
+
+/** "Moje siłownie": the gyms the client attends; their trainers see them in the client card. */
+@Composable
+private fun ClientGymsSection(gyms: com.trainingapp.feature.client.presentation.ClientGyms, failed: Boolean, onSave: (Set<String>) -> Unit) {
+    var choosing by remember { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+        SectionHeader(stringResource(Res.string.client_gyms_title))
+        val chosen = gyms.all.filter { it.id in gyms.selected }
+        GroupedSurface {
+            Column(Modifier.padding(Spacing.cardPadding), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                if (chosen.isEmpty()) {
+                    Text(stringResource(Res.string.client_gyms_none), style = AppTheme.type.body, color = AppTheme.colors.textSecondary)
+                } else {
+                    chosen.forEach { Text(it.name, style = AppTheme.type.itemTitle, color = AppTheme.colors.text) }
+                }
+                if (failed) Text(stringResource(Res.string.client_gyms_failed), style = AppTheme.type.compactBody, color = AppTheme.colors.onErrorContainer)
+                AppTextButton(text = stringResource(Res.string.client_gyms_choose), onClick = { choosing = true })
+            }
+        }
+    }
+    if (choosing) {
+        var picked by remember { mutableStateOf(gyms.selected) }
+        AppBottomSheet(onDismiss = { choosing = false }, title = stringResource(Res.string.client_gyms_title)) {
+            gyms.all.forEach { gym ->
+                Row(
+                    Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(value = gym.id in picked, role = Role.Checkbox) {
+                        picked = if (it) picked + gym.id else picked - gym.id
+                    },
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Checkbox(checked = gym.id in picked, onCheckedChange = null)
+                    Column(Modifier.padding(start = Spacing.s)) {
+                        Text(gym.name, style = AppTheme.type.body, color = AppTheme.colors.text)
+                        if (gym.address.isNotBlank()) Text(gym.address, style = AppTheme.type.compactBody, color = AppTheme.colors.textSecondary)
+                    }
+                }
+            }
+            PrimaryButton(text = stringResource(Res.string.client_gyms_save), onClick = { choosing = false; onSave(picked) }, modifier = Modifier.fillMaxWidth())
+        }
+    }
 }
 
 /** "Mam kod od trenera": the code from the trainer's invite; joining waits for the server. */

@@ -214,4 +214,9 @@
     <string name="join_code_failed">Nie udało się dołączyć. Spróbuj ponownie.</string>
     <string name="join_code_unavailable">Dołączanie kodem działa po połączeniu z serwerem.</string>
     <string name="join_done">Dołączono do trenera: %1$s</string>
+    <string name="client_gyms_title">Moje siłownie</string>
+    <string name="client_gyms_none">Nie wybrano siłowni. Trener zobaczy, gdzie trenujesz.</string>
+    <string name="client_gyms_choose">Wybierz siłownie</string>
+    <string name="client_gyms_save">Zapisz</string>
+    <string name="client_gyms_failed">Nie udało się zapisać siłowni.</string>
 </resources>

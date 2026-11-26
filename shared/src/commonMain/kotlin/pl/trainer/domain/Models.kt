@@ -23,6 +23,8 @@ data class Client(
     val userId: String? = null,
     /** In the trainer's archive: [active] is false but the relationship continues and the client can be restored. */
     val archived: Boolean = false,
+    /** The gyms the client says they attend (names). */
+    val gyms: List<String> = emptyList(),
 )
 
 /** Private relationship-scoped information; kept outside client-list responses and fixtures. */

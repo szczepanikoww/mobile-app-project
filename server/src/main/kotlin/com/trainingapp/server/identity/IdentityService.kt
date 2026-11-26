@@ -209,6 +209,36 @@ class IdentityService(private val db: Db) {
         com.trainingapp.contract.account.JoinedTrainerDto(trainerId.toString(), name, relationship.id.toString())
     }
 
+    /** "Moje siłownie" of the client: every public gym and the client's choice. */
+    suspend fun clientGyms(client: CurrentUser): com.trainingapp.contract.account.ClientGymsDto = db.tx {
+        val all = com.trainingapp.server.catalogue.Gyms.selectAll().where { com.trainingapp.server.catalogue.Gyms.isPublic eq true }
+            .orderBy(com.trainingapp.server.catalogue.Gyms.name)
+            .map {
+                com.trainingapp.contract.account.GymChoiceDto(
+                    it[com.trainingapp.server.catalogue.Gyms.id].toString(),
+                    it[com.trainingapp.server.catalogue.Gyms.name],
+                    listOf(it[com.trainingapp.server.catalogue.Gyms.street], it[com.trainingapp.server.catalogue.Gyms.city]).filter { p -> p.isNotBlank() }.joinToString(", "),
+                )
+            }
+        val selected = ClientGyms.selectAll().where { ClientGyms.clientId eq client.id }.map { it[ClientGyms.gymId].toString() }
+        com.trainingapp.contract.account.ClientGymsDto(all, selected)
+    }
+
+    /** Replaces the client's gyms; only public gyms, at most 10. */
+    suspend fun saveClientGyms(client: CurrentUser, request: com.trainingapp.contract.account.SaveClientGymsRequest): com.trainingapp.contract.account.ClientGymsDto {
+        val ids = request.gymIds.distinct().map { runCatching { Uuid.parse(it) }.getOrElse { throw invalid("gymIds") } }
+        if (ids.size > 10) throw invalid("gymIds")
+        db.tx {
+            val known = if (ids.isEmpty()) emptySet() else com.trainingapp.server.catalogue.Gyms.selectAll()
+                .where { (com.trainingapp.server.catalogue.Gyms.id inList ids) and (com.trainingapp.server.catalogue.Gyms.isPublic eq true) }
+                .map { it[com.trainingapp.server.catalogue.Gyms.id] }.toSet()
+            if (known.size != ids.size) throw invalid("gymIds")
+            ClientGyms.deleteWhere { ClientGyms.clientId eq client.id }
+            ids.forEach { gym -> ClientGyms.insert { it[clientId] = client.id; it[gymId] = gym } }
+        }
+        return clientGyms(client)
+    }
+
     // ----- Used by other modules inside their transactions -----
 
     fun JdbcTransaction.relationship(id: Uuid): Relationship? =

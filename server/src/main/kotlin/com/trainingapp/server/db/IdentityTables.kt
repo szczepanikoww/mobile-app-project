@@ -51,6 +51,13 @@ object TrainerClients : Table("identity.trainer_client") {
     override val primaryKey = PrimaryKey(id)
 }
 
+/** The gyms a client attends (V11); the trainer reads their names. */
+object ClientGyms : Table("identity.client_gym") {
+    val clientId = javaUUID("client_id")
+    val gymId = javaUUID("gym_id")
+    override val primaryKey = PrimaryKey(clientId, gymId)
+}
+
 /** Scoped access a client gives the trainer; revoked when the relationship ends. */
 object AccessGrants : Table("identity.access_grant") {
     val id = javaUUID("id")

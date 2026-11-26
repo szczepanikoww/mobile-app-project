@@ -214,4 +214,9 @@
     <string name="join_code_failed">Couldn't join. Try again.</string>
     <string name="join_code_unavailable">Joining with a code needs the server connection.</string>
     <string name="join_done">You joined your trainer: %1$s</string>
+    <string name="client_gyms_title">My gyms</string>
+    <string name="client_gyms_none">No gyms chosen. Your trainer will see where you train.</string>
+    <string name="client_gyms_choose">Choose gyms</string>
+    <string name="client_gyms_save">Save</string>
+    <string name="client_gyms_failed">The gyms could not be saved.</string>
 </resources>

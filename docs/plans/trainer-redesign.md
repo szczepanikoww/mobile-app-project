@@ -124,10 +124,19 @@ Implemented:
 
 Server contract changes: `ClientSummaryDto.archived`, `TrainerDashboardDto.sessionComments`, `SessionCommentRequest`, `CreateInviteRequest.permanent()`; routes `POST trainer/clients/{id}/archive|restore`, `PUT trainer/sessions/{id}/comment`.
 
+### Follow-up (2026-11-26, second round)
+
+| Area | Where |
+| --- | --- |
+| Session plans stored as `SESSION` beside the client's ACTIVE plan; the client trains it on that session's day | `V8__session_plans_and_attendance.sql`, `TrainerTraining.assign`, `TrainingService.today` |
+| Attendance correction completed ↔ no-show (append-only log, moves no money; a charged no-show fee blocks it) | `POST trainer/sessions/{id}/attendance`, history list, session details |
+| Invite redemption: "I have a code from my trainer" in the client profile; Android opens `trainingapp://join/CODE` | `POST v1/client/invites/{code}/redeem`, `ClientProfileContent`, `MainActivity` |
+| "Od trenera": the trainer's note and video on library exercises (video shown before the images) | `V9__trainer_exercise_notes.sql`, `trainer/exercises/{id}/note`, `ExerciseDetailScreen` |
+| Photo gallery in the trainer profile (up to 9, visible like the profile photo) | `V10__profile_gallery.sql`, `/v1/me/gallery`, `ProfileGallery.kt` |
+| Client's gyms: chosen in the client profile, shown in the trainer's client card | `V11__client_gyms.sql`, `v1/client/gyms`, `ClientSummaryDto.gyms` |
+
 Known gaps:
 
-- The client side of the invite link (a screen that opens `InviteBaseUrl` and redeems the code) does not exist; `InviteBaseUrl` is a placeholder domain.
-- A plan assigned to a session also becomes the client's current plan: the server keeps one ACTIVE plan per client.
-- Attendance cannot be changed once marked (the server only allows it from CONFIRMED).
-- The trainer's own note and video on a base exercise, and the photo gallery in the profile, need server storage that does not exist yet.
-- The client's gyms in the client card need data the server does not have yet.
+- `InviteBaseUrl` uses the app's own scheme (`trainingapp://join/`); messengers may not make it clickable, so the message also carries the code. A web domain with app links would fix that.
+- Clients do not see the trainer's "Od trenera" note or video yet; only the trainer does.
+- Migrations V4 differ between this branch (`V4__profile_photo`) and `feature/stripe-payments` (`V4__prepaid_sessions`); renumber one before merging. A database already migrated by the other branch needs a fresh database (locally: `trainer_redesign`).

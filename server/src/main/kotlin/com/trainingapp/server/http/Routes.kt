@@ -216,6 +216,11 @@ fun Route.clientRoutes(s: Services) = authenticate(AUTH_API) {
             val exclude = call.request.queryParameters["excludeSessionId"]?.let { runCatching { kotlin.uuid.Uuid.parse(it) }.getOrNull() ?: throw invalid("excludeSessionId") }
             call.respond(s.scheduling.availableSlots(call.currentClient(s.identity), call.pathUuid("trainerId", "trainer"), date, exclude))
         }
+        // "Moje siłownie": the gyms the client attends; their trainers see them in the client card.
+        get("/gyms") { call.respond(s.identity.clientGyms(call.currentClient(s.identity))) }
+        put("/gyms") {
+            call.respond(s.identity.saveClientGyms(call.currentClient(s.identity), call.receive<com.trainingapp.contract.account.SaveClientGymsRequest>()))
+        }
         // "Mam kod od trenera": joins the trainer of an invite code (docs/plans/trainer-redesign.md).
         post("/invites/{code}/redeem") {
             call.respond(s.identity.redeemInvite(call.currentClient(s.identity), call.parameters["code"].orEmpty()))

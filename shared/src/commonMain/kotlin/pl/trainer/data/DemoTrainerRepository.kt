@@ -234,7 +234,7 @@ val DemoServerNow: Instant = at(28, 9, 20)
 
 fun demoDashboard() = TrainerDashboard(
     clients = listOf(
-        Client("c1", "Katarzyna Nowak", "KN"),
+        Client("c1", "Katarzyna Nowak", "KN", gyms = listOf("Studio Centrum", "Siłownia Wola")),
         Client("c2", "Marek Wiśniewski", "MW", hasOverduePayment = true),
         Client("c3", "Anna Zielińska", "AZ"),
         Client("c4", "Tomasz Wójcik", "TW"),

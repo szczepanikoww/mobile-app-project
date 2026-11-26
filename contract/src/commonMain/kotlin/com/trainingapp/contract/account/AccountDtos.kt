@@ -2,6 +2,18 @@ package com.trainingapp.contract.account
 
 import kotlinx.serialization.Serializable
 
+/** One public gym, for choosing "Moje siłownie". */
+@Serializable
+data class GymChoiceDto(val id: String, val name: String, val address: String)
+
+/** Every public gym and the ones the client attends (`GET /v1/client/gyms`). */
+@Serializable
+data class ClientGymsDto(val all: List<GymChoiceDto>, val selected: List<String>)
+
+/** `PUT /v1/client/gyms`: the gyms the client attends (replaces the list). */
+@Serializable
+data class SaveClientGymsRequest(val gymIds: List<String>)
+
 /** The trainer a client joined with an invite code ("Mam kod od trenera"). */
 @Serializable
 data class JoinedTrainerDto(val trainerId: String, val trainerName: String, val relationshipId: String)

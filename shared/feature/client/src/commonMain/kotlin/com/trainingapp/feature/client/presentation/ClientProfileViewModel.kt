@@ -14,6 +14,12 @@ interface ClientAccount {
     /** Only [SaveResult.Saved] means the server confirmed it; the session then carries the new name. */
     suspend fun saveDisplayName(name: String): SaveResult
 
+    /** "Moje siłownie": every public gym and the client's choice; null without a server. */
+    suspend fun gyms(): ClientGyms? = null
+
+    /** Stores the client's gyms; returns the stored state, or null when it could not be saved. */
+    suspend fun saveGyms(ids: Set<String>): ClientGyms? = null
+
     /** "Mam kod od trenera": joins the trainer of an invite code. Needs the server; the demo has none. */
     suspend fun joinTrainer(code: String): JoinResult = JoinResult.Unavailable
 
@@ -28,6 +34,11 @@ interface ClientAccount {
         data object Unavailable : JoinResult
     }
 }
+
+data class GymOption(val id: String, val name: String, val address: String)
+
+/** Every public gym and the ones the client attends. */
+data class ClientGyms(val all: List<GymOption>, val selected: Set<String>)
 
 enum class JoinError { Required, NotFound, Offline, Failed, Unavailable }
 
@@ -51,6 +62,10 @@ data class ClientProfileUiState(
     /** Set once after a confirmed save, for the shell's snackbar. */
     val saved: Boolean = false,
     val join: JoinState? = null,
+    /** "Moje siłownie"; null without a server or until loaded. */
+    val gyms: ClientGyms? = null,
+    val gymsSaving: Boolean = false,
+    val gymsFailed: Boolean = false,
     /** The trainer just joined, once, for the shell's snackbar. */
     val joinedTrainer: String? = null,
 )
@@ -104,6 +119,25 @@ class ClientProfileViewModel(private val account: ClientAccount) : ViewModel() {
     }
 
     fun dismissSaved() = mutableState.update { it.copy(saved = false) }
+
+    init {
+        viewModelScope.launch {
+            val gyms = runCatching { account.gyms() }.getOrNull()
+            mutableState.update { it.copy(gyms = gyms) }
+        }
+    }
+
+    fun saveGyms(ids: Set<String>) {
+        val previous = state.value.gyms ?: return
+        if (state.value.gymsSaving) return
+        mutableState.update { it.copy(gyms = previous.copy(selected = ids), gymsSaving = true, gymsFailed = false) }
+        viewModelScope.launch {
+            val saved = runCatching { account.saveGyms(ids) }.getOrNull()
+            mutableState.update {
+                if (saved != null) it.copy(gyms = saved, gymsSaving = false) else it.copy(gyms = previous, gymsSaving = false, gymsFailed = true)
+            }
+        }
+    }
 
     /** Opens the sheet, with [code] filled in when it came from an invite link. */
     fun openJoin(code: String = "") = mutableState.update { it.copy(join = JoinState(code = code.trim().uppercase())) }

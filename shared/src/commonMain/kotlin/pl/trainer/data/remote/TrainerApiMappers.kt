@@ -89,6 +89,7 @@ fun ClientSummaryDto.toModel(): Client = Client(
     hasOverduePayment = hasOverduePayment,
     userId = userId,
     archived = archived,
+    gyms = gyms,
 )
 
 fun CalendarBlockDto.toModel(): AvailabilityBlock = AvailabilityBlock(id, start, end)

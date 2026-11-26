@@ -76,6 +76,8 @@ data class ClientSummaryDto(
     val hasOverduePayment: Boolean,
     /** The trainer moved the client to the archive; reversible, the relationship stays active. */
     val archived: Boolean = false,
+    /** The gyms the client says they attend (names), for the client card. */
+    val gyms: List<String> = emptyList(),
 )
 
 @Serializable

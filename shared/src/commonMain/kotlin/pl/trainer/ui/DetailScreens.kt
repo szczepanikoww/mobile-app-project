@@ -1,5 +1,6 @@
 package pl.trainer.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -232,6 +233,17 @@ fun ClientDetailScreen(state: TrainerUiState, client: Client, onSession: (String
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Layout.medium)) {
             Portrait(client.initials, client.userId, size = 88.dp)
             Text(client.name, style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
+            // The gyms the client attends, as they entered them.
+            if (client.gyms.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(Layout.small, Alignment.CenterHorizontally),
+                verticalArrangement = Arrangement.spacedBy(Layout.small)) {
+                client.gyms.forEach { gym ->
+                    Row(Modifier.background(AppColors.surface, Layout.pill).padding(horizontal = Layout.medium, vertical = Layout.tiny),
+                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Layout.tiny)) {
+                        Icon(Icons.Outlined.LocationOn, null, Modifier.size(16.dp), tint = AppColors.brandStrong)
+                        Text(gym, style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(Layout.small)) {
                 if (onChat != null) QuickAction(Icons.AutoMirrored.Outlined.Chat, tr(Res.string.client_chat), onChat)
                 QuickAction(Icons.Outlined.EventAvailable, tr(Res.string.new_session), onNewSession)

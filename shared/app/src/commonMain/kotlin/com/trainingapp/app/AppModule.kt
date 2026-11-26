@@ -208,6 +208,24 @@ private class SessionClientAccount(private val auth: AuthRepository) : ClientAcc
 
 /** The session-backed account plus joining a trainer with an invite code (`POST /v1/client/invites/{code}/redeem`). */
 private class RemoteClientAccount(private val session: ClientAccount, private val api: ClientApi) : ClientAccount by session {
+    override suspend fun gyms(): com.trainingapp.feature.client.presentation.ClientGyms? = runCatching {
+        api.get("v1/client/gyms", com.trainingapp.contract.account.ClientGymsDto.serializer()).toModel()
+    }.getOrElse { if (it is kotlinx.coroutines.CancellationException) throw it else null }
+
+    override suspend fun saveGyms(ids: Set<String>): com.trainingapp.feature.client.presentation.ClientGyms? = runCatching {
+        api.send(
+            io.ktor.http.HttpMethod.Put, "v1/client/gyms",
+            com.trainingapp.contract.account.SaveClientGymsRequest(ids.toList()),
+            com.trainingapp.contract.account.SaveClientGymsRequest.serializer(),
+            com.trainingapp.contract.account.ClientGymsDto.serializer(),
+        )?.toModel()
+    }.getOrElse { if (it is kotlinx.coroutines.CancellationException) throw it else null }
+
+    private fun com.trainingapp.contract.account.ClientGymsDto.toModel() = com.trainingapp.feature.client.presentation.ClientGyms(
+        all = all.map { com.trainingapp.feature.client.presentation.GymOption(it.id, it.name, it.address) },
+        selected = selected.toSet(),
+    )
+
     override suspend fun joinTrainer(code: String): ClientAccount.JoinResult = try {
         val joined = api.send<Unit, com.trainingapp.contract.account.JoinedTrainerDto>(
             io.ktor.http.HttpMethod.Post, "v1/client/invites/${code.trim().uppercase()}/redeem",
