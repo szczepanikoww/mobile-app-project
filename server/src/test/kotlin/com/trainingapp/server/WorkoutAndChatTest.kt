@@ -49,7 +49,7 @@ class WorkoutAndChatTest : ApiTest() {
     }
 
     private val clientSubject = DemoSeed.CLIENT_SUBJECT
-    private val squat = DemoSeed.id("ex-squat").toString()
+    private val squat = DemoSeed.exSquat.toString()
 
     private suspend fun HttpClient.sync(vararg ops: SyncOperationDto, batch: Uuid = Ids.v7()) =
         post("/v1/client/workout-sync") { auth(clientSubject); json(); setBody(WorkoutSyncRequest(batch.toString(), ops.toList())) }.body<WorkoutSyncResponse>()

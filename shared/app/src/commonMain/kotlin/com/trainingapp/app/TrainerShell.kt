@@ -1,5 +1,9 @@
 package com.trainingapp.app
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Assignment
 import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
@@ -93,11 +97,23 @@ fun TrainerShell(actions: WorkoutNavigationActions) {
     }
     AppTheme {
         val trainer: TrainerViewModel = viewModel { TrainerViewModel(calendar) }
+        // A session opened from a notification: shown once the calendar is on screen and has fresh data.
+        var pendingSession by remember { mutableStateOf<String?>(null) }
         MainTrainerShell(
             repositories,
             trainerFeature = { destination, createRequest, onMain ->
                 LaunchedEffect(destination) {
                     trainer.destination(if (destination == TrainerDestination.Calendar) Destination.Calendar else Destination.Clients)
+                    // Requests and changes from clients arrive on the server; show them when the tab opens.
+                    if (api != null) trainer.reload()
+                }
+                // Cleared only after navigating: clearing it earlier would restart (and cancel) this effect.
+                LaunchedEffect(pendingSession) {
+                    val id = pendingSession ?: return@LaunchedEffect
+                    trainer.reload()
+                    withTimeoutOrNull(5_000) { trainer.state.first { s -> !s.loading && s.data?.sessions?.any { it.id == id } == true } }
+                    trainer.openSessionById(id)
+                    pendingSession = null
                 }
                 TrainerApp(
                     trainer,
@@ -109,6 +125,7 @@ fun TrainerShell(actions: WorkoutNavigationActions) {
             },
             onLogOut = actions.onLogOut,
             videoCard = AppTechniqueVideoCard,
+            onOpenSession = { pendingSession = it },
         )
     }
 }

@@ -115,6 +115,8 @@ fun TrainerShell(
     onLogOut: (() -> Unit)? = null,
     /** The technique-video player (A5); the app supplies it from the media feature. */
     videoCard: TechniqueVideoCard = NoTechniqueVideoCard,
+    /** Opens a session or booking request in the calendar feature (from a notification); null when there is none. */
+    onOpenSession: ((String) -> Unit)? = null,
 ) {
     var featureIsMain by remember { mutableStateOf(true) }
     var createRequest by remember { mutableStateOf(0) }
@@ -265,7 +267,11 @@ fun TrainerShell(
                                         routeKeys = arrayListOf()
                                         selected = TrainerDestination.Finance
                                     }
-                                    is NotificationTarget.Session -> showNotAvailable()
+                                    is NotificationTarget.Session -> if (onOpenSession != null && trainerFeature != null) {
+                                        routeKeys = arrayListOf()
+                                        selected = TrainerDestination.Calendar
+                                        onOpenSession(target.sessionId)
+                                    } else showNotAvailable()
                                     NotificationTarget.None -> Unit
                                 }
                             },

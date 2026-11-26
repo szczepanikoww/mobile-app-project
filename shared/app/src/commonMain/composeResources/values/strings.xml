@@ -23,4 +23,13 @@
     <string name="client_chats_find_body">Nie masz jeszcze trenera. Wybierz trenera, aby poprosić o termin i zacząć rozmowę.</string>
     <string name="client_chats_find_error">Nie udało się wczytać trenerów.</string>
     <string name="client_chats_find_none">Na razie nie ma dostępnych trenerów.</string>
+    <string name="assign_choose_client">Wybierz podopiecznego. Plan zastąpi jego obecny plan; zapisane treningi zostają bez zmian.</string>
+    <string name="assign_confirm">Przypisz plan</string>
+    <string name="assign_cancel">Anuluj</string>
+    <string name="assign_no_clients">Nie masz jeszcze aktywnych podopiecznych. Plan możesz przypisać, gdy klient zostanie Twoim podopiecznym.</string>
+    <string name="assign_failed">Nie udało się przypisać planu. Spróbuj ponownie.</string>
+    <string name="assign_offline">Brak połączenia. Plan nie został przypisany.</string>
+    <string name="assign_load_failed">Nie udało się pobrać listy podopiecznych.</string>
+    <string name="assign_done">Plan „%1$s” przypisany: %2$s</string>
+    <string name="assign_retry">Spróbuj ponownie</string>
 </resources>

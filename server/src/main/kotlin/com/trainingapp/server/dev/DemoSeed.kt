@@ -56,6 +56,13 @@ class DemoSeed(private val s: Services) {
         fun id(demoId: String): Uuid = Ids.derived(Uuid.NIL, "demo:$demoId")
         const val CLIENT_SUBJECT = "demo-client"
         const val TRAINER_SUBJECT = "demo-trainer"
+
+        // The ids of these exercises in the shared library (resources/seed/exercise_library.json, also bundled in the
+        // app), so the seeded plan refers to exercises the app knows and the library import keeps them.
+        val exSquat: Uuid = Uuid.parse("31027ab9-c68d-56f5-af10-0b76db519a50")
+        val exBench: Uuid = Uuid.parse("3a905a8f-a317-562b-aeb6-e1ae7cfea800")
+        val exRow: Uuid = Uuid.parse("8e6e40bb-5781-5c81-b6fc-ac944bbb684e")
+        val exPlank: Uuid = Uuid.parse("30440af6-d827-5149-a8e3-7b15d78d075b")
     }
 
     private data class GymSeed(val id: String, val name: String, val district: String, val street: String, val hours: List<OpeningHours>, val lat: String, val lng: String)
@@ -148,10 +155,10 @@ class DemoSeed(private val s: Services) {
             ClientProfiles.insert { it[userId] = id("tr-michal") }
             insertUser("demo-trainer-only", "Trener demo", trainer = true, client = false)
             with(s.training) {
-                insertGlobalExercise(id("ex-squat"), "Barbell_Squat", "Przysiad ze sztangą", "Barbell squat", TrackingType.WEIGHT_REPS, Equipment.BARBELL, MuscleGroup.QUADRICEPS)
-                insertGlobalExercise(id("ex-bench"), "Barbell_Bench_Press", "Wyciskanie sztangi leżąc", "Barbell bench press", TrackingType.WEIGHT_REPS, Equipment.BARBELL, MuscleGroup.CHEST)
-                insertGlobalExercise(id("ex-row"), "Bent_Over_Barbell_Row", "Wiosłowanie sztangą", "Bent-over barbell row", TrackingType.WEIGHT_REPS, Equipment.BARBELL, MuscleGroup.MIDDLE_BACK)
-                insertGlobalExercise(id("ex-plank"), "Plank", "Deska", "Plank", TrackingType.TIME, Equipment.BODY_ONLY, MuscleGroup.ABDOMINALS)
+                insertGlobalExercise(exSquat, "Barbell_Squat", "Przysiad ze sztangą", "Barbell squat", TrackingType.WEIGHT_REPS, Equipment.BARBELL, MuscleGroup.QUADRICEPS)
+                insertGlobalExercise(exBench, "Barbell_Bench_Press_-_Medium_Grip", "Wyciskanie sztangi leżąc", "Barbell bench press", TrackingType.WEIGHT_REPS, Equipment.BARBELL, MuscleGroup.CHEST)
+                insertGlobalExercise(exRow, "Bent_Over_Barbell_Row", "Wiosłowanie sztangą", "Bent-over barbell row", TrackingType.WEIGHT_REPS, Equipment.BARBELL, MuscleGroup.MIDDLE_BACK)
+                insertGlobalExercise(exPlank, "Plank", "Deska", "Plank", TrackingType.TIME, Equipment.BODY_ONLY, MuscleGroup.ABDOMINALS)
             }
         }
         // Transitions through the services: a booking request, its confirmation (activates the relationship and
@@ -190,22 +197,22 @@ class DemoSeed(private val s: Services) {
         tags = listOf("Siła"),
         days = listOf(
             PlanDayDto("day-a", "Dzień A", listOf(
-                PlannedExerciseDto("pe-a1", id("ex-squat").toString(), restSeconds = 150, sets = listOf(
+                PlannedExerciseDto("pe-a1", exSquat.toString(), restSeconds = 150, sets = listOf(
                     PlannedSetDto("ps-a1-w", SetType.WARM_UP, 8, 8, 40_000),
                     PlannedSetDto("ps-a1-1", SetType.WORKING, 5, 5, 80_000),
                     PlannedSetDto("ps-a1-2", SetType.WORKING, 5, 5, 80_000),
                 )),
-                PlannedExerciseDto("pe-a2", id("ex-bench").toString(), restSeconds = 120, sets = listOf(
+                PlannedExerciseDto("pe-a2", exBench.toString(), restSeconds = 120, sets = listOf(
                     PlannedSetDto("ps-a2-1", SetType.WORKING, 6, 8, 60_000),
                     PlannedSetDto("ps-a2-2", SetType.WORKING, 6, 8, 60_000),
                 )),
             )),
             PlanDayDto("day-b", "Dzień B", listOf(
-                PlannedExerciseDto("pe-b1", id("ex-row").toString(), restSeconds = 120, sets = listOf(
+                PlannedExerciseDto("pe-b1", exRow.toString(), restSeconds = 120, sets = listOf(
                     PlannedSetDto("ps-b1-1", SetType.WORKING, 8, 10, 50_000),
                     PlannedSetDto("ps-b1-2", SetType.WORKING, 8, 10, 50_000),
                 )),
-                PlannedExerciseDto("pe-b2", id("ex-plank").toString(), accessory = true, sets = listOf(
+                PlannedExerciseDto("pe-b2", exPlank.toString(), accessory = true, sets = listOf(
                     PlannedSetDto("ps-b2-1", SetType.WORKING, durationSeconds = 45),
                 )),
             )),

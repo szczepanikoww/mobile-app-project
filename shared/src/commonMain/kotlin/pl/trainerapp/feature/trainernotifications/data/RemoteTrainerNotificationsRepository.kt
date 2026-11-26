@@ -69,7 +69,7 @@ class RemoteTrainerNotificationsRepository(private val api: TrainerApiClient) : 
             if (s.status == SessionStatus.REQUESTED) {
                 items += TrainerNotification(
                     id = "request-${s.id}", type = NotificationType.Session,
-                    title = "Prośba o sesję od ${name(s.clientId)}", body = s.location,
+                    title = "Prośba o sesję: ${name(s.clientId)}", body = s.location,
                     detail = "${name(s.clientId)} prosi o potwierdzenie sesji. Miejsce: ${s.location}.",
                     at = s.requestedAt, zone = zone, read = false, target = target,
                 )
@@ -80,7 +80,7 @@ class RemoteTrainerNotificationsRepository(private val api: TrainerApiClient) : 
             ) {
                 items += TrainerNotification(
                     id = "proposal-${s.id}-${p.requestedAt}", type = NotificationType.Session,
-                    title = "Prośba o zmianę terminu od ${name(s.clientId)}", body = "Czeka na Twoją decyzję",
+                    title = "Prośba o zmianę terminu: ${name(s.clientId)}", body = "Czeka na Twoją decyzję",
                     detail = "${name(s.clientId)} proponuje nowy termin sesji. Do czasu Twojej decyzji obowiązuje dotychczasowy termin.",
                     at = p.requestedAt, zone = zone, read = false, target = target,
                 )

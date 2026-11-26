@@ -6,7 +6,10 @@ import com.trainingapp.contract.plan.PlanDayDto
 import com.trainingapp.contract.plan.PlannedExerciseDto
 import com.trainingapp.contract.plan.PlannedSetDto
 import com.trainingapp.contract.plan.PublishPlanRequest
+import com.trainingapp.contract.plan.PlanTemplateDto
+import com.trainingapp.contract.plan.PlanVersionDto
 import com.trainingapp.data.db.createTrainingDatabase
+import com.trainingapp.data.plan.PlanRemoteDataSource
 import com.trainingapp.data.plan.FakePlanRemoteDataSource
 import com.trainingapp.data.plan.LocalPlanRepository
 import com.trainingapp.domain.plan.DraftSetField
@@ -107,6 +110,79 @@ class PlanPersistenceTest {
         // Version 1 is untouched by version 2.
         assertEquals("Góra A", v1.response.version.body.name)
         assertEquals("Góra A v2", repository.getLatestVersion(templateId)?.body?.name)
+    }
+
+    /** A server with scripted templates; publishing is not used. */
+    private class ServerPlans(val templates: MutableList<PlanTemplateDto>, val versions: Map<String, PlanVersionDto>) : PlanRemoteDataSource {
+        var reachable = true
+        override suspend fun publish(request: PublishPlanRequest): PublishResult = PublishResult.Failed
+        override suspend fun fetchTemplates() = if (reachable) templates.toList() else null
+        override suspend fun fetchLatestVersion(templateId: String) = versions[templateId]
+    }
+
+    private fun serverTemplate(id: String, name: String, latest: Int, archivedAt: Long? = null) =
+        PlanTemplateDto(id, "trainer-1", name, latest, archivedAt, 500)
+
+    private fun serverVersion(templateId: String, number: Int, name: String) =
+        PlanVersionDto("v-$templateId-$number", templateId, number, 400, null, body(name))
+
+    @Test
+    fun refreshImportsServerTemplatesAndKeepsDrafts() = runTest {
+        val db = createTrainingDatabase(memoryDriver())
+        val server = ServerPlans(
+            mutableListOf(serverTemplate("t1", "FBW", 1), serverTemplate("t2", "Góra", 3), serverTemplate("t3", "Stary", 1, archivedAt = 9)),
+            mapOf("t1" to serverVersion("t1", 1, "FBW"), "t2" to serverVersion("t2", 3, "Góra v3"), "t3" to serverVersion("t3", 1, "Stary")),
+        )
+        val repository = LocalPlanRepository(db, server, clock, Dispatchers.IO)
+        // A local draft of t2 must survive the import.
+        val draft = SavePlanDraft(repository, clock)(editedDraft().copy(templateId = "t2", baseVersion = 1, name = "Moja Góra"))
+
+        repository.refresh()
+
+        val library = repository.observeLibrary().first()
+        assertEquals(setOf("t1", "t2"), library.mapNotNull { it.templateId }.toSet())
+        assertEquals(3, library.single { it.templateId == "t2" }.latestVersion)
+        assertEquals("Moja Góra", library.single { it.templateId == "t2" }.name)
+        assertEquals(draft, repository.findDraftForTemplate("t2"))
+        assertEquals("Góra v3", repository.getLatestVersion("t2")?.body?.name)
+        assertEquals("bench", library.single { it.templateId == "t1" }.firstExerciseId)
+    }
+
+    @Test
+    fun refreshDoesNotOverwriteNewerOrEqualLocalVersionsAndRespectsArchive() = runTest {
+        val db = createTrainingDatabase(memoryDriver())
+        val server = ServerPlans(mutableListOf(), emptyMap())
+        val repository = LocalPlanRepository(db, server, clock, Dispatchers.IO)
+        val local = FakePlanRemoteDataSource(db, network, trainer, TestIds("server"), clock, Dispatchers.IO)
+        val published = assertIs<PublishResult.Published>(local.publish(PublishPlanRequest("op-1", body = body("Lokalny v1"))))
+        val id = published.response.template.id
+        assertIs<PublishResult.Published>(local.publish(PublishPlanRequest("op-2", id, 1, body("Lokalny v2"))))
+        repository.archive(id)
+
+        // The server is behind (v1) and has not archived it: the local v2 and the local archive stay.
+        server.templates += serverTemplate(id, "Serwer v1", 1)
+        repository.refresh()
+        assertEquals("Lokalny v2", repository.getLatestVersion(id)?.body?.name)
+        assertTrue(repository.observeLibrary().first().isEmpty())
+
+        // A server-side archive is applied to a template that is up to date locally.
+        val other = assertIs<PublishResult.Published>(local.publish(PublishPlanRequest("op-3", body = body("Drugi"))))
+        server.templates += serverTemplate(other.response.template.id, "Drugi", 1, archivedAt = 77)
+        repository.refresh()
+        assertTrue(repository.observeLibrary().first().isEmpty())
+    }
+
+    @Test
+    fun refreshWhileServerUnreachableLeavesCache() = runTest {
+        val db = createTrainingDatabase(memoryDriver())
+        val server = ServerPlans(mutableListOf(serverTemplate("t1", "FBW", 1)), mapOf("t1" to serverVersion("t1", 1, "FBW")))
+        val repository = LocalPlanRepository(db, server, clock, Dispatchers.IO)
+        server.reachable = false
+        repository.refresh()
+        assertTrue(repository.observeLibrary().first().isEmpty())
+        server.reachable = true
+        repository.refresh()
+        assertEquals(listOf("t1"), repository.observeLibrary().first().map { it.templateId })
     }
 
     @Test

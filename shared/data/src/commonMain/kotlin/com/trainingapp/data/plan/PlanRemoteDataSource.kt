@@ -18,6 +18,12 @@ import kotlinx.coroutines.withContext
 /** `POST /plans` and `POST /plans/{id}/versions`. */
 interface PlanRemoteDataSource {
     suspend fun publish(request: PublishPlanRequest): PublishResult
+
+    /** `GET /plans`: the trainer's templates, archived ones included. Null when the server could not be reached. */
+    suspend fun fetchTemplates(): List<PlanTemplateDto>? = null
+
+    /** `GET /plans/{id}/versions/latest`. Null when unavailable. */
+    suspend fun fetchLatestVersion(templateId: String): PlanVersionDto? = null
 }
 
 /**
