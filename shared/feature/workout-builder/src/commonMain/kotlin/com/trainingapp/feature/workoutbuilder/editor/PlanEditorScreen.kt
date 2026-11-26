@@ -114,6 +114,7 @@ import com.trainingapp.designsystem.theme.Spacing
 import com.trainingapp.domain.common.AppLanguage
 import com.trainingapp.domain.format.LocaleFormats
 import com.trainingapp.domain.plan.DraftDay
+import com.trainingapp.domain.plan.DraftSetField
 import com.trainingapp.domain.plan.PlanDraftAction
 import com.trainingapp.domain.plan.PlanStats
 import com.trainingapp.domain.plan.PlanStatsCalculator
@@ -244,6 +245,9 @@ fun PlanEditorContent(
 ) {
     val draft = state.draft
     var settingsFor by rememberSaveable { mutableStateOf<String?>(null) }
+    // The rest block being edited: the planned exercise and the set it follows.
+    var restExerciseId by rememberSaveable { mutableStateOf<String?>(null) }
+    var restSetId by rememberSaveable { mutableStateOf<String?>(null) }
     var showTags by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
@@ -303,6 +307,7 @@ fun PlanEditorContent(
                                 issues = issues,
                                 onAction = onAction,
                                 onOpenSettings = { settingsFor = it },
+                                onEditRest = { plannedId, setId -> restExerciseId = plannedId; restSetId = setId },
                                 onReplace = { onReplaceExercise(day.id, it) },
                                 onRemove = { onRemoveExercise(day.id, it) },
                             )
@@ -322,12 +327,28 @@ fun PlanEditorContent(
                             onApply = { settings ->
                                 onAction(
                                     PlanDraftAction.UpdateSettings(
-                                        day.id, planned.id, settings.restSeconds, planned.rpeEnabled, settings.tempo, settings.note, settings.accessory,
+                                        day.id, planned.id, settings.restSeconds, settings.rpeEnabled, settings.tempo, settings.note, settings.accessory,
                                     ),
                                 )
                                 settingsFor = null
                             },
                             onDismiss = { settingsFor = null },
+                        )
+                    }
+                    val restPlanned = restExerciseId?.let { id -> day.exercises.firstOrNull { it.id == id } }
+                    val restSet = restSetId?.let { id -> restPlanned?.sets?.firstOrNull { it.id == id } }
+                    if (restPlanned != null && restSet != null) {
+                        val closeRest = { restExerciseId = null; restSetId = null }
+                        RestSheet(
+                            sheetKey = restSet.id,
+                            setLabel = state.exercises[restPlanned.exerciseId]?.name(languageTag).orEmpty(),
+                            currentRest = restSet.rest,
+                            defaultSeconds = restPlanned.restSeconds ?: PlanStatsCalculator.DEFAULT_REST_SECONDS,
+                            onApply = { text ->
+                                onAction(PlanDraftAction.UpdateSetValue(day.id, restPlanned.id, restSet.id, DraftSetField.REST, text))
+                                closeRest()
+                            },
+                            onDismiss = closeRest,
                         )
                     }
                     if (showTags) {
@@ -531,6 +552,7 @@ private fun DayExercises(
     issues: EditorIssues,
     onAction: (PlanDraftAction) -> Unit,
     onOpenSettings: (plannedExerciseId: String) -> Unit,
+    onEditRest: (plannedExerciseId: String, setId: String) -> Unit,
     onReplace: (plannedExerciseId: String) -> Unit,
     onRemove: (plannedExerciseId: String) -> Unit,
 ) {
@@ -564,6 +586,14 @@ private fun DayExercises(
                     onRemoveSet = { setId -> onAction(PlanDraftAction.RemoveSet(day.id, planned.id, setId)) },
                     onCycleSetType = { setId -> onAction(PlanDraftAction.CycleSetType(day.id, planned.id, setId)) },
                     onSetValue = { setId, field, text -> onAction(PlanDraftAction.UpdateSetValue(day.id, planned.id, setId, field, text)) },
+                    onEditRest = { setId -> onEditRest(planned.id, setId) },
+                    onToggleRpe = {
+                        onAction(
+                            PlanDraftAction.UpdateSettings(
+                                day.id, planned.id, planned.restSeconds, !planned.rpeEnabled, planned.tempo, planned.note, planned.accessory,
+                            ),
+                        )
+                    },
                 )
                 val dragHandle = Modifier.pointerInput(planned.id) {
                     detectDragGesturesAfterLongPress(

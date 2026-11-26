@@ -1,0 +1,39 @@
+{
+  "family": "trainer-db-init",
+  "requiresCompatibilities": ["FARGATE"],
+  "networkMode": "awsvpc",
+  "runtimePlatform": { "operatingSystemFamily": "LINUX", "cpuArchitecture": "X86_64" },
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::<account-id>:role/trainerTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "psql",
+      "image": "postgres:16-alpine",
+      "essential": true,
+      "entryPoint": ["sh", "-c"],
+      "command": [
+        "set -e\npsql -v ON_ERROR_STOP=1 <<SQL\nCREATE ROLE trainer_owner LOGIN PASSWORD '$OWNER_PW';\nCREATE ROLE trainer_app LOGIN PASSWORD '$APP_PW';\nGRANT trainer_owner TO $PGUSER;\nALTER DATABASE trainer OWNER TO trainer_owner;\nSQL\necho roles-created"
+      ],
+      "environment": [
+        { "name": "PGHOST", "value": "<rds-endpoint>" },
+        { "name": "PGUSER", "value": "trainer_admin" },
+        { "name": "PGDATABASE", "value": "trainer" },
+        { "name": "PGSSLMODE", "value": "require" }
+      ],
+      "secrets": [
+        { "name": "PGPASSWORD", "valueFrom": "arn:aws:ssm:eu-central-1:<account-id>:parameter/trainer/db-password" },
+        { "name": "OWNER_PW", "valueFrom": "arn:aws:ssm:eu-central-1:<account-id>:parameter/trainer/db-owner-password" },
+        { "name": "APP_PW", "valueFrom": "arn:aws:ssm:eu-central-1:<account-id>:parameter/trainer/db-app-password" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/trainer-api",
+          "awslogs-region": "eu-central-1",
+          "awslogs-stream-prefix": "db-init"
+        }
+      }
+    }
+  ]
+}

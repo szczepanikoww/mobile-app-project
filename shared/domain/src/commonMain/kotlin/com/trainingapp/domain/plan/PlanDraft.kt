@@ -62,7 +62,7 @@ data class DraftSet(
     val duration: String = "",
     val distance: String = "",
     val rpe: String = "",
-    /** Rest after this set, in seconds or min:s ("PRZERWA"). Blank uses the exercise's rest. */
+    /** The rest block after this set, as min:s ("1:30"). Blank uses the exercise's rest; ignored on the last set. */
     val rest: String = "",
 )
 

@@ -12,7 +12,7 @@ data class PlanStats(
 
 /**
  * An estimate, not a policy: each set takes [SET_WORK_SECONDS] (or its planned duration for timed sets) plus the
- * rest after it. The rest is the set's own "PRZERWA", else the exercise's rest, else [DEFAULT_REST_SECONDS].
+ * rest after it. The rest is the rest block after the set (none after the last set), else the exercise's rest, else [DEFAULT_REST_SECONDS].
  */
 object PlanStatsCalculator {
     const val SET_WORK_SECONDS = 45
@@ -24,12 +24,14 @@ object PlanStatsCalculator {
         val rpes = mutableListOf<Double>()
         day.exercises.forEach { exercise ->
             val timed = trackingTypeOf(exercise.exerciseId).let { it == TrackingType.TIME || it == TrackingType.DISTANCE_TIME }
-            exercise.sets.forEach { set ->
+            exercise.sets.forEachIndexed { index, set ->
                 sets++
                 val work = if (timed) SetInput.parseDurationSeconds(set.duration).valueOrNull() ?: SET_WORK_SECONDS else SET_WORK_SECONDS
-                val rest = SetInput.parseDurationSeconds(set.rest).valueOrNull() ?: exercise.restSeconds ?: DEFAULT_REST_SECONDS
+                // The last set has no rest block of its own; the exercise's rest follows it.
+                val override = if (index == exercise.sets.lastIndex) null else SetInput.parseDurationSeconds(set.rest).valueOrNull()
+                val rest = override ?: exercise.restSeconds ?: DEFAULT_REST_SECONDS
                 seconds += work + rest
-                SetInput.parseRpe(set.rpe).valueOrNull()?.let { rpes += it }
+                if (exercise.rpeEnabled) SetInput.parseRpe(set.rpe).valueOrNull()?.let { rpes += it }
             }
         }
         return PlanStats(
