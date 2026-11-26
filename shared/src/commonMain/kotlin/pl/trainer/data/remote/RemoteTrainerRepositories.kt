@@ -120,6 +120,13 @@ class RemoteTrainerRepository(private val api: TrainerApiClient) : TrainerReposi
         return load()
     }
 
+    override suspend fun correctAttendance(id: String, revision: Int, attended: Boolean): TrainerDashboard {
+        api.send<com.trainingapp.contract.api.AttendanceCorrectionRequest, SessionResultDto>(
+            HttpMethod.Post, "trainer/sessions/$id/attendance", com.trainingapp.contract.api.AttendanceCorrectionRequest(revision, attended),
+        )
+        return load()
+    }
+
     override suspend fun saveSessionComment(sessionId: String, comment: String): TrainerDashboard {
         api.command(HttpMethod.Put, "trainer/sessions/$sessionId/comment", SessionCommentRequest(comment))
         return load()

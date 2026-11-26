@@ -85,4 +85,9 @@
     <string name="profile_hours_from">From</string>
     <string name="profile_hours_to">To</string>
     <string name="profile_hours_failed">The hours could not be saved. Enter them like 08:00 and 16:00.</string>
+    <string name="attendance_change">Change attendance</string>
+    <string name="attendance_change_to_present">The session will be marked as completed. Payments do not change.</string>
+    <string name="attendance_change_to_no_show">The session will be marked as a no-show. Payments do not change.</string>
+    <string name="attendance_change_button_present">Change to: took place</string>
+    <string name="attendance_change_button_no_show">Change to: no-show</string>
 </resources>

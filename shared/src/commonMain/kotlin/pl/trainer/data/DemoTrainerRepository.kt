@@ -154,6 +154,15 @@ class DemoTrainerRepository(
         data = data.copy(clients = data.clients.map { if (it.id == clientId) it.copy(active = !archived, archived = archived) else it })
     }
 
+    override suspend fun correctAttendance(id: String, revision: Int, attended: Boolean) = change {
+        val session = current(id, revision)
+        val target = if (attended) SessionStatus.Completed else SessionStatus.NoShow
+        if ((session.status != SessionStatus.Completed && session.status != SessionStatus.NoShow) || session.status == target) {
+            throw TrainerException(Failure.Conflict)
+        }
+        data = data.copy(sessions = data.sessions.map { if (it.id == id) it.copy(status = target, revision = it.revision + 1) else it })
+    }
+
     override suspend fun saveSessionComment(sessionId: String, comment: String) = change {
         if (data.sessions.none { it.id == sessionId && trainerOf(it) == DemoTrainerId }) throw TrainerException(Failure.Conflict)
         val text = comment.trim()

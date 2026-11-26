@@ -147,6 +147,12 @@ interface TrainerRepository {
     /** Moves the client to the trainer's archive ([archived] true) or back to the current clients. */
     suspend fun setArchived(clientId: String, archived: Boolean): TrainerDashboard = throw TrainerException(Failure.Save)
 
+    /**
+     * Corrects marked attendance: [attended] true turns a no-show into a completed session, false the other way.
+     * Moves no money; refused ([Failure.Conflict]) when a no-show fee was already charged.
+     */
+    suspend fun correctAttendance(id: String, revision: Int, attended: Boolean): TrainerDashboard = throw TrainerException(Failure.Save)
+
     /** Saves the trainer's private comment on a session; a blank [comment] removes it. */
     suspend fun saveSessionComment(sessionId: String, comment: String): TrainerDashboard = throw TrainerException(Failure.Save)
 

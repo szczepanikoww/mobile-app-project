@@ -112,6 +112,14 @@ data class CreateSessionRequest(
 @Serializable
 data class RevisionRequest(val revision: Int, val operationId: String? = null)
 
+/**
+ * Corrects a marked attendance: [attended] true turns a no-show into a completed session, false the other way.
+ * The correction moves no money: credits and charges of the first marking stay, and a no-show that was already
+ * charged a fee cannot be turned into "attended" here (CONFLICT).
+ */
+@Serializable
+data class AttendanceCorrectionRequest(val revision: Int, val attended: Boolean, val reason: String? = null)
+
 /** A full fee waiver with an optional reason the client can see (D8: full waivers only). */
 @Serializable
 data class FeeWaiverDto(val reason: String? = null)

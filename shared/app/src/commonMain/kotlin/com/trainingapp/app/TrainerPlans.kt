@@ -136,8 +136,8 @@ fun TrainerPlansTab(actions: WorkoutNavigationActions) {
  * The plan of a client (their default plan) or of one session, inside the client card and the session details.
  * Assigning uses the server's assignment API; without a server it says so. "Rozpisz dla tej sesji" copies the chosen
  * plan into a new draft named after the session and opens it in the editor; its "Przypisz klientowi" assigns it to
- * this session ([PendingSessionPlan]). The server keeps one current plan per client, so a plan given to a session also
- * becomes the client's current plan.
+ * this session ([PendingSessionPlan]). A plan for a session leaves the client's default plan in place: the client
+ * trains it on the day of that session.
  */
 @OptIn(ExperimentalUuidApi::class)
 @Composable

@@ -279,6 +279,9 @@ class TrainerViewModel(
         if (!archived) loadClientInformation(clientId)
     }
 
+    /** Turns a completed session into a no-show or back ([attended]). */
+    fun correctAttendance(session: Session, attended: Boolean) = mutate { repository.correctAttendance(session.id, session.revision, attended) }
+
     /** Saves the trainer's private comment on the session. */
     fun saveSessionComment(sessionId: String, comment: String) = mutate { repository.saveSessionComment(sessionId, comment) }
     fun saveNote(clientId: String, note: String) = mutate(pop = true) { repository.saveNote(clientId, note) }

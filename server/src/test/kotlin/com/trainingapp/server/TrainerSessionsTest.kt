@@ -235,4 +235,31 @@ class TrainerSessionsTest {
         assertTrue(katarzyna.hasOverduePayment)
         assertTrue(dashboard.sessions.any { it.id == Seed.REQUESTED_SESSION && it.status == SessionStatus.REQUESTED })
     }
+    @Test
+    fun `marked attendance can be corrected both ways and keeps the first marking`() = apiTest {
+        val trainer = signedIn("demo-trainer")
+        val path = "/api/v1/trainer/sessions/${Seed.COMPLETED_SESSION}"
+        val before = trainer.get("/api/v1/trainer/dashboard").body<TrainerDashboardDto>().sessions.single { it.id == Seed.COMPLETED_SESSION }
+        assertEquals(SessionStatus.COMPLETED, before.status)
+
+        val toNoShow = trainer.post("$path/attendance") { setBody(com.trainingapp.contract.api.AttendanceCorrectionRequest(before.revision, attended = false)) }
+        assertEquals(HttpStatusCode.OK, toNoShow.status)
+        val noShow = toNoShow.session()
+        assertEquals(SessionStatus.NO_SHOW, noShow.status)
+        // Same answer again is a conflict, not a silent success; a stale revision is refused.
+        assertEquals(HttpStatusCode.Conflict, trainer.post("$path/attendance") { setBody(com.trainingapp.contract.api.AttendanceCorrectionRequest(noShow.revision, attended = false)) }.status)
+        assertEquals(HttpStatusCode.Conflict, trainer.post("$path/attendance") { setBody(com.trainingapp.contract.api.AttendanceCorrectionRequest(before.revision, attended = true)) }.status)
+
+        val back = trainer.post("$path/attendance") { setBody(com.trainingapp.contract.api.AttendanceCorrectionRequest(noShow.revision, attended = true)) }.session()
+        assertEquals(SessionStatus.COMPLETED, back.status)
+        // Both corrections are appended; the second points at the first (the seed marked the session without a row).
+        assertEquals(2L, TrainerTestDatabase.count("SELECT count(*) FROM scheduling.attendance WHERE session_id = '${Seed.COMPLETED_SESSION}'"))
+        assertEquals(1L, TrainerTestDatabase.count("SELECT count(*) FROM scheduling.attendance WHERE session_id = '${Seed.COMPLETED_SESSION}' AND corrects_id IS NOT NULL"))
+        // A session that was never marked cannot be corrected.
+        val confirmed = trainer.post("/api/v1/trainer/sessions/${Seed.CONFIRMED_SESSION}/attendance") { setBody(com.trainingapp.contract.api.AttendanceCorrectionRequest(1, attended = false)) }
+        assertEquals(HttpStatusCode.Conflict, confirmed.status)
+        assertEquals(HttpStatusCode.NotFound, signedIn("demo-other-trainer").post("$path/attendance") {
+            setBody(com.trainingapp.contract.api.AttendanceCorrectionRequest(back.revision, attended = false))
+        }.status)
+    }
 }

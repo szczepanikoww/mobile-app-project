@@ -92,6 +92,23 @@ class TrainerBehaviorTest {
         assertEquals(SessionStatus.NoShow, model.state.value.data!!.sessions.first { it.id == past.id }.status)
     }
 
+    @Test fun markedAttendanceCanBeCorrected() = runTest {
+        val model = model(DemoTrainerRepository(0))
+        advanceUntilIdle()
+        val completed = model.state.value.data!!.sessions.first { it.id == "s7" }
+        assertEquals(SessionStatus.Completed, completed.status)
+        model.correctAttendance(completed, attended = false)
+        advanceUntilIdle()
+        val noShow = model.state.value.data!!.sessions.first { it.id == "s7" }
+        assertEquals(SessionStatus.NoShow, noShow.status)
+        model.correctAttendance(noShow, attended = false)
+        advanceUntilIdle()
+        assertEquals(Failure.Conflict, model.state.value.actionFailure)
+        model.correctAttendance(noShow, attended = true)
+        advanceUntilIdle()
+        assertEquals(SessionStatus.Completed, model.state.value.data!!.sessions.first { it.id == "s7" }.status)
+    }
+
     @Test fun acceptingABookingChangesRequestedToConfirmed() = runTest {
         val repo = DemoTrainerRepository(0)
         val before = repo.load().sessions.first { it.id == "s2" }

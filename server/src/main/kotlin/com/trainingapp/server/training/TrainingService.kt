@@ -75,12 +75,14 @@ class TrainingService(private val db: Db, private val identity: IdentityService)
      */
     suspend fun today(client: CurrentUser): TodayWorkoutDto? = db.tx {
         val now = dbNow()
+        val zone = ZoneId.of(client.timeZone)
+        val today = now.toJavaInstant().atZone(zone).toLocalDate()
+        // A plan written for today's confirmed session wins over the current plan, until it is done.
+        sessionPlanFor(client.id, zone, today)?.let { return@tx it }
         val assigned = AssignedPlans.selectAll().where { (AssignedPlans.clientId eq client.id) and (AssignedPlans.status eq "ACTIVE") }
             .singleOrNull() ?: return@tx null
         val versionId = assigned[AssignedPlans.planVersionId]
         val version = planVersion(versionId) ?: return@tx null
-        val zone = ZoneId.of(client.timeZone)
-        val today = now.toJavaInstant().atZone(zone).toLocalDate()
         val pinned = assigned[AssignedPlans.sessionId]?.let { sid ->
             Sessions.selectAll().where { (Sessions.id eq sid) and (Sessions.status eq DbSessionStatus.CONFIRMED) }.singleOrNull()
         }?.takeIf { it[Sessions.startsAt].toInstant().atZone(zone).toLocalDate() == today }
@@ -95,6 +97,30 @@ class TrainingService(private val db: Db, private val identity: IdentityService)
             sessionId = pinned?.get(Sessions.id)?.toString(),
             place = pinned?.get(Sessions.placeNote),
         )
+    }
+
+    /** The SESSION plan pinned to one of the client's confirmed sessions today, while it has a day not finished yet. */
+    private fun JdbcTransaction.sessionPlanFor(clientId: Uuid, zone: ZoneId, today: java.time.LocalDate): TodayWorkoutDto? {
+        val rows = AssignedPlans.selectAll().where { (AssignedPlans.clientId eq clientId) and (AssignedPlans.status eq "SESSION") }.toList()
+        for (assigned in rows) {
+            val session = Sessions.selectAll().where {
+                (Sessions.id eq assigned[AssignedPlans.sessionId]!!) and (Sessions.status eq DbSessionStatus.CONFIRMED)
+            }.singleOrNull() ?: continue
+            if (session[Sessions.startsAt].toInstant().atZone(zone).toLocalDate() != today) continue
+            val version = planVersion(assigned[AssignedPlans.planVersionId]) ?: continue
+            val finished = WorkoutLogs.selectAll().where {
+                (WorkoutLogs.assignedPlanId eq assigned[AssignedPlans.id]) and (WorkoutLogs.state eq "FINISHED") and WorkoutLogs.deletedAt.isNull()
+            }.mapNotNull { it[WorkoutLogs.planDayId] }.toSet()
+            val day = version.body.days.firstOrNull { it.id !in finished } ?: continue
+            return TodayWorkoutDto(
+                planVersion = version,
+                dayId = day.id,
+                assignedPlanId = assigned[AssignedPlans.id].toString(),
+                sessionId = session[Sessions.id].toString(),
+                place = session[Sessions.placeNote],
+            )
+        }
+        return null
     }
 
     /** Every assignment of the caller (all statuses, so history still resolves), with its immutable version. */

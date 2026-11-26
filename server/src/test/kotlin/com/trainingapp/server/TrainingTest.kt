@@ -185,6 +185,30 @@ class TrainingTest {
         assertEquals(HttpStatusCode.NotFound, foreign.status)
     }
 
+    @Test
+    fun `a plan for one session keeps the current plan`() = apiTest {
+        val trainer = signedIn("demo-trainer")
+        val exercise = trainer.createExercise()
+        val default = trainer.publishNew(exercise.id).body<PublishPlanResponse>()
+        val other = trainer.publishNew(exercise.id).body<PublishPlanResponse>()
+        trainer.post("$base/clients/${Seed.REL_1}/assigned-plan") { setBody(AssignPlanRequest(default.version.id, operationId = uuid())) }
+
+        val forSession = trainer.post("$base/clients/${Seed.REL_1}/assigned-plan") {
+            setBody(AssignPlanRequest(other.version.id, sessionId = Seed.CONFIRMED_SESSION, operationId = uuid()))
+        }
+        assertEquals(HttpStatusCode.Created, forSession.status)
+        assertEquals("SESSION", forSession.body<AssignedPlanDto>().status)
+        // The default plan is still the current one.
+        assertEquals(default.version.id, trainer.get("$base/clients/${Seed.REL_1}/assigned-plan").body<AssignedPlanDto>().planVersionId)
+
+        // A second plan for the same session replaces only the first one.
+        trainer.post("$base/clients/${Seed.REL_1}/assigned-plan") {
+            setBody(AssignPlanRequest(default.version.id, sessionId = Seed.CONFIRMED_SESSION, operationId = uuid()))
+        }
+        assertEquals(1L, TrainerTestDatabase.count("SELECT count(*) FROM training.assigned_plan WHERE session_id = '${Seed.CONFIRMED_SESSION}' AND status = 'SESSION'"))
+        assertEquals(1L, TrainerTestDatabase.count("SELECT count(*) FROM training.assigned_plan WHERE relationship_id = '${Seed.REL_1}' AND status = 'ACTIVE'"))
+    }
+
     // ---------------------------------------------------------------- client progress
 
     @Test

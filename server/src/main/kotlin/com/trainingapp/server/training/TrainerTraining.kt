@@ -423,9 +423,15 @@ class TrainerTraining(private val db: Db, private val clock: ServerClock, privat
         val to = request.endsOn?.let { runCatching { LocalDate.parse(it) }.getOrElse { invalid("Invalid endsOn") } }
         if (from != null && to != null && to.isBefore(from)) invalid("endsOn is before startsOn")
         val clientProfileId = relationship[TrainerClients.clientId]
-        AssignedPlans.update({
-            (AssignedPlans.relationshipId eq relationshipId) and (AssignedPlans.status eq "ACTIVE")
-        }) { it[status] = "REPLACED" }
+        // A plan for one session (status SESSION) replaces only that session's earlier plan; the client's current
+        // ACTIVE plan stays (docs/plans/trainer-redesign.md). Without a session it is the new current plan.
+        if (pinnedSession != null) {
+            AssignedPlans.update({ (AssignedPlans.sessionId eq pinnedSession) and (AssignedPlans.status eq "SESSION") }) { it[status] = "REPLACED" }
+        } else {
+            AssignedPlans.update({
+                (AssignedPlans.relationshipId eq relationshipId) and (AssignedPlans.status eq "ACTIVE")
+            }) { it[status] = "REPLACED" }
+        }
         val newPlanId = newId()
         AssignedPlans.insert {
             it[id] = newPlanId
@@ -433,7 +439,7 @@ class TrainerTraining(private val db: Db, private val clock: ServerClock, privat
             it[clientId] = clientProfileId
             it[planVersionId] = versionId
             it[sessionId] = pinnedSession
-            it[status] = "ACTIVE"
+            it[status] = if (pinnedSession != null) "SESSION" else "ACTIVE"
             it[startsOn] = from
             it[endsOn] = to
             it[assignedBy] = trainerId

@@ -1,6 +1,9 @@
 package pl.trainer.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -247,7 +250,8 @@ fun RequestCard(session: Session, client: Client, submitting: Boolean, onAccept:
 
 /** "Historia sesji": past sessions by date; unmarked ones get ✓ Odbyła się / ✗ Nieobecność. */
 @Composable
-fun HistoryScreen(state: TrainerUiState, onAttended: (Session) -> Unit, onNoShow: (Session) -> Unit, onOpen: (String) -> Unit) {
+fun HistoryScreen(state: TrainerUiState, onAttended: (Session) -> Unit, onNoShow: (Session) -> Unit, onOpen: (String) -> Unit,
+    onCorrect: (Session, Boolean) -> Unit = { _, _ -> }) {
     val data = state.data ?: return
     val language = DateFormats.defaultLanguage()
     val byDate = state.pastSessions.groupBy { it.start.toLocalDateTime(TrainerZone).date }
@@ -261,14 +265,17 @@ fun HistoryScreen(state: TrainerUiState, onAttended: (Session) -> Unit, onNoShow
                     modifier = Modifier.padding(top = Layout.medium, bottom = Layout.tiny).semantics { heading() })
             }
             items(sessions, key = { it.id }) { session ->
-                HistoryRow(session, data.client(session.clientId), state.submitting, { onAttended(session) }, { onNoShow(session) }, { onOpen(session.id) })
+                HistoryRow(session, data.client(session.clientId), state.submitting, { onAttended(session) }, { onNoShow(session) }, { onOpen(session.id) },
+                    onCorrect = { attended -> onCorrect(session, attended) })
             }
         }
     }
 }
 
 @Composable
-private fun HistoryRow(session: Session, client: Client, submitting: Boolean, onAttended: () -> Unit, onNoShow: () -> Unit, onOpen: () -> Unit) {
+private fun HistoryRow(session: Session, client: Client, submitting: Boolean, onAttended: () -> Unit, onNoShow: () -> Unit, onOpen: () -> Unit,
+    onCorrect: (attended: Boolean) -> Unit) {
+    var correcting by remember(session.id) { mutableStateOf(false) }
     WhiteCard(onClick = onOpen) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Layout.medium)) {
             Portrait(client.initials, client.userId, size = 40.dp)
@@ -277,8 +284,8 @@ private fun HistoryRow(session: Session, client: Client, submitting: Boolean, on
                 Text(timeRange(session.start, session.end, session.timeZone), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             when (session.status) {
-                SessionStatus.Completed -> AttendanceChip(true)
-                SessionStatus.NoShow -> AttendanceChip(false)
+                SessionStatus.Completed -> AttendanceChip(true, onClick = { correcting = true }.takeUnless { submitting })
+                SessionStatus.NoShow -> AttendanceChip(false, onClick = { correcting = true }.takeUnless { submitting })
                 else -> Row(horizontalArrangement = Arrangement.spacedBy(Layout.small)) {
                     FilledTonalIconButton(onClick = onAttended, enabled = !submitting,
                         colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = AppColors.successSurface, contentColor = AppColors.success)) {
@@ -292,12 +299,28 @@ private fun HistoryRow(session: Session, client: Client, submitting: Boolean, on
             }
         }
     }
+    if (correcting) AttendanceCorrection(session, client, submitting, onDismiss = { correcting = false }, onCorrect = onCorrect)
+}
+
+/** Asks before turning a marked session into the other outcome. */
+@Composable
+private fun AttendanceCorrection(session: Session, client: Client, submitting: Boolean, onDismiss: () -> Unit, onCorrect: (Boolean) -> Unit) {
+    val toAttended = session.status == SessionStatus.NoShow
+    ConfirmDialog(
+        title = tr(Res.string.attendance_change),
+        body = tr(if (toAttended) Res.string.attendance_change_to_present else Res.string.attendance_change_to_no_show),
+        confirm = tr(if (toAttended) Res.string.attendance_present else Res.string.attendance_no_show),
+        context = client.name + "\n" + timeRange(session.start, session.end, session.timeZone),
+        submitting = submitting, onDismiss = onDismiss, onConfirm = { onDismiss(); onCorrect(toAttended) },
+    )
 }
 
 @Composable
-private fun AttendanceChip(attended: Boolean) {
+private fun AttendanceChip(attended: Boolean, onClick: (() -> Unit)? = null) {
     val (bg, fg) = if (attended) AppColors.successSurface to AppColors.success else AppColors.errorSurface to AppColors.errorText
-    Row(Modifier.background(bg, Layout.pill).padding(horizontal = Layout.small, vertical = Layout.tiny),
+    Row(Modifier.clip(Layout.pill).background(bg, Layout.pill)
+        .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClickLabel = tr(Res.string.attendance_change), onClick = onClick) else Modifier)
+        .heightIn(min = 32.dp).padding(horizontal = Layout.small, vertical = Layout.tiny),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Layout.tiny)) {
         Icon(if (attended) Icons.Outlined.Check else Icons.Outlined.Close, null, Modifier.size(16.dp), tint = fg)
         Text(tr(if (attended) Res.string.attendance_present else Res.string.attendance_no_show), style = MaterialTheme.typography.labelMedium, color = fg)

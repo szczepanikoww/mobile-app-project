@@ -21,7 +21,7 @@ import pl.trainer.domain.*
 import pl.trainer.presentation.*
 import pl.trainer.resources.*
 
-private enum class Confirmation { Cancel, Reject, Withdraw, Attended, NoShow }
+private enum class Confirmation { Cancel, Reject, Withdraw, Attended, NoShow, CorrectToPresent, CorrectToNoShow }
 
 /**
  * A session's details: when and where, the plan for this session (assigned from a template and written out for this
@@ -31,7 +31,8 @@ private enum class Confirmation { Cancel, Reject, Withdraw, Attended, NoShow }
 @Composable
 fun SessionDetailScreen(state: TrainerUiState, session: Session, onClient: () -> Unit, onEdit: () -> Unit,
     onAccept: () -> Unit, onReject: () -> Unit, onCancel: () -> Unit, onComplete: () -> Unit,
-    onNoShow: () -> Unit = {}, onSaveComment: (String) -> Unit = {}, planSection: (@Composable (PlanTarget) -> Unit)? = null) {
+    onNoShow: () -> Unit = {}, onCorrectAttendance: (Boolean) -> Unit = {}, onSaveComment: (String) -> Unit = {},
+    planSection: (@Composable (PlanTarget) -> Unit)? = null) {
     val data = state.data!!
     val client = data.client(session.clientId)
     var confirmation by remember(session.id) { mutableStateOf<Confirmation?>(null) }
@@ -84,6 +85,14 @@ fun SessionDetailScreen(state: TrainerUiState, session: Session, onClient: () ->
             }
         }
 
+        if (session.status == SessionStatus.Completed || session.status == SessionStatus.NoShow) {
+            val toAttended = session.status == SessionStatus.NoShow
+            OutlinedButton(onClick = { confirmation = if (toAttended) Confirmation.CorrectToPresent else Confirmation.CorrectToNoShow },
+                enabled = !state.submitting, shape = Layout.pill, modifier = Modifier.fillMaxWidth().heightIn(min = Layout.target)) {
+                Text(tr(if (toAttended) Res.string.attendance_change_button_present else Res.string.attendance_change_button_no_show))
+            }
+        }
+
         if (planSection != null && !session.isClosedWithoutTraining()) Column(verticalArrangement = Arrangement.spacedBy(Layout.medium)) {
             SectionTitle(tr(Res.string.session_plan_title))
             planSection(PlanTarget(client.id, client.name, session.id,
@@ -117,12 +126,15 @@ fun SessionDetailScreen(state: TrainerUiState, session: Session, onClient: () ->
                 Confirmation.Cancel -> Res.string.cancel_title
                 Confirmation.Attended -> Res.string.attendance_present_title
                 Confirmation.NoShow -> Res.string.attendance_no_show_title
+                Confirmation.CorrectToPresent, Confirmation.CorrectToNoShow -> Res.string.attendance_change
                 else -> Res.string.reject_title
             }),
             body = tr(when (action) {
                 Confirmation.Cancel -> Res.string.cancel_body
                 Confirmation.Attended -> Res.string.attendance_present_body
                 Confirmation.NoShow -> Res.string.attendance_no_show_body
+                Confirmation.CorrectToPresent -> Res.string.attendance_change_to_present
+                Confirmation.CorrectToNoShow -> Res.string.attendance_change_to_no_show
                 else -> Res.string.reject_body
             }),
             confirm = tr(when (action) {
@@ -130,7 +142,8 @@ fun SessionDetailScreen(state: TrainerUiState, session: Session, onClient: () ->
                 Confirmation.Withdraw -> Res.string.withdraw
                 Confirmation.Reject -> Res.string.reject
                 Confirmation.Attended -> Res.string.attendance_present
-                Confirmation.NoShow -> Res.string.attendance_no_show
+                Confirmation.NoShow, Confirmation.CorrectToNoShow -> Res.string.attendance_no_show
+                Confirmation.CorrectToPresent -> Res.string.attendance_present
             }),
             context = client.name + "\n" + DateFormats.date(session.start.toLocalDateTime(TrainerZone).date, language, "d MMMM yyyy") + " · " + timeRange(session.start, session.end, session.timeZone),
             submitting = state.submitting,
@@ -140,6 +153,8 @@ fun SessionDetailScreen(state: TrainerUiState, session: Session, onClient: () ->
                     Confirmation.Cancel -> onCancel()
                     Confirmation.Attended -> onComplete()
                     Confirmation.NoShow -> onNoShow()
+                    Confirmation.CorrectToPresent -> onCorrectAttendance(true)
+                    Confirmation.CorrectToNoShow -> onCorrectAttendance(false)
                     else -> onReject()
                 }
             },

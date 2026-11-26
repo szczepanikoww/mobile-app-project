@@ -173,13 +173,14 @@ private fun TrainerRouteContent(state: TrainerUiState, model: TrainerViewModel, 
             }
         }
         Route.Requests -> RequestsScreen(state, onAccept = model::accept, onReject = model::reject, onOpen = model::openSessionById)
-        Route.History -> HistoryScreen(state, onAttended = model::complete, onNoShow = model::noShow, onOpen = model::openSessionById)
+        Route.History -> HistoryScreen(state, onAttended = model::complete, onNoShow = model::noShow, onOpen = model::openSessionById,
+            onCorrect = model::correctAttendance)
         Route.Payments -> PaymentsScreen(state, onRetry = model::loadPayments)
         is Route.SessionDetail -> data.sessions.find { it.id == route.id }?.let { session ->
             SessionDetailScreen(state, session,
                 onClient = { model.navigate(Route.ClientDetail(session.clientId)) }, onEdit = { model.navigate(Route.SessionEditor(sessionId = session.id)) },
                 onAccept = { model.accept(session) }, onReject = { model.reject(session) }, onCancel = { model.cancel(session) }, onComplete = { model.complete(session) },
-                onNoShow = { model.noShow(session) }, onSaveComment = { model.saveSessionComment(session.id, it) }, planSection = integrations.planSection)
+                onNoShow = { model.noShow(session) }, onCorrectAttendance = { model.correctAttendance(session, it) }, onSaveComment = { model.saveSessionComment(session.id, it) }, planSection = integrations.planSection)
         }
         is Route.RequestDetail -> data.sessions.find { it.id == route.id }?.let { session ->
             RequestDetailScreen(state, session,

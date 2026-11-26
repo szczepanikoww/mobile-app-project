@@ -85,4 +85,9 @@
     <string name="profile_hours_from">Od</string>
     <string name="profile_hours_to">Do</string>
     <string name="profile_hours_failed">Nie udało się zapisać godzin. Wpisz je jako 08:00 i 16:00.</string>
+    <string name="attendance_change">Zmień obecność</string>
+    <string name="attendance_change_to_present">Sesja zostanie oznaczona jako odbyta. Rozliczenia się nie zmienią.</string>
+    <string name="attendance_change_to_no_show">Sesja zostanie oznaczona jako nieobecność. Rozliczenia się nie zmienią.</string>
+    <string name="attendance_change_button_present">Zmień na: odbyła się</string>
+    <string name="attendance_change_button_no_show">Zmień na: nieobecność</string>
 </resources>
