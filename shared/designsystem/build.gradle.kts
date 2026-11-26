@@ -20,6 +20,8 @@ kotlin {
             api(libs.compose.materialIconsExtended)
             api(libs.compose.components.resources)
             api(libs.compose.uiToolingPreview)
+            // MonthCalendar works on LocalDate.
+            implementation(libs.kotlinx.datetime)
         }
     }
 }

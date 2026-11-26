@@ -36,6 +36,8 @@ data class Conversation(
     val lastFromMe: Boolean,
     val lastHasVideo: Boolean,
     val unread: Int,
+    /** The other person's latest sign of life (a message sent or a thread read); drives the green "active" dot. */
+    val peerActiveAt: Instant? = null,
 )
 
 data class ChatMessage(
@@ -57,6 +59,11 @@ data class ChatThread(
     /** Server time of the snapshot; used for display only ("Wczoraj"), never for policy. */
     val generatedAt: Instant,
     val zone: TimeZone,
+    /** The other person's latest sign of life; null when unknown. */
+    val peerActiveAt: Instant? = null,
+    /** The newest message of mine that the other person has read, and when they caught up ("Seen 14:32"). */
+    val seenMessageId: String? = null,
+    val seenAt: Instant? = null,
 )
 
 data class ConversationsSnapshot(
@@ -70,3 +77,13 @@ data class ConversationsSnapshot(
 
 /** A technique video waiting for the trainer's review ("Wymaga uwagi"). */
 data class PendingReview(val mediaId: String, val relationshipId: String, val clientName: String, val exerciseName: String)
+
+/** How recently someone must have been seen to count as "active now". */
+val ActiveWindow = kotlin.time.Duration.parse("5m")
+
+/** True when [peerActiveAt] is within [ActiveWindow] of [now]. Display only: it never gates behavior. */
+fun isActive(peerActiveAt: Instant?, now: Instant): Boolean = peerActiveAt != null && now - peerActiveAt in kotlin.time.Duration.ZERO..ActiveWindow
+
+/** The last of [messages] written by [mine] whose position is within what the other person has read. */
+fun <T> seenMessage(messages: List<T>, isMine: (T) -> Boolean, isRead: (T) -> Boolean): T? =
+    messages.lastOrNull { isMine(it) && isRead(it) }

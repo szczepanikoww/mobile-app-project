@@ -140,10 +140,13 @@ class IdentityService(private val db: Db) {
     suspend fun updateMe(user: CurrentUser, request: UpdateMeRequest): CurrentUser {
         if (request.locale != null && request.locale !in setOf("pl", "en")) throw invalid("locale")
         if (request.timeZone != null && runCatching { ZoneId.of(request.timeZone) }.isFailure) throw invalid("timeZone")
+        val name = request.displayName?.trim()
+        if (name != null && name.length !in 1..UpdateMeRequest.DISPLAY_NAME_MAX_LENGTH) throw invalid("displayName")
         return db.tx {
             AppUsers.update({ AppUsers.id eq user.id }) { row ->
                 request.locale?.let { row[locale] = it }
                 request.timeZone?.let { row[timeZone] = it }
+                name?.let { row[displayName] = it }
             }
             currentUser(AppUsers.selectAll().where { AppUsers.id eq user.id }.single())
         }
@@ -165,6 +168,75 @@ class IdentityService(private val db: Db) {
 
     suspend fun deletePushToken(user: CurrentUser, token: String) = db.tx {
         PushTokens.deleteWhere { (PushTokens.token eq token) and (PushTokens.userId eq user.id) }
+    }
+
+    /**
+     * The client joins the trainer of an invite code: an active relationship with the default grants, as if the
+     * trainer had confirmed a first booking. Joining a trainer the client already has is idempotent and does not use
+     * the code again. An unknown, expired or used-up code is NOT_FOUND; the trainer's own code is INVALID.
+     */
+    suspend fun redeemInvite(client: CurrentUser, code: String): com.trainingapp.contract.account.JoinedTrainerDto = db.tx {
+        val normalized = code.trim().uppercase()
+        if (normalized.isEmpty() || normalized.length > 32) throw invalid("code")
+        val now = dbNow().toOffset()
+        val invite = InviteCodes.selectAll().where { InviteCodes.code eq normalized }
+            .forUpdate(org.jetbrains.exposed.v1.core.vendors.ForUpdateOption.ForUpdate).singleOrNull()
+            ?.takeIf { it[InviteCodes.expiresAt] > now && it[InviteCodes.usedCount] < it[InviteCodes.maxUses] }
+            ?: throw com.trainingapp.server.common.notFound("invite")
+        val trainerId = invite[InviteCodes.trainerId]
+        if (trainerId == client.id) throw invalid("code")
+        val existing = openRelationship(trainerId, client.id)
+        val relationship = when {
+            existing?.status == RelationshipStatus.ACTIVE -> existing
+            existing != null -> existing.also { activate(it.id) }
+            else -> {
+                val id = Ids.v7()
+                TrainerClients.insert {
+                    it[TrainerClients.id] = id
+                    it[TrainerClients.trainerId] = trainerId
+                    it[TrainerClients.clientId] = client.id
+                    it[status] = RelationshipStatus.PENDING
+                    it[origin] = "INVITE_CODE"
+                }
+                activate(id)
+                Relationship(id, trainerId, client.id, RelationshipStatus.ACTIVE)
+            }
+        }
+        if (existing?.status != RelationshipStatus.ACTIVE) {
+            InviteCodes.update({ InviteCodes.code eq normalized }) { it[usedCount] = invite[InviteCodes.usedCount] + 1 }
+        }
+        val name = AppUsers.selectAll().where { AppUsers.id eq trainerId }.single()[AppUsers.displayName]
+        com.trainingapp.contract.account.JoinedTrainerDto(trainerId.toString(), name, relationship.id.toString())
+    }
+
+    /** "Moje siłownie" of the client: every public gym and the client's choice. */
+    suspend fun clientGyms(client: CurrentUser): com.trainingapp.contract.account.ClientGymsDto = db.tx {
+        val all = com.trainingapp.server.catalogue.Gyms.selectAll().where { com.trainingapp.server.catalogue.Gyms.isPublic eq true }
+            .orderBy(com.trainingapp.server.catalogue.Gyms.name)
+            .map {
+                com.trainingapp.contract.account.GymChoiceDto(
+                    it[com.trainingapp.server.catalogue.Gyms.id].toString(),
+                    it[com.trainingapp.server.catalogue.Gyms.name],
+                    listOf(it[com.trainingapp.server.catalogue.Gyms.street], it[com.trainingapp.server.catalogue.Gyms.city]).filter { p -> p.isNotBlank() }.joinToString(", "),
+                )
+            }
+        val selected = ClientGyms.selectAll().where { ClientGyms.clientId eq client.id }.map { it[ClientGyms.gymId].toString() }
+        com.trainingapp.contract.account.ClientGymsDto(all, selected)
+    }
+
+    /** Replaces the client's gyms; only public gyms, at most 10. */
+    suspend fun saveClientGyms(client: CurrentUser, request: com.trainingapp.contract.account.SaveClientGymsRequest): com.trainingapp.contract.account.ClientGymsDto {
+        val ids = request.gymIds.distinct().map { runCatching { Uuid.parse(it) }.getOrElse { throw invalid("gymIds") } }
+        if (ids.size > 10) throw invalid("gymIds")
+        db.tx {
+            val known = if (ids.isEmpty()) emptySet() else com.trainingapp.server.catalogue.Gyms.selectAll()
+                .where { (com.trainingapp.server.catalogue.Gyms.id inList ids) and (com.trainingapp.server.catalogue.Gyms.isPublic eq true) }
+                .map { it[com.trainingapp.server.catalogue.Gyms.id] }.toSet()
+            if (known.size != ids.size) throw invalid("gymIds")
+            ClientGyms.deleteWhere { ClientGyms.clientId eq client.id }
+            ids.forEach { gym -> ClientGyms.insert { it[clientId] = client.id; it[gymId] = gym } }
+        }
+        return clientGyms(client)
     }
 
     // ----- Used by other modules inside their transactions -----

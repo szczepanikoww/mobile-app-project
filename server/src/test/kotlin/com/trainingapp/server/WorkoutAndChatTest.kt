@@ -3,6 +3,7 @@ package com.trainingapp.server
 import com.trainingapp.contract.chat.ConversationDto
 import com.trainingapp.contract.chat.MessageDto
 import com.trainingapp.contract.chat.MessagesDto
+import com.trainingapp.contract.chat.ReadRequest
 import com.trainingapp.contract.chat.SendMessageRequest
 import com.trainingapp.contract.exercise.SetType
 import com.trainingapp.contract.media.CreateUploadSessionRequest
@@ -48,7 +49,7 @@ class WorkoutAndChatTest : ApiTest() {
     }
 
     private val clientSubject = DemoSeed.CLIENT_SUBJECT
-    private val squat = DemoSeed.id("ex-squat").toString()
+    private val squat = DemoSeed.exSquat.toString()
 
     private suspend fun HttpClient.sync(vararg ops: SyncOperationDto, batch: Uuid = Ids.v7()) =
         post("/v1/client/workout-sync") { auth(clientSubject); json(); setBody(WorkoutSyncRequest(batch.toString(), ops.toList())) }.body<WorkoutSyncResponse>()
@@ -132,6 +133,28 @@ class WorkoutAndChatTest : ApiTest() {
         assertEquals(HttpStatusCode.NotFound, http.get("/v1/conversations/$rel/messages") { auth("tr-anna") }.status)
         assertEquals(1, count("SELECT count(*) FROM platform.audit_record WHERE subject_type = 'conversation'"))
         assertEquals(0, count("SELECT count(*) FROM platform.outbox_event WHERE payload::text LIKE '%Dzień%' OR payload::text LIKE '%Cześć%'"))
+    }
+
+    @Test
+    fun `read receipts - the sender sees how far and when the other party has read`() = api { http ->
+        val rel = http.get("/v1/client/conversations") { auth(clientSubject) }.body<List<ConversationDto>>().single().relationshipId
+        val sent = http.post("/v1/conversations/$rel/messages") { auth(DemoSeed.TRAINER_SUBJECT); json(); setBody(SendMessageRequest(Ids.v7().toString(), "Plan na jutro")) }
+            .body<MessageDto>()
+
+        // Nobody has read it yet: no receipt.
+        val before = http.get("/v1/conversations/$rel/messages") { auth(DemoSeed.TRAINER_SUBJECT) }.body<MessagesDto>()
+        assertEquals(0L, before.peerLastReadSeq)
+        assertEquals(null, before.peerLastReadAt)
+
+        http.post("/v1/conversations/$rel/read") { auth(clientSubject); json(); setBody(ReadRequest(sent.seq)) }
+
+        val after = http.get("/v1/conversations/$rel/messages") { auth(DemoSeed.TRAINER_SUBJECT) }.body<MessagesDto>()
+        assertEquals(sent.seq, after.peerLastReadSeq)
+        assertTrue(after.peerLastReadAt != null)
+        // The reader's own marker is not reported as the peer's.
+        assertEquals(0L, http.get("/v1/conversations/$rel/messages") { auth(clientSubject) }.body<MessagesDto>().peerLastReadSeq)
+        // Reading or sending counts as a sign of life in the list.
+        assertTrue(http.get("/v1/client/conversations") { auth(clientSubject) }.body<List<ConversationDto>>().single().peerActiveAt != null)
     }
 
     @Test

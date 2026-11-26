@@ -1,5 +1,6 @@
 package com.trainingapp.feature.client
 
+import com.trainingapp.feature.client.presentation.ClientProfileViewModel
 import com.trainingapp.feature.client.presentation.ClientScheduleViewModel
 import com.trainingapp.feature.client.presentation.ClientShellViewModel
 import com.trainingapp.feature.client.presentation.TodayWorkoutViewModel
@@ -20,4 +21,6 @@ val clientModule = module {
     viewModel { ClientScheduleViewModel(get(), get()) }
     viewModel { WalletViewModel(get(), get(), get()) }
     viewModel { TodayWorkoutViewModel(get(), get(), get()) }
+    // ClientAccount (own name) comes from the app, which saves it through the sign-in session.
+    viewModel { ClientProfileViewModel(get()) }
 }

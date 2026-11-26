@@ -208,6 +208,53 @@ class PolicyAndClientsTest {
         assertEquals(HttpStatusCode.UnprocessableEntity, trainer.post("$base/invites") { setBody(CreateInviteRequest(maxUses = 0)) }.status)
     }
 
+    @Test
+    fun `the permanent invite outlasts the one-off limits and a new one replaces it`() = apiTest {
+        val trainer = signedIn("demo-trainer")
+        val permanent = trainer.post("$base/invites") { setBody(CreateInviteRequest.permanent()) }
+        assertEquals(HttpStatusCode.Created, permanent.status)
+        val first = permanent.body<InviteDto>()
+        assertEquals(CreateInviteRequest.PERMANENT_USES, first.maxUses)
+        assertTrue(first.expiresAt > clock.now() + 3000.days)
+        // Only the exact permanent values pass; other long or wide codes keep the one-off limits.
+        assertEquals(HttpStatusCode.UnprocessableEntity, trainer.post("$base/invites") { setBody(CreateInviteRequest(validDays = 365, maxUses = 1)) }.status)
+        assertEquals(HttpStatusCode.NoContent, trainer.delete("$base/invites/${first.code}").status)
+        val second = trainer.post("$base/invites") { setBody(CreateInviteRequest.permanent()) }.body<InviteDto>()
+        assertNotEquals(first.code, second.code)
+        assertEquals(listOf(second.code), trainer.get("$base/invites").body<List<InviteDto>>().map { it.code })
+    }
+
+    // ---------------------------------------------------------------- archive
+
+    @Test
+    fun `archiving a client is reversible and keeps the relationship`() = apiTest {
+        val trainer = signedIn("demo-trainer")
+        assertEquals(HttpStatusCode.NoContent, trainer.post("$base/clients/${Seed.REL_1}/archive").status)
+        val archived = trainer.get("$base/clients").body<List<ClientSummaryDto>>().first { it.id == Seed.REL_1 }
+        assertTrue(archived.archived)
+        assertEquals(1L, TrainerTestDatabase.count("SELECT count(*) FROM identity.trainer_client WHERE id = '${Seed.REL_1}' AND status = 'ACTIVE'"))
+        assertEquals(HttpStatusCode.NotFound, signedIn("demo-other-trainer").post("$base/clients/${Seed.REL_1}/archive").status)
+
+        assertEquals(HttpStatusCode.NoContent, trainer.post("$base/clients/${Seed.REL_1}/restore").status)
+        val restored = trainer.get("$base/clients").body<List<ClientSummaryDto>>().first { it.id == Seed.REL_1 }
+        assertTrue(!restored.archived)
+    }
+
+    // ---------------------------------------------------------------- session comment
+
+    @Test
+    fun `a session comment is private to the trainer and cleared when blank`() = apiTest {
+        val trainer = signedIn("demo-trainer")
+        val path = "$base/sessions/${Seed.CONFIRMED_SESSION}/comment"
+        assertEquals(HttpStatusCode.NoContent, trainer.put(path) { setBody(com.trainingapp.contract.api.SessionCommentRequest("  Technika przysiadu  ")) }.status)
+        val dashboard = trainer.get("$base/dashboard").body<com.trainingapp.contract.api.TrainerDashboardDto>()
+        assertEquals("Technika przysiadu", dashboard.sessionComments[Seed.CONFIRMED_SESSION])
+        assertEquals(HttpStatusCode.NotFound, signedIn("demo-other-trainer").put(path) { setBody(com.trainingapp.contract.api.SessionCommentRequest("x")) }.status)
+
+        assertEquals(HttpStatusCode.NoContent, trainer.put(path) { setBody(com.trainingapp.contract.api.SessionCommentRequest(" ")) }.status)
+        assertTrue(trainer.get("$base/dashboard").body<com.trainingapp.contract.api.TrainerDashboardDto>().sessionComments.isEmpty())
+    }
+
     // ---------------------------------------------------------------- ending a relationship
 
     @Test

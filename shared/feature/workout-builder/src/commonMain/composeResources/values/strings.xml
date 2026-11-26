@@ -96,7 +96,7 @@
     <string name="set_value_time">%1$s, czas</string>
     <string name="set_value_distance">%1$s, dystans w kilometrach</string>
     <string name="set_add">Dodaj serię</string>
-    <string name="set_delete">Usuń serię</string>
+    <string name="set_delete">Usuń serię: %1$s</string>
     <string name="set_options">Opcje serii %1$s</string>
     <string name="set_error">%1$s: %2$s</string>
     <string name="set_error_reps_required">podaj powtórzenia, np. 8 lub 8–10</string>
@@ -115,7 +115,7 @@
 
     <!-- S6 Exercise settings -->
     <string name="settings_title">Ustawienia ćwiczenia</string>
-    <string name="settings_rest">Domyślna przerwa między seriami</string>
+    <string name="settings_rest">Domyślna przerwa między seriami i po ćwiczeniu</string>
     <string name="settings_rest_none">Brak</string>
     <string name="settings_rpe">Planuj RPE</string>
     <string name="settings_rpe_supporting">Dodaje kolumnę RPE do serii tego ćwiczenia.</string>
@@ -291,13 +291,23 @@
     <string name="creator_not_available">Wiadomości, powiadomienia i profil pojawią się w kolejnych wersjach aplikacji.</string>
     <string name="creator_tags_invalid">Sprawdź tagi planu: najwyżej 5, każdy do 24 znaków.</string>
     <string name="set_column_weight">Ciężar</string>
-    <string name="set_column_rest">Przerwa</string>
     <string name="set_suffix_kg">kg</string>
     <string name="set_suffix_reps">powt.</string>
-    <string name="set_suffix_seconds">s</string>
     <string name="set_suffix_km">km</string>
-    <string name="set_value_rest">%1$s, przerwa w sekundach</string>
-    <string name="set_error_rest">przerwa od 0 do 3600 s</string>
+    <string name="set_error_rest">przerwa od 0:00 do 60:00</string>
+    <string name="rest_block">Przerwa %1$s</string>
+    <string name="rest_block_description">Przerwa po serii %1$s: %2$s</string>
+    <string name="rest_block_default_description">Przerwa po serii %1$s: %2$s, domyślna</string>
+    <string name="rest_block_edit">Zmień przerwę</string>
+    <string name="rest_sheet_title">Przerwa między seriami</string>
+    <string name="rest_sheet_minutes">Minuty</string>
+    <string name="rest_sheet_seconds">Sekundy</string>
+    <string name="rest_sheet_default">Domyślna (%1$s)</string>
+    <string name="rest_sheet_error_seconds">Od 0 do 59</string>
+    <string name="rest_sheet_error_range">Przerwa może trwać najwyżej %1$s</string>
+    <string name="rest_sheet_error_number">Wpisz liczbę</string>
+    <string name="editor_rpe_add">Dodaj RPE</string>
+    <string name="editor_rpe_remove">Usuń RPE</string>
     <string name="settings_accessory">Ćwiczenie akcesoryjne</string>
     <string name="settings_accessory_supporting">Oznacza ćwiczenie etykietą „Akcesoryjne”.</string>
     <plurals name="positions_count">
@@ -343,4 +353,15 @@
     <string name="video_error_unreadable">Nie udało się odczytać tego pliku wideo.</string>
     <string name="video_play">Odtwórz wideo wzorcowe</string>
     <string name="video_desktop_playback">Odtwarzanie wideo działa w aplikacji na Androida.</string>
+    <string name="trainer_note_title">From the trainer</string>
+    <string name="trainer_note_label">Your note for this exercise</string>
+    <string name="trainer_note_empty">Add your own cues for this exercise. Only you and your plans use them.</string>
+    <string name="trainer_note_add">Add note</string>
+    <string name="trainer_note_edit">Edit note</string>
+    <string name="trainer_note_save">Save</string>
+    <string name="trainer_note_cancel">Cancel</string>
+    <string name="trainer_video_add">Add your video</string>
+    <string name="trainer_video_replace">Replace video</string>
+    <string name="trainer_video_remove">Remove video</string>
+    <string name="trainer_note_failed">Couldn't save. Check the connection and try again.</string>
 </resources>

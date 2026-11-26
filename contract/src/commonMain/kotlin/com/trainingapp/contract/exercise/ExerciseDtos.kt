@@ -47,3 +47,10 @@ object ExerciseSources {
     const val FREE_EXERCISE_DB = "free-exercise-db"
     const val TRAINER = "trainer"
 }
+
+/**
+ * The trainer's own note and video on an exercise ("Od trenera"), for the global library too. The video is shown
+ * before the library images. `GET`/`PUT trainer/exercises/{id}/note`; an empty note and no video remove it.
+ */
+@Serializable
+data class TrainerExerciseNoteDto(val exerciseId: String, val note: String = "", val demoMediaId: String? = null)

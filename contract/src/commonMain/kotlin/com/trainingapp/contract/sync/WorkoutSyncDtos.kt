@@ -21,7 +21,8 @@ data class TodayWorkoutDto(
 )
 
 @Serializable
-enum class AssignedPlanStatusDto { ACTIVE, REPLACED, ENDED }
+/** SESSION: a plan for one session; it applies on that day and leaves the ACTIVE plan in place. */
+enum class AssignedPlanStatusDto { ACTIVE, REPLACED, ENDED, SESSION }
 
 @Serializable
 data class AssignedPlanDto(

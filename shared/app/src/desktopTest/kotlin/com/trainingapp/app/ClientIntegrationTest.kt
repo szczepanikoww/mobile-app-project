@@ -127,12 +127,96 @@ class ClientIntegrationTest {
     }
 
     @Test
+    fun messagesListOpensChatAndAvatarOpensProfile() = runClient(390, 844, 1f) {
+        waitForText("Hej, Katarzyna")
+        clickOnUi(onNodeWithContentDescription("Wiadomości", substring = true))
+        waitForText("Wiadomości")
+        // The trainer's conversation is the one row; tapping it opens the thread.
+        waitUntil(timeoutMillis = 10_000) { onAllNodes(hasClickAction()).fetchSemanticsNodes().size > 1 }
+        capture("client-messages-pl")
+        clickOnUi(onAllNodes(hasClickAction()).onLast())
+        waitUntil(timeoutMillis = 10_000) { onAllNodes(hasSetTextAction()).fetchSemanticsNodes().isNotEmpty() }
+        capture("client-chat-pl")
+        clickOnUi(onNodeWithContentDescription("Wstecz"))
+        waitForText("Wiadomości")
+        clickOnUi(onNodeWithContentDescription("Wstecz"))
+
+        waitForText("Hej, Katarzyna")
+        clickOnUi(onNodeWithContentDescription("Profil i ustawienia"))
+        waitForText("Twój trener")
+        capture("client-profile-pl")
+        clickOnUi(onNodeWithText("Ustawienia"))
+        waitForText("Wyloguj")
+        onNodeWithText("Zmień hasło").assertExists()
+        capture("client-settings-pl")
+        clickOnUi(onNodeWithContentDescription("Wstecz"))
+        waitForText("Hej, Katarzyna")
+    }
+
+    @Test
+    fun profileEditsName() = runClient(390, 844, 1f) {
+        waitForText("Hej, Katarzyna")
+        clickOnUi(onNodeWithContentDescription("Profil i ustawienia"))
+        waitForText("Twój trener")
+        clickOnUi(onNodeWithText("Edytuj dane"))
+        waitForText("Imię i nazwisko")
+        onNode(hasSetTextAction()).performTextReplacement("   ")
+        clickOnUi(onNodeWithText("Zapisz"))
+        waitForText("Wpisz imię i nazwisko.")
+        onNode(hasSetTextAction()).performTextReplacement("Katarzyna Nowak-Kowalska")
+        capture("client-profile-edit-pl")
+        clickOnUi(onNodeWithText("Zapisz"))
+        waitForText("Dane zostały zapisane")
+        waitForText("Katarzyna Nowak-Kowalska")
+        capture("client-profile-saved-pl")
+    }
+
+    @Test
+    fun dumbbellStartsAnOwnWorkoutAndExercisesAreAddedWhileLogging() = runClient(390, 844, 1f) {
+        waitForText("Hej, Katarzyna")
+        // The centre dumbbell opens today's plan, with an empty workout of one's own as the alternative.
+        clickOnUi(onAllNodes(hasContentDescription("Rozpocznij trening")).onFirst())
+        waitForText("Zacznij pusty trening zamiast planu")
+        capture("client-live-not-started-pl")
+        clickOnUi(onNodeWithText("Zacznij pusty trening zamiast planu"))
+
+        // The library opens in pick mode, without the trainer's create tools.
+        waitForText("Dodaj ćwiczenia")
+        onNodeWithText("Nowe ćwiczenie").assertDoesNotExist()
+        onNode(hasSetTextAction()).performTextReplacement("Wyciskanie sztangi")
+        waitForText("Wyciskanie sztangi leżąc")
+        clickOnUi(onAllNodes(hasText("Wyciskanie sztangi leżąc")).onFirst())
+        waitForText("Dodaj (1)")
+        capture("client-live-pick-pl")
+        clickOnUi(onNodeWithText("Dodaj (1)"))
+
+        waitForText("Własny trening")
+        waitForText("Wyciskanie sztangi leżąc")
+        onAllNodes(hasText("Dodaj ćwiczenie")).fetchSemanticsNodes().isNotEmpty().let { assert(it) }
+        capture("client-live-own-workout-pl")
+    }
+
+    @Test
+    fun progressShowsTheExercisePhotoAboveTheChart() = runClient(390, 844, 1f) {
+        waitForText("Hej, Katarzyna")
+        clickOnUi(onNodeWithText("Postępy"))
+        waitForText("Ćwiczenia")
+        clickOnUi(onNodeWithText("Ćwiczenia"))
+        waitForIdle()
+        capture("client-progress-exercises-pl")
+    }
+
+    @Test
     fun bookingRequestNeedsPolicyConsent() = runClient(390, 844, 1f) {
         waitForText("Najbliższa sesja")
         clickOnUi(onNodeWithText("Kalendarz"))
         waitForText("Poproś o sesję")
         clickOnUi(onAllNodesWithText("Poproś o sesję")[0])
-        waitForText("Wolne terminy")
+        // First the trainer list, then the chosen trainer's month calendar.
+        waitForText("Dotknij trenera", substring = true)
+        capture("client-booking-trainers-pl")
+        clickOnUi(onAllNodesWithText("Michał Kowalczyk").onLast())
+        waitForText("Wybierz dzień")
         waitForText("Akceptuję zasady odwołań", substring = true)
         onNodeWithText("Wyślij prośbę").assertIsNotEnabled()
         capture("client-booking-sheet-pl")

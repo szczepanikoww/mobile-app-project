@@ -31,6 +31,18 @@ sealed interface AuthResult {
     data object Unavailable : AuthResult
     /** The sign-in method is not connected yet (Google sign-in, D10). */
     data object NotSupported : AuthResult
+    /** The user closed the provider's dialog (Google account picker). Nothing changed; no message. */
+    data object Cancelled : AuthResult
+    /**
+     * Signed in at the identity provider, but no account exists on our server yet (first Google sign-in, or a
+     * registration that stopped half way). The user finishes it with [AuthRepository.completeAccount]: name, starting
+     * role and consent are never assumed (docs/plans/firebase-auth.md F4).
+     */
+    data class NeedsAccount(val email: String?, val suggestedName: String?) : AuthResult {
+        override fun toString() = "NeedsAccount(email=***, suggestedName=***)"
+    }
+    /** The identity provider blocks further attempts for a while. */
+    data object TooManyAttempts : AuthResult
 }
 
 /**
@@ -61,10 +73,37 @@ interface AuthRepository {
     suspend fun logOut()
 
     /**
+     * Finishes an account after [AuthResult.NeedsAccount]: creates it on our server with the accepted terms. Only
+     * meaningful with a real identity provider.
+     */
+    suspend fun completeAccount(name: String, role: StartingRole, acceptedTermsVersion: String): AuthResult = AuthResult.NotSupported
+
+    /** The user left the account completion: forget the identity provider's sign-in. */
+    suspend fun cancelAccountCompletion() {}
+
+    /**
      * Makes [role] the session's active role when the session holds it. Returns the updated session, or null when
      * the role is not held (or switching is not supported).
      */
     suspend fun switchRole(role: Role): AuthSession? = null
+
+    /**
+     * Changes the signed-in user's display name on the server. Only a confirmed change updates [session]; any other
+     * result leaves it as it was.
+     */
+    suspend fun updateDisplayName(name: String): AccountUpdateResult = AccountUpdateResult.Unavailable
+}
+
+/** The outcome of changing the signed-in user's own account data (`PATCH /v1/me`). */
+enum class AccountUpdateResult {
+    /** The server confirmed it; the session already carries the new value. */
+    Saved,
+    /** Not sent: no connection. Nothing changed. */
+    Offline,
+    /** The server rejected the value (e.g. an empty or too long name). */
+    Invalid,
+    /** No session, an unsupported sign-in, or a server error. Nothing changed. */
+    Unavailable,
 }
 
 /** Raised by the catalogue when the server cannot be reached; the screens keep the last loaded data. */

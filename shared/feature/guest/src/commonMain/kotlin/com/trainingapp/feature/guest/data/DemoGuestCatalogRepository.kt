@@ -84,12 +84,12 @@ object DemoCatalog {
     private fun weekend(open: LocalTime, close: LocalTime) = listOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY).map { OpeningPeriod(it, open, close) }
 
     private val gymSummaries = listOf(
-        GymSummary("gym-centrum", "Studio Centrum", "Śródmieście", "Pon–Pt 06:00–22:00 · Sob–Nd 08:00–20:00", 1_200, Rating(4.8, 128)),
-        GymSummary("gym-wola", "Forma Wola", "Wola", "Całą dobę", 2_400, Rating(4.6, 87)),
-        GymSummary("gym-mokotow", "Ruch Mokotów", "Mokotów", "Pon–Pt 06:00–23:00 · Sob–Nd 08:00–21:00", 3_100, Rating(4.7, 64)),
-        GymSummary("gym-praga", "Hala Praga", "Praga-Południe", "Pon–Nd 07:00–22:00", 4_800, Rating(4.4, 41)),
-        GymSummary("gym-zoliborz", "Puls Żoliborz", "Żoliborz", "Pon–Pt 06:30–22:00 · Sob 09:00–18:00", 5_600, null),
-        GymSummary("gym-ursynow", "Strefa Ursynów", "Ursynów", "Pon–Pt 06:00–22:00 · Sob–Nd 08:00–20:00", 9_300, Rating(4.5, 23)),
+        GymSummary("gym-centrum", "Studio Centrum", "Śródmieście", "Pon–Pt 06:00–22:00 · Sob–Nd 08:00–20:00", 1_200, Rating(4.8, 128), 52.2297, 21.0122),
+        GymSummary("gym-wola", "Forma Wola", "Wola", "Całą dobę", 2_400, Rating(4.6, 87), 52.2370, 20.9650),
+        GymSummary("gym-mokotow", "Ruch Mokotów", "Mokotów", "Pon–Pt 06:00–23:00 · Sob–Nd 08:00–21:00", 3_100, Rating(4.7, 64), 52.1930, 21.0250),
+        GymSummary("gym-praga", "Hala Praga", "Praga-Południe", "Pon–Nd 07:00–22:00", 4_800, Rating(4.4, 41), 52.2400, 21.0800),
+        GymSummary("gym-zoliborz", "Puls Żoliborz", "Żoliborz", "Pon–Pt 06:30–22:00 · Sob 09:00–18:00", 5_600, null, 52.2700, 20.9850),
+        GymSummary("gym-ursynow", "Strefa Ursynów", "Ursynów", "Pon–Pt 06:00–22:00 · Sob–Nd 08:00–20:00", 9_300, Rating(4.5, 23), 52.1400, 21.0450),
     )
 
     private fun gymSummary(id: String) = gymSummaries.first { it.id == id }

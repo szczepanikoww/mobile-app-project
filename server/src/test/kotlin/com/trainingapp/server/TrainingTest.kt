@@ -185,6 +185,49 @@ class TrainingTest {
         assertEquals(HttpStatusCode.NotFound, foreign.status)
     }
 
+    @Test
+    fun `a plan for one session keeps the current plan`() = apiTest {
+        val trainer = signedIn("demo-trainer")
+        val exercise = trainer.createExercise()
+        val default = trainer.publishNew(exercise.id).body<PublishPlanResponse>()
+        val other = trainer.publishNew(exercise.id).body<PublishPlanResponse>()
+        trainer.post("$base/clients/${Seed.REL_1}/assigned-plan") { setBody(AssignPlanRequest(default.version.id, operationId = uuid())) }
+
+        val forSession = trainer.post("$base/clients/${Seed.REL_1}/assigned-plan") {
+            setBody(AssignPlanRequest(other.version.id, sessionId = Seed.CONFIRMED_SESSION, operationId = uuid()))
+        }
+        assertEquals(HttpStatusCode.Created, forSession.status)
+        assertEquals("SESSION", forSession.body<AssignedPlanDto>().status)
+        // The default plan is still the current one.
+        assertEquals(default.version.id, trainer.get("$base/clients/${Seed.REL_1}/assigned-plan").body<AssignedPlanDto>().planVersionId)
+
+        // A second plan for the same session replaces only the first one.
+        trainer.post("$base/clients/${Seed.REL_1}/assigned-plan") {
+            setBody(AssignPlanRequest(default.version.id, sessionId = Seed.CONFIRMED_SESSION, operationId = uuid()))
+        }
+        assertEquals(1L, TrainerTestDatabase.count("SELECT count(*) FROM training.assigned_plan WHERE session_id = '${Seed.CONFIRMED_SESSION}' AND status = 'SESSION'"))
+        assertEquals(1L, TrainerTestDatabase.count("SELECT count(*) FROM training.assigned_plan WHERE relationship_id = '${Seed.REL_1}' AND status = 'ACTIVE'"))
+    }
+
+    @Test
+    fun `a trainer note on an exercise is private to the trainer and removable`() = apiTest {
+        val trainer = signedIn("demo-trainer")
+        // The test seed has no global library; the same rules apply to an own exercise.
+        val exerciseId = trainer.createExercise().id
+        val path = "$base/exercises/$exerciseId/note"
+        assertEquals("", trainer.get(path).body<com.trainingapp.contract.exercise.TrainerExerciseNoteDto>().note)
+
+        val saved = trainer.put(path) { setBody(com.trainingapp.contract.exercise.TrainerExerciseNoteDto(exerciseId, "  Łokcie blisko tułowia  ")) }
+        assertEquals(HttpStatusCode.OK, saved.status)
+        assertEquals("Łokcie blisko tułowia", trainer.get(path).body<com.trainingapp.contract.exercise.TrainerExerciseNoteDto>().note)
+        // Another trainer cannot see this trainer's own exercise, so not its note either.
+        assertEquals(HttpStatusCode.NotFound, signedIn("demo-other-trainer").get(path).status)
+
+        trainer.put(path) { setBody(com.trainingapp.contract.exercise.TrainerExerciseNoteDto(exerciseId, " ")) }
+        assertEquals(0L, TrainerTestDatabase.count("SELECT count(*) FROM training.exercise_trainer_note"))
+        assertEquals(HttpStatusCode.NotFound, trainer.get("$base/exercises/${uuid()}/note").status)
+    }
+
     // ---------------------------------------------------------------- client progress
 
     @Test

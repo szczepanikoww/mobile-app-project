@@ -71,6 +71,26 @@ class PublishPlanTest {
     }
 
     @Test
+    fun restsBetweenSetsAreSentAndTheLastSetsRestIsNotAndTheyReopenAsMinutes() {
+        val draft = validDraft()
+        val dayId = draft.days.single().id
+        val exercise = draft.days.single().exercises.single()
+        val withRest = draft.apply(
+            PlanDraftAction.AddSet(dayId, exercise.id),
+            PlanDraftAction.UpdateSetValue(dayId, exercise.id, exercise.sets.single().id, DraftSetField.REST, "1:30"),
+        ).let { d ->
+            // A stale rest on the last set (no block in the editor) must not be sent.
+            val last = d.days.single().exercises.single().sets.last()
+            d.apply(PlanDraftAction.UpdateSetValue(dayId, exercise.id, last.id, DraftSetField.REST, "3:00"))
+        }
+        val body = PlanDraftMapper.validate(withRest, { TrackingType.WEIGHT_REPS }, dayName).body
+        assertEquals(listOf(90, null), body.days.single().exercises.single().sets.map { it.restSecondsOverride })
+
+        val reopened = PlanDraftMapper.toDraft(body, "t", 1, ',', ids, dayName)
+        assertEquals(listOf("1:30", ""), reopened.days.single().exercises.single().sets.map { it.rest })
+    }
+
+    @Test
     fun fieldsOutsideTheTrackingTypeAreNotSent() {
         val draft = validDraft("plank")
         val dayId = draft.days.single().id

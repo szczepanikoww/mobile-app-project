@@ -34,6 +34,8 @@ class RemoteClientChatTest {
         var failSends = 0
         var failConversations = false
         var status: MediaStatusDto? = null
+        var peerReadSeq = 0L
+        var peerReadAt: Instant? = null
 
         override suspend fun conversations(): List<ConversationDto> {
             if (failConversations) error("offline")
@@ -41,7 +43,8 @@ class RemoteClientChatTest {
         }
 
         override suspend fun messages(relationshipId: String, afterSeq: Long, limit: Int) =
-            MessagesDto(messages.filter { it.seq > afterSeq }.take(limit), lastSeq = messages.maxOfOrNull { it.seq } ?: 0, lastReadSeq = 0)
+            MessagesDto(messages.filter { it.seq > afterSeq }.take(limit), lastSeq = messages.maxOfOrNull { it.seq } ?: 0, lastReadSeq = 0,
+                peerLastReadSeq = peerReadSeq, peerLastReadAt = peerReadAt)
 
         override suspend fun send(relationshipId: String, request: SendMessageRequest): MessageDto {
             sent += request
@@ -116,6 +119,40 @@ class RemoteClientChatTest {
         assertEquals("media-1", reply.quotedMediaId)
         assertNull(reply.attachment)
         assertEquals(listOf(3L), server.reads)
+    }
+
+    @Test
+    fun theThreadReportsWhichOfMyMessagesTheTrainerHasReadAndWhen() = runTest {
+        val server = FakeServer()
+        val seenAt = Instant.parse("2026-11-11T10:30:00Z")
+        server.messages = listOf(
+            msg("m1", 1, "client-1", "Dzień dobry"),
+            msg("m2", 2, "client-1", "Jestem w drodze"),
+            msg("m3", 3, "trainer-1", "Czekam"),
+            msg("m4", 4, "client-1", "Już jestem"),
+        )
+        // The trainer has read up to message 3: my newest read message is m2, not m4.
+        server.peerReadSeq = 3
+        server.peerReadAt = seenAt
+        server.conversations = listOf(
+            ConversationDto("rel-1", TrainerRefDto("trainer-1", "Test Trener", "TT"), 4, 0, true, peerActiveAt = at),
+        )
+        val thread = RemoteClientChatRepository(server, RemoteClientContext(server)).thread()
+
+        assertEquals("m2", thread.seenMessageId)
+        assertEquals(seenAt, thread.seenAt)
+        assertEquals(at, thread.peerActiveAt)
+    }
+
+    @Test
+    fun noReceiptWhenTheTrainerHasReadNothingOfMine() = runTest {
+        val server = FakeServer()
+        server.messages = listOf(msg("m1", 1, "trainer-1", "Cześć"), msg("m2", 2, "client-1", "Hej"))
+        server.peerReadSeq = 1 // the trainer read only their own message
+        val thread = RemoteClientChatRepository(server, RemoteClientContext(server)).thread()
+
+        assertNull(thread.seenMessageId)
+        assertNull(thread.seenAt)
     }
 
     @Test

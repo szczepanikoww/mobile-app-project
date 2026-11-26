@@ -2,6 +2,7 @@ package com.trainingapp.data.remote
 
 import com.trainingapp.contract.api.ApiErrorDto
 import com.trainingapp.contract.api.IDEMPOTENCY_KEY_HEADER
+import com.trainingapp.domain.auth.TokenProvider
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.cio.CIO
@@ -19,6 +20,7 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
@@ -56,15 +58,24 @@ class ApiHttpException(val status: Int, val code: String, message: String) : Exc
 
 /**
  * A thin HTTP client for the backend: JSON with the `:contract` DTOs, timeouts, and the error mapping of plan §4.
- * [token] is the signed-in account's bearer token (until an identity provider exists: `dev.<subject>`, decision
- * TB2); null for a guest. It is attached to every call, and public endpoints ignore it.
+ * [tokens] gives the signed-in account's bearer token (`dev.<subject>` or a Firebase ID token,
+ * docs/plans/firebase-auth.md §5); null for a guest. It is attached to every call, and public endpoints ignore it.
+ * A `401` on [get] or [send] asks for a fresh token once and repeats the call.
  */
 class ApiClient(
     baseUrl: String,
     engine: HttpClientEngine = CIO.create(),
     private val language: () -> String = { "pl" },
-    private val token: () -> String? = { null },
+    private val tokens: TokenProvider = TokenProvider.None,
 ) {
+    /** A fixed token source (tests and the dev sign-in): [token] is read on every call. */
+    constructor(
+        baseUrl: String,
+        engine: HttpClientEngine = CIO.create(),
+        language: () -> String = { "pl" },
+        token: () -> String?,
+    ) : this(baseUrl, engine, language, TokenProvider { token() })
+
     val json = Json {
         ignoreUnknownKeys = true
         explicitNulls = false
@@ -82,10 +93,10 @@ class ApiClient(
 
     /** `GET` [path] and decode with [serializer]. [query] names may repeat (`district=A&district=B`). */
     suspend fun <T> get(path: String, serializer: KSerializer<T>, query: List<Pair<String, String>> = emptyList()): T {
-        val response = call {
+        val response = call(retryOnUnauthorized = true) { token ->
             http.get(path.trimStart('/')) {
                 header(HttpHeaders.AcceptLanguage, language())
-                token()?.let { bearerAuth(it) }
+                token?.let { bearerAuth(it) }
                 query.forEach { (name, value) -> url.parameters.append(name, value) }
             }
         }
@@ -111,11 +122,11 @@ class ApiClient(
         response: KSerializer<T>? = null,
         operationId: String? = null,
     ): T? {
-        val answer = call {
+        val answer = call(retryOnUnauthorized = true) { token ->
             http.request(path.trimStart('/')) {
                 this.method = method
                 header(HttpHeaders.AcceptLanguage, language())
-                token()?.let { bearerAuth(it) }
+                token?.let { bearerAuth(it) }
                 operationId?.let { header(IDEMPOTENCY_KEY_HEADER, it) }
                 if (body != null && bodySerializer != null) {
                     contentType(ContentType.Application.Json)
@@ -128,23 +139,33 @@ class ApiClient(
         return if (text.isBlank()) null else json.decodeFromString(response, text)
     }
 
-    /** A call with full control of the request (media uploads); errors are mapped as for [get]. */
-    suspend fun raw(method: HttpMethod, path: String, configure: HttpRequestBuilder.() -> Unit = {}): HttpResponse = call {
+    /**
+     * A call with full control of the request (media uploads); errors are mapped as for [get]. Not repeated after a
+     * `401`, because [configure] may set a one-shot body.
+     */
+    suspend fun raw(method: HttpMethod, path: String, configure: HttpRequestBuilder.() -> Unit = {}): HttpResponse = call(retryOnUnauthorized = false) { token ->
         http.request(path.trimStart('/')) {
             this.method = method
-            token()?.let { bearerAuth(it) }
+            token?.let { bearerAuth(it) }
             configure(this)
         }
     }
 
-    private suspend fun call(block: suspend () -> HttpResponse): HttpResponse {
-        val response = try {
-            block()
+    private suspend fun call(retryOnUnauthorized: Boolean, block: suspend (token: String?) -> HttpResponse): HttpResponse {
+        suspend fun attempt(forceRefresh: Boolean): Pair<String?, HttpResponse> = try {
+            // Inside the try: a token refresh that cannot reach the identity provider is offline too.
+            val token = tokens.token(forceRefresh)
+            token to block(token)
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
             // Connection refused, DNS, timeouts: the device is offline or the server is down.
             throw ApiOfflineException(e)
+        }
+        var (sent, response) = attempt(forceRefresh = false)
+        if (retryOnUnauthorized && response.status == HttpStatusCode.Unauthorized && sent != null) {
+            // The token expired or was revoked: one fresh token, one more try. Never a loop.
+            response = attempt(forceRefresh = true).second
         }
         if (response.status.isSuccess()) return response
         val error = runCatching { json.decodeFromString(ApiErrorDto.serializer(), response.bodyAsText()) }.getOrNull()

@@ -40,7 +40,7 @@ Health integrations (Garmin/Health Connect and Apple Health) and iOS are later w
 
 **The target is a minimal, calm, practical fitness app. Users should immediately understand what matters and what they can do next.**
 
-- Stitch establishes the visual direction, not a screen-by-screen implementation specification. Keep its light surfaces, warm orange accents, strong hierarchy, and rounded components; simplify its content, oversized imagery, repeated controls and decorative effects.
+- Stitch establishes the visual direction, not a screen-by-screen implementation specification. Keep its light surfaces, calm teal accents (changed from the reference orange), strong hierarchy, and rounded components; simplify its content, oversized imagery, repeated controls and decorative effects.
 - Give each screen one clear purpose and one dominant next action where appropriate. Repeated row actions are allowed; competing full-width primary actions are not the default.
 - Show essential information first. Put advanced fields and secondary actions in detail views, expandable sections, menus or sheets.
 - Use whitespace, typography and grouping before adding containers, borders or shadows. Do not wrap every row in a separate card or nest cards unnecessarily.
@@ -62,16 +62,16 @@ The values below are a repository baseline derived from the linked Stitch refere
 | Main text | `#0F172A` | Titles and primary content. |
 | Secondary text | `#565E74` | Supporting information. |
 | Outline | `#E2E8F0` | Subtle separators and boundaries. |
-| Brand accent | `#FF6B00` | Highlights, selected accents and accent containers. |
-| Strong brand | `#A04100` | Readable brand text and filled primary controls. |
-| Soft accent / text | `#FFF0E6` / `#572000` | Tinted brand surfaces with dark text. |
+| Brand accent | `#14B8A6` | Highlights, selected accents and accent containers. |
+| Strong brand | `#0F766E` | Readable brand text and filled primary controls. |
+| Soft accent / text | `#CCFBF1` / `#134E4A` | Tinted brand surfaces with dark text. |
 | Success / container | `#15803D` / `#DCFCE7` | Confirmed, completed or successfully saved states. |
 | Warning | `#D97706` | Attention indicators; check contrast for text. |
 | Error accent | `#EF4444` | Error indicators; not an automatic text/background pair. |
 | Error container / text | `#FFDAD6` / `#93000A` | Readable error messages and destructive context. |
 
 - Use semantic theme roles rather than hard-coded hex values inside feature screens. Centralize any additional foreground/container pairs.
-- Bright orange with small white text does not provide sufficient contrast. Use white on the strong brand color, or dark text on a suitable orange/tinted container, verified for contrast.
+- The bright brand accent with small white text does not provide sufficient contrast. Use white on the strong brand color, or dark text on a suitable tinted container, verified for contrast.
 - Status must have a label or icon as well as color. Keep brand emphasis distinct from warning and error semantics.
 - Start with the light reference. If the app supports dark mode, use the shared dark theme consistently; do not invent it separately for a feature.
 
@@ -83,6 +83,7 @@ The values below are a repository baseline derived from the linked Stitch refere
 - Use `dp` for layout and `sp` for text. Shared spacing scale: **4, 8, 12, 16, 20, 24, 32 dp**. Default screen gutter: **20 dp**; card padding: **16 dp**; section gap: **24 dp**; related-item gap: **8–12 dp**.
 - Baseline radii: **16 dp** for cards and inputs; **24–32 dp** for larger sheets or feature cards; pill shapes for chips and rounded buttons. Expose these through shared shape tokens, not local constants.
 - Prefer flat surfaces and subtle borders or low elevation. Avoid heavy shadows, glow effects, glass effects and ornamental gradients.
+- Recorded decision (2026-11-26, trainer redesign, [docs/plans/trainer-redesign.md](docs/plans/trainer-redesign.md)): one **hero card** per screen may use the strong-brand fill with two soft decorative circles (`HeroCard`); routine cards are white and borderless with a 20–24 dp radius on the light background; widgets lead with a coloured icon tile (`IconTile`); people are shown with their profile photo (`Portrait`). The active bottom-navigation tab sits on a soft-accent pill (shared with the client shell).
 - Use one Material-style icon set, generally outlined, at a consistent size (usually **24 dp**) with at least **48 × 48 dp** interactive targets. Use actual vector icons, not icon-font ligature strings or emoji as interface controls.
 - Use photos and video thumbnails only when they convey identity or exercise content. Keep aspect ratios and placeholders consistent; avoid large stock-photo sections on routine task screens.
 
@@ -127,7 +128,7 @@ The following are implementation guardrails from the requirements and proposed a
 - **Scheduling:** a client's request is not a confirmed booking. During reschedule negotiation, the original session stays confirmed until acceptance succeeds. Show requested, confirmed, rejected, cancelled and completed states accurately; the server resolves availability conflicts.
 - **Cancellation:** policies belong to trainers and are versioned. Show a fresh server quote before fee-bearing actions; do not hard-code a universal 24-hour rule. Trainer cancellation does not charge the client. The trainer may waive fees according to the supported workflow.
 - **Payments:** money uses integer minor units plus a currency code. Charges, money received, outstanding debt and payouts are different values. A client-side success callback does not prove settlement; show pending until authoritative confirmation. Use test mode during the university phase.
-- **Client list:** show the overdue-payment yes/no flag. Detailed financial amounts belong in the appropriate authorized finance flow, not the general client list.
+- **Client list:** recorded decision (2026-11-26): every session is paid by card when it is booked, so the trainer's client list shows no payment flag; the weekly sum of payments is a widget on the trainer's Start. Detailed financial amounts still belong in an authorized finance flow, not the general client list. Archiving a client is the trainer's own, reversible list state; it does not end the relationship.
 - **Plans:** assigned plan versions and completed workout logs are separate. Editing a template must not rewrite historical assignments or actual results. Independent workouts need not have a booked session.
 - **Workout logging:** persist every set locally and survive process death. Cached plans, history and logging support offline work. Show pending/failed/conflicting synchronization; retry must not duplicate sets. The rest timer is based on a stored end time.
 - **Server-dependent actions:** bookings, payments and fee-bearing changes need server confirmation. An offline attempt is unsent/pending, never silently successful.

@@ -86,16 +86,12 @@ enum class AuthMode {
     DEV,
 
     /** Firebase ID tokens verified against Google's public keys. */
-    FIREBASE,
-
-    /** Unsigned tokens from the Firebase Auth emulator. Local only. */
-    FIREBASE_EMULATOR;
+    FIREBASE;
 
     companion object {
         fun parse(value: String) = when (value.lowercase()) {
             "dev" -> DEV
             "firebase" -> FIREBASE
-            "firebase-emulator", "emulator" -> FIREBASE_EMULATOR
             else -> error("Unknown AUTH_MODE '$value'")
         }
     }

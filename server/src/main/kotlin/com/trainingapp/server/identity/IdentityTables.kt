@@ -45,6 +45,23 @@ object TrainerClients : Table("identity.trainer_client") {
     override val primaryKey = PrimaryKey(id)
 }
 
+/** The gyms a client attends (V11). */
+object ClientGyms : Table("identity.client_gym") {
+    val clientId = uuid("client_id")
+    val gymId = uuid("gym_id")
+    override val primaryKey = PrimaryKey(clientId, gymId)
+}
+
+/** Trainer invite codes ("Zaproś podopiecznego"); the client redeems one to join the trainer. */
+object InviteCodes : Table("identity.invite_code") {
+    val code = text("code")
+    val trainerId = uuid("trainer_id")
+    val expiresAt = timestampWithTimeZone("expires_at")
+    val maxUses = integer("max_uses")
+    val usedCount = integer("used_count")
+    override val primaryKey = PrimaryKey(code)
+}
+
 object AccessGrants : Table("identity.access_grant") {
     val id = uuid("id")
     val relationshipId = uuid("relationship_id")

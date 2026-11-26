@@ -74,6 +74,10 @@ data class ClientSummaryDto(
     val status: RelationshipStatus,
     /** The only financial fact the client list shows (CLAUDE.md §7). */
     val hasOverduePayment: Boolean,
+    /** The trainer moved the client to the archive; reversible, the relationship stays active. */
+    val archived: Boolean = false,
+    /** The gyms the client says they attend (names), for the client card. */
+    val gyms: List<String> = emptyList(),
 )
 
 @Serializable
@@ -90,6 +94,8 @@ data class TrainerDashboardDto(
     /** The latest private note per client id, written by this trainer. */
     val notes: Map<String, String>,
     val serverNow: ApiInstant,
+    /** The trainer's private comment per session id (only sessions that have one). */
+    val sessionComments: Map<String, String> = emptyMap(),
 )
 
 @Serializable
@@ -107,6 +113,14 @@ data class CreateSessionRequest(
 
 @Serializable
 data class RevisionRequest(val revision: Int, val operationId: String? = null)
+
+/**
+ * Corrects a marked attendance: [attended] true turns a no-show into a completed session, false the other way.
+ * The correction moves no money: credits and charges of the first marking stay, and a no-show that was already
+ * charged a fee cannot be turned into "attended" here (CONFLICT).
+ */
+@Serializable
+data class AttendanceCorrectionRequest(val revision: Int, val attended: Boolean, val reason: String? = null)
 
 /** A full fee waiver with an optional reason the client can see (D8: full waivers only). */
 @Serializable
@@ -259,6 +273,10 @@ data class NoteDto(val id: String, val body: String, val createdAt: ApiInstant, 
 @Serializable
 data class SaveNoteRequest(val body: String)
 
+/** The trainer's private comment on a session; an empty [body] removes it. */
+@Serializable
+data class SessionCommentRequest(val body: String)
+
 /**
  * Private information the client enters about themself; the trainer reads it with the client's
  * HEALTH_QUESTIONNAIRE grant (decision: client-entered, see docs/features/trainer-backend.md). Dates `YYYY-MM-DD`.
@@ -280,7 +298,15 @@ data class ClientInformationDto(
 data class InviteDto(val code: String, val expiresAt: ApiInstant, val maxUses: Int, val usedCount: Int)
 
 @Serializable
-data class CreateInviteRequest(val validDays: Int = 7, val maxUses: Int = 1)
+data class CreateInviteRequest(val validDays: Int = 7, val maxUses: Int = 1) {
+    companion object {
+        /** The trainer's permanent invite link: these exact values; revoked by generating a new one. */
+        const val PERMANENT_DAYS = 3650
+        const val PERMANENT_USES = 10_000
+
+        fun permanent() = CreateInviteRequest(PERMANENT_DAYS, PERMANENT_USES)
+    }
+}
 
 // ---------------------------------------------------------------- profile and price list
 
@@ -494,6 +520,8 @@ data class ConversationDto(
     val clientName: String,
     val lastMessage: MessageDto? = null,
     val unread: Int,
+    /** The client's latest sign of life (a message sent or a thread read); null when there is none. Drives the "active" dot. */
+    val peerActiveAt: ApiInstant? = null,
 )
 
 @Serializable
@@ -520,7 +548,15 @@ data class SendMessageRequest(
 )
 
 @Serializable
-data class ThreadDto(val conversationId: String, val clientId: String, val messages: List<MessageDto>, val lastReadSeq: Long)
+data class ThreadDto(
+    val conversationId: String,
+    val clientId: String,
+    val messages: List<MessageDto>,
+    val lastReadSeq: Long,
+    /** How far the other party has read, and when they last caught up: the "Seen 14:32" receipt. */
+    val peerLastReadSeq: Long = 0,
+    val peerLastReadAt: ApiInstant? = null,
+)
 
 @Serializable
 data class MarkReadRequest(val seq: Long)

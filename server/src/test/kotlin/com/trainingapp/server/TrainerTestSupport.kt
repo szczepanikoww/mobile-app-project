@@ -4,7 +4,8 @@ import com.trainingapp.contract.api.DevTokenRequest
 import com.trainingapp.contract.api.TokenDto
 import com.trainingapp.server.platform.ApiJson
 import com.trainingapp.server.platform.AppConfig
-import com.trainingapp.server.platform.AuthConfig
+import com.trainingapp.server.config.AuthConfig
+import com.trainingapp.server.config.AuthMode
 import com.trainingapp.server.platform.Db
 import com.trainingapp.server.platform.SCHEMAS
 import com.trainingapp.server.platform.ServerClock
@@ -101,7 +102,8 @@ fun testConfig() = AppConfig(
     dbUser = "",
     dbPassword = "",
     devSeed = true,
-    auth = AuthConfig("dev", "test-secret-0123456789-0123456789", "trainer-app-dev", "trainer-app"),
+    auth = AuthConfig(AuthMode.DEV, "demo-trainer"),
+    mediaSigningSecret = "test-secret-0123456789-0123456789",
     dataKeyId = "test-1",
     dataKey = Base64.getDecoder().decode("ZGV2LW9ubHkta2V5LWRvLW5vdC11c2UtaW4tcHJvZCE="),
     mediaDir = "build/test-media",

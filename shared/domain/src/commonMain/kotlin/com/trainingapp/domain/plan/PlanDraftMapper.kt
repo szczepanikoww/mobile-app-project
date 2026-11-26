@@ -47,8 +47,8 @@ object PlanDraftMapper {
                             accessory = exercise.accessory,
                             tempo = exercise.tempo.trim().ifEmpty { null },
                             note = exercise.note.trim().ifEmpty { null },
-                            sets = exercise.sets.map { set ->
-                                toSetDto(set, tracking, exercise.rpeEnabled) { field ->
+                            sets = exercise.sets.mapIndexed { setIndex, set ->
+                                toSetDto(set, tracking, exercise.rpeEnabled, isLast = setIndex == exercise.sets.lastIndex) { field ->
                                     parseIssues += PlanIssue.SetValueInvalid(day.id, exercise.id, set.id, field, SetProblem.INVALID)
                                 }
                             },
@@ -68,6 +68,7 @@ object PlanDraftMapper {
         set: DraftSet,
         tracking: TrackingType?,
         rpeEnabled: Boolean,
+        isLast: Boolean,
         onInvalid: (SetField) -> Unit,
     ): PlannedSetDto {
         fun <T> SetInput.Parsed<T>.valueOrReport(field: SetField): T? = when (this) {
@@ -88,7 +89,8 @@ object PlanDraftMapper {
             durationSeconds = if (usesDuration) SetInput.parseDurationSeconds(set.duration).valueOrReport(SetField.DURATION) else null,
             distanceMeters = if (tracking == TrackingType.DISTANCE_TIME) SetInput.parseDistanceMeters(set.distance).valueOrReport(SetField.DISTANCE) else null,
             rpe = if (rpeEnabled) SetInput.parseRpe(set.rpe).valueOrReport(SetField.RPE) else null,
-            restSecondsOverride = SetInput.parseDurationSeconds(set.rest).valueOrReport(SetField.REST),
+            // Rests are edited between sets only; after the last set the exercise's default rest applies.
+            restSecondsOverride = if (isLast) null else SetInput.parseDurationSeconds(set.rest).valueOrReport(SetField.REST),
         )
     }
 
@@ -130,7 +132,7 @@ object PlanDraftMapper {
                                 duration = SetInput.formatDuration(set.durationSeconds),
                                 distance = SetInput.formatThousandths(set.distanceMeters, decimalSeparator),
                                 rpe = SetInput.formatRpe(set.rpe, decimalSeparator),
-                                rest = set.restSecondsOverride?.toString().orEmpty(),
+                                rest = SetInput.formatDuration(set.restSecondsOverride),
                             )
                         },
                     )

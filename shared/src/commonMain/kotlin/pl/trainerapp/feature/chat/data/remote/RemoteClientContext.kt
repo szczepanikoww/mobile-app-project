@@ -30,14 +30,17 @@ class RemoteClientContext(private val api: ChatServerApi) {
 
     private val lock = Mutex()
 
+    /** Every relationship from the last successful refresh, by id: the client may open any of their conversations. */
+    private val known = MutableStateFlow<Map<String, ClientRelationship>>(emptyMap())
+
     /** Asks the server; with several conversations the first one that can still send wins. */
     suspend fun refresh(): ClientRelationship? = lock.withLock {
         try {
-            val rows = api.conversations()
-            val row = rows.firstOrNull { it.canSend } ?: rows.firstOrNull()
-            _relationship.value = row?.let {
+            val rows = api.conversations().map {
                 ClientRelationship(it.relationshipId, it.counterpart.id, it.counterpart.name, it.canSend)
             }
+            known.value = rows.associateBy { it.relationshipId }
+            _relationship.value = rows.firstOrNull { it.canSend } ?: rows.firstOrNull()
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -49,7 +52,12 @@ class RemoteClientContext(private val api: ChatServerApi) {
     /** The known relationship, or one fresh attempt to find it. */
     suspend fun ensure(): ClientRelationship? = _relationship.value ?: refresh()
 
+    /** One of the client's relationships (a conversation chosen in the list); asks the server once when unknown. */
+    suspend fun find(relationshipId: String): ClientRelationship? =
+        known.value[relationshipId] ?: run { refresh(); known.value[relationshipId] }
+
     fun clear() {
         _relationship.value = null
+        known.value = emptyMap()
     }
 }

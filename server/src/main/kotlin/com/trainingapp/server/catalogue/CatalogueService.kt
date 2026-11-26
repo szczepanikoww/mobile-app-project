@@ -314,6 +314,8 @@ class CatalogueService(private val db: Db) {
         name = row[Gyms.name],
         district = row[Gyms.district] ?: row[Gyms.city],
         hoursSummary = HoursFormatter.summary(row[Gyms.openingHours].orEmpty(), locale),
+        latitude = row[Gyms.latitude]?.toDouble(),
+        longitude = row[Gyms.longitude]?.toDouble(),
     )
 
     companion object {

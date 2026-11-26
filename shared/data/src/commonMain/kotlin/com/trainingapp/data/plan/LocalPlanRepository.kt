@@ -107,6 +107,34 @@ class LocalPlanRepository(
         return result
     }
 
+    /**
+     * Imports server templates this device lacks or has only an older version of. A local archive is kept (it is not
+     * sent yet), a server-side archive is applied, and drafts are never touched.
+     */
+    override suspend fun refresh() {
+        val templates = remote.fetchTemplates() ?: return
+        for (remoteTemplate in templates) {
+            val local = withContext(io) { queries.selectTemplate(remoteTemplate.id).executeAsOneOrNull() }
+            if (local != null && local.latest_version >= remoteTemplate.latestVersion.toLong()) {
+                val archivedAt = remoteTemplate.archivedAtEpochMs
+                if (local.archived_at == null && archivedAt != null) {
+                    withContext(io) { queries.archiveTemplate(archivedAt, local.id) }
+                }
+                continue
+            }
+            val latest = remote.fetchLatestVersion(remoteTemplate.id) ?: continue
+            withContext(io) {
+                db.transaction {
+                    queries.insertVersion(latest.id, remoteTemplate.id, latest.number.toLong(), DataJson.encodeToString(PlanVersionDto.serializer(), latest))
+                    queries.upsertTemplate(
+                        remoteTemplate.id, remoteTemplate.ownerTrainerId, remoteTemplate.name, latest.number.toLong(),
+                        local?.archived_at ?: remoteTemplate.archivedAtEpochMs, remoteTemplate.updatedAtEpochMs,
+                    )
+                }
+            }
+        }
+    }
+
     // TODO(slice 4): send the archive to the server; until then it only hides the template on this device.
     override suspend fun archive(templateId: String): Unit = withContext(io) {
         queries.archiveTemplate(time.nowEpochMs(), templateId)

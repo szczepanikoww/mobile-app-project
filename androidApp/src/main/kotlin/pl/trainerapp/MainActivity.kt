@@ -1,6 +1,8 @@
 package pl.trainerapp
 
+import com.trainingapp.android.auth.CurrentActivity
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
@@ -11,24 +13,58 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.trainingapp.app.App
 import com.trainingapp.feature.workoutlogging.rest.AndroidRestTimerNotifier
 import pl.trainer.domain.ClientSession
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     /** Incremented when the rest-timer notification is tapped; the app then opens the live workout. */
     private var openWorkoutRequests by mutableIntStateOf(0)
 
+    /** The code of an invite link (trainingapp://join/CODE) until the client shell has taken it. */
+    private var inviteCode by mutableStateOf<String?>(null)
+
+    /**
+     * The UI language is English for now (team request), whatever the device locale. The Polish resources stay in
+     * place: to follow the device again, remove this override.
+     */
+    override fun attachBaseContext(newBase: Context) {
+        Locale.setDefault(UiLocale)
+        val configuration = android.content.res.Configuration(newBase.resources.configuration).apply { setLocale(UiLocale) }
+        super.attachBaseContext(newBase.createConfigurationContext(configuration))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Google sign-in shows its account picker over this activity.
+        CurrentActivity.set(this)
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
         )
         if (savedInstanceState == null) handleIntent(intent)
         // The whole UI lives in :shared and :shared:app, so Android and desktop render the same shells.
-        setContent { App(openLiveWorkoutRequest = openWorkoutRequests, addToCalendar = ::addToCalendar) }
+        setContent {
+            App(
+                openLiveWorkoutRequest = openWorkoutRequests,
+                addToCalendar = ::addToCalendar,
+                inviteCode = inviteCode,
+                onInviteCodeConsumed = { inviteCode = null },
+            )
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        CurrentActivity.set(this)
+    }
+
+    override fun onDestroy() {
+        CurrentActivity.clear(this)
+        super.onDestroy()
     }
 
     /**
@@ -60,5 +96,11 @@ class MainActivity : ComponentActivity() {
             intent.removeExtra(AndroidRestTimerNotifier.EXTRA_OPEN_WORKOUT)
             openWorkoutRequests++
         }
+        val data = intent?.data
+        if (intent?.action == Intent.ACTION_VIEW && data?.scheme == "trainingapp" && data.host == "join") {
+            data.pathSegments.firstOrNull()?.takeIf { it.isNotBlank() }?.let { inviteCode = it }
+        }
     }
 }
+
+private val UiLocale: Locale = Locale.ENGLISH

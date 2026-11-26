@@ -31,9 +31,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -91,12 +97,12 @@ fun TrainerProfileRoute(
     onUnavailable: () -> Unit,
     modifier: Modifier = Modifier,
     onLogOut: () -> Unit = onUnavailable,
-    /** The current cancellation policy version with the editor entry (B5); the static summary when null. */
-    cancellationPolicy: (@Composable () -> Unit)? = null,
+    /** Extra sections the app adds above the account card. */
+    extras: (@Composable () -> Unit)? = null,
 ) {
     val viewModel = viewModel { TrainerProfileViewModel(repository) }
     val state by viewModel.state.collectAsStateWithLifecycle()
-    TrainerProfileScreen(state, viewModel::onAction, onBack, onUnavailable, modifier, onLogOut, cancellationPolicy)
+    TrainerProfileScreen(state, viewModel::onAction, onBack, onUnavailable, modifier, onLogOut, extras)
 }
 
 @Composable
@@ -118,7 +124,7 @@ fun TrainerProfileScreen(
     onUnavailable: () -> Unit,
     modifier: Modifier = Modifier,
     onLogOut: () -> Unit = onUnavailable,
-    cancellationPolicy: (@Composable () -> Unit)? = null,
+    extras: (@Composable () -> Unit)? = null,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
         DetailHeader(title = stringResource(Res.string.profile_title), onBack = onBack)
@@ -142,51 +148,98 @@ fun TrainerProfileScreen(
                             modifier = Gutter,
                         )
                     }
-                    ProfileLoadStatus.Content -> content(state, onAction, onUnavailable, onLogOut, cancellationPolicy)
+                    ProfileLoadStatus.Content -> content(state, onAction, onLogOut, extras)
                 }
             }
         }
     }
 }
 
+/**
+ * One page (docs/plans/trainer-redesign.md, Profil): who the trainer is, "Moje siłownie", working hours and the
+ * account. Notification settings, the cancellation policy and payouts were removed with the redesign.
+ */
 private fun LazyListScope.content(
     state: TrainerProfileUiState,
     onAction: (TrainerProfileAction) -> Unit,
-    onUnavailable: () -> Unit,
     onLogOut: () -> Unit,
-    cancellationPolicy: (@Composable () -> Unit)?,
+    extras: (@Composable () -> Unit)?,
 ) {
-    item {
-        PillTabs(
-            items = ProfileTab.entries,
-            selected = state.tab,
-            label = { tabLabel(it) },
-            onSelect = { onAction(TrainerProfileAction.SelectTab(it)) },
-            modifier = Gutter,
-        )
-    }
     val updated = state.lastUpdated
     if (state.isOffline && updated != null) {
         item { InlineBanner(stringResource(Res.string.offline_banner, formatUpdatedAt(updated)), modifier = Gutter) }
     }
     val profile = state.profile
     val draft = state.draft
-    val settings = state.settings
-    val payout = state.payout
-    when (state.tab) {
-        ProfileTab.Profile -> if (profile != null && draft != null) {
-            item { IdentityCard(profile) }
-            item { ProfileForm(state, draft, onAction) }
+    if (profile != null && draft != null) {
+        item { IdentityCard(profile) }
+        item { ProfileForm(state, draft, onAction) }
+    }
+    item { GymsCard(state, onAction) }
+    item { AvailabilityCard(state.availability, state.availabilityFailed, onAction) }
+    if (extras != null) item { extras() }
+    item { AccountCard(onLogOut) }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun GymsCard(state: TrainerProfileUiState, onAction: (TrainerProfileAction) -> Unit) {
+    var choosing by remember { mutableStateOf(false) }
+    val gyms = state.gyms
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+        SectionTitle(stringResource(Res.string.profile_gyms_title))
+        CardColumn {
+            Text(stringResource(Res.string.profile_gyms_hint), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            when {
+                gyms == null && state.gymsFailed -> Text(stringResource(Res.string.profile_gyms_failed), style = MaterialTheme.typography.bodyMedium, color = SharedColors.errorText)
+                gyms == null -> Text(stringResource(Res.string.screen_loading), style = MaterialTheme.typography.bodyMedium)
+                else -> {
+                    val chosen = gyms.all.filter { it.id in gyms.selected }
+                    if (chosen.isEmpty()) Text(stringResource(Res.string.profile_gyms_none), style = MaterialTheme.typography.bodyMedium)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(Layout.small), verticalArrangement = Arrangement.spacedBy(Layout.small)) {
+                        chosen.forEach { gym ->
+                            Surface(shape = Layout.pill, color = SharedColors.softAccent, contentColor = SharedColors.onSoftAccent) {
+                                Text(gym.name, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = Layout.medium, vertical = Layout.small))
+                            }
+                        }
+                    }
+                    if (state.gymsFailed) Text(stringResource(Res.string.profile_gyms_failed), style = MaterialTheme.typography.bodySmall, color = SharedColors.errorText)
+                    TextButton(onClick = { choosing = true }, enabled = !state.gymsSaving, modifier = Modifier.heightIn(min = Layout.target)) {
+                        Text(stringResource(Res.string.profile_gyms_choose))
+                    }
+                }
+            }
         }
-        ProfileTab.Settings -> if (settings != null) {
-            item { NotificationSettings(settings, onAction) }
-            item { if (cancellationPolicy != null) cancellationPolicy() else PolicyCard() }
-            item { AccountCard(onUnavailable, onLogOut) }
-        }
-        ProfileTab.Availability -> item { AvailabilityCard(state.availability, onAction) }
-        ProfileTab.Payments -> if (payout != null) {
-            item { PayoutsCard(payout, onUnavailable) }
-        }
+    }
+    if (choosing && gyms != null) {
+        var picked by remember { mutableStateOf(gyms.selected) }
+        AlertDialog(
+            onDismissRequest = { choosing = false },
+            title = { Text(stringResource(Res.string.profile_gyms_title)) },
+            text = {
+                LazyColumn(Modifier.heightIn(max = 360.dp)) {
+                    items(gyms.all.size) { index ->
+                        val gym = gyms.all[index]
+                        Row(
+                            Modifier.fillMaxWidth().heightIn(min = Layout.target).clickable(role = Role.Checkbox) {
+                                picked = if (gym.id in picked) picked - gym.id else picked + gym.id
+                            },
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Checkbox(checked = gym.id in picked, onCheckedChange = null)
+                            Column(Modifier.padding(start = Layout.small)) {
+                                Text(gym.name, style = MaterialTheme.typography.bodyLarge)
+                                if (gym.address.isNotBlank()) Text(gym.address, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { choosing = false; onAction(TrainerProfileAction.SaveGyms(picked)) }) { Text(stringResource(Res.string.profile_gyms_save)) }
+            },
+            dismissButton = { TextButton(onClick = { choosing = false }) { Text(stringResource(Res.string.profile_cancel)) } },
+        )
     }
 }
 
@@ -257,13 +310,18 @@ private fun Divider() = HorizontalDivider(color = MaterialTheme.colorScheme.outl
 private fun IdentityCard(profile: TrainerProfile) {
     CardColumn {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Layout.padding)) {
-            Avatar(profile.name, size = 64.dp)
-            Column(verticalArrangement = Arrangement.spacedBy(Layout.tiny)) {
+            Avatar(profile.name, size = 64.dp, photoOf = pl.trainer.ui.MyPhoto)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Layout.tiny)) {
                 Text(profile.name, style = MaterialTheme.typography.titleLarge)
                 Text(profile.email, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (profile.location.isNotBlank()) {
                     Text(profile.location, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+            }
+        }
+        pl.trainer.ui.LocalProfilePhotoChange.current?.let { change ->
+            TextButton(onClick = change.pick, enabled = change.state != pl.trainer.ui.PhotoUploadState.Uploading) {
+                Text(stringResource(Res.string.profile_change_photo))
             }
         }
     }
@@ -388,16 +446,10 @@ private fun PolicyCard() {
 }
 
 @Composable
-private fun AccountCard(onUnavailable: () -> Unit, onLogOut: () -> Unit) {
+private fun AccountCard(onLogOut: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
         SectionTitle(stringResource(Res.string.settings_account))
         CardColumn {
-            InfoRow(stringResource(Res.string.settings_language), stringResource(Res.string.settings_language_value))
-            Divider()
-            ActionRow(stringResource(Res.string.settings_change_password), MaterialTheme.colorScheme.onSurface, onUnavailable)
-            Divider()
-            ActionRow(stringResource(Res.string.settings_terms), MaterialTheme.colorScheme.onSurface, onUnavailable)
-            Divider()
             ActionRow(stringResource(Res.string.settings_logout), SharedColors.errorText, onLogOut)
         }
     }
@@ -406,19 +458,49 @@ private fun AccountCard(onUnavailable: () -> Unit, onLogOut: () -> Unit) {
 // ---------------------------------------------------------------- Availability tab
 
 @Composable
-private fun AvailabilityCard(days: List<AvailabilityDay>, onAction: (TrainerProfileAction) -> Unit) {
-    CardColumn {
-        Text(stringResource(Res.string.availability_title), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-        Text(stringResource(Res.string.availability_hint), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        days.forEachIndexed { index, day ->
-            if (index > 0) Divider()
-            SwitchRow(
-                title = day.dayName,
-                subtitle = if (day.enabled) day.hours else stringResource(Res.string.availability_closed),
-                checked = day.enabled,
-                onChange = { onAction(TrainerProfileAction.SetDayEnabled(index, it)) },
-            )
+private fun AvailabilityCard(days: List<AvailabilityDay>, failed: Boolean, onAction: (TrainerProfileAction) -> Unit) {
+    var editing by remember { mutableStateOf<Int?>(null) }
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+        SectionTitle(stringResource(Res.string.availability_title))
+        CardColumn {
+            Text(stringResource(Res.string.profile_hours_hint), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (failed) Text(stringResource(Res.string.profile_hours_failed), style = MaterialTheme.typography.bodySmall, color = SharedColors.errorText)
+            days.forEachIndexed { index, day ->
+                if (index > 0) Divider()
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f).clickable(enabled = day.enabled, role = Role.Button) { editing = index }.padding(vertical = Layout.small)) {
+                        Text(day.dayName, style = MaterialTheme.typography.bodyLarge)
+                        Text(if (day.enabled) day.hours else stringResource(Res.string.availability_closed), style = MaterialTheme.typography.bodySmall,
+                            color = if (day.enabled) SharedColors.brandStrong else MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(checked = day.enabled, onCheckedChange = { onAction(TrainerProfileAction.SetDayEnabled(index, it)) })
+                }
+            }
         }
+    }
+    editing?.let { index ->
+        val day = days.getOrNull(index) ?: return@let
+        val parts = day.hours.split("–", "-").map { it.trim() }
+        var from by remember(index) { mutableStateOf(parts.getOrNull(0).orEmpty()) }
+        var to by remember(index) { mutableStateOf(parts.getOrNull(1)?.substringBefore(',')?.trim().orEmpty()) }
+        AlertDialog(
+            onDismissRequest = { editing = null },
+            title = { Text(day.dayName) },
+            text = {
+                Row(horizontalArrangement = Arrangement.spacedBy(Layout.small)) {
+                    OutlinedTextField(from, { from = it.take(5) }, label = { Text(stringResource(Res.string.profile_hours_from)) }, singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f))
+                    OutlinedTextField(to, { to = it.take(5) }, label = { Text(stringResource(Res.string.profile_hours_to)) }, singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f))
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { editing = null; onAction(TrainerProfileAction.SetDayHours(index, "${from.trim()} – ${to.trim()}")) }) {
+                    Text(stringResource(Res.string.profile_gyms_save))
+                }
+            },
+            dismissButton = { TextButton(onClick = { editing = null }) { Text(stringResource(Res.string.profile_cancel)) } },
+        )
     }
 }
 

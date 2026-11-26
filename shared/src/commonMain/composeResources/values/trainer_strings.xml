@@ -114,8 +114,18 @@
     <string name="error_load_chat">Nie udało się wczytać rozmowy</string>
     <string name="chat_empty_title">Zacznij rozmowę</string>
     <string name="chat_empty_body">Napisz pierwszą wiadomość do klienta.</string>
+    <string name="chat_empty_body_client">Napisz pierwszą wiadomość do trenera.</string>
     <string name="chat_placeholder">Napisz wiadomość</string>
     <string name="chat_send">Wyślij</string>
+    <string name="chats_search_placeholder">Szukaj</string>
+    <string name="chats_search_empty">Brak wyników</string>
+    <string name="chats_active_now_section">Aktywni teraz</string>
+    <string name="chats_unread_a11y">Nieprzeczytane wiadomości: %1$d</string>
+    <string name="chat_active_now">Aktywny teraz</string>
+    <string name="chat_active_at">Ostatnia aktywność: %1$s</string>
+    <string name="chat_yesterday_time">Wczoraj, %1$s</string>
+    <string name="chat_seen_at">Wyświetlono · %1$s</string>
+    <string name="chat_sent_status">Wysłano</string>
     <string name="chat_send_failed">Nie udało się wysłać wiadomości. Spróbuj ponownie.</string>
 
     <!-- Powiadomienia -->

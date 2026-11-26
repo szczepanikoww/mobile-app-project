@@ -254,8 +254,11 @@ class TrainerClientsService(
     }
 
     suspend fun createInvite(trainerId: UUID, request: CreateInviteRequest): InviteDto = db.tx {
-        if (request.validDays !in 1..30) invalid("Invalid validity")
-        if (request.maxUses !in 1..50) invalid("Invalid use count")
+        // A one-off code is valid for up to 30 days; the trainer's permanent link (decision 2026-11-26) uses the
+        // permanent limits and stays valid until the trainer generates a new one.
+        val permanent = request.validDays == CreateInviteRequest.PERMANENT_DAYS && request.maxUses == CreateInviteRequest.PERMANENT_USES
+        if (!permanent && request.validDays !in 1..30) invalid("Invalid validity")
+        if (!permanent && request.maxUses !in 1..50) invalid("Invalid use count")
         val now = clock.now()
         var code = randomCode()
         var attempts = 0
@@ -306,6 +309,14 @@ class TrainerClientsService(
         }
         AssignedPlans.update({ (AssignedPlans.relationshipId eq relationshipId) and (AssignedPlans.status eq "ACTIVE") }) {
             it[status] = "ENDED"
+        }
+    }
+
+    /** Moves the client to the trainer's archive, or back with [archived] false. The relationship is unchanged. */
+    suspend fun setArchived(trainerId: UUID, relationshipId: UUID, archived: Boolean): Unit = db.tx {
+        Access.trainerRelationship(trainerId, relationshipId)
+        TrainerClients.update({ TrainerClients.id eq relationshipId }) {
+            it[archivedAt] = if (archived) clock.now().toOffset() else null
         }
     }
 

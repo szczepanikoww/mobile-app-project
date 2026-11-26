@@ -153,6 +153,31 @@ class FinanceChatMediaTest {
     }
 
     @Test
+    fun `the trainer sees how far the client has read and when, and when the client was last active`() = apiTest {
+        val trainer = signedIn("demo-trainer")
+        val path = "$base/conversations/${Seed.REL_1}"
+        trainer.post("$path/messages") { setBody(SendMessageRequest(uuid(), "Plan na jutro")) }
+
+        val before = trainer.get("$path/messages").body<ThreadDto>()
+        assertEquals(0L, before.peerLastReadSeq)
+        assertEquals(null, before.peerLastReadAt)
+
+        // The client reads through the client API; here the marker is written directly.
+        TrainerTestDatabase.exec(
+            """INSERT INTO messaging.read_marker (conversation_id, user_id, last_read_seq)
+               SELECT c.id, tc.client_id, 1 FROM messaging.conversation c
+               JOIN identity.trainer_client tc ON tc.id = c.relationship_id WHERE tc.id = '${Seed.REL_1}'""",
+        )
+        val after = trainer.get("$path/messages").body<ThreadDto>()
+        assertEquals(1L, after.peerLastReadSeq)
+        assertTrue(after.peerLastReadAt != null)
+        // The trainer's own marker is reported separately.
+        assertEquals(0L, after.lastReadSeq)
+        val conversation = trainer.get("$base/conversations").body<List<ConversationDto>>().single { it.clientId == Seed.REL_1 }
+        assertTrue(conversation.peerActiveAt != null)
+    }
+
+    @Test
     fun `another trainer cannot read or write the conversation`() = apiTest {
         val trainer = signedIn("demo-trainer")
         trainer.post("$base/conversations/${Seed.REL_1}/messages") { setBody(SendMessageRequest(uuid(), "Prywatne")) }

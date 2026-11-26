@@ -1,5 +1,6 @@
 package pl.trainerapp.feature.trainernotifications
 
+import com.trainingapp.domain.auth.TokenProvider
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -50,7 +51,7 @@ class RemoteTrainerNotificationsRepositoryTest {
                 else -> respond("{}", HttpStatusCode.NotFound, json)
             }
         }
-        return RemoteTrainerNotificationsRepository(TrainerApiClient("http://test", { "demo-trainer" }, HttpClient(engine)))
+        return RemoteTrainerNotificationsRepository(TrainerApiClient("http://test", TokenProvider.dev { "demo-trainer" }, HttpClient(engine)))
     }
 
     @Test

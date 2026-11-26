@@ -41,7 +41,11 @@ val ClientZone: TimeZone = TimeZone.of("Europe/Warsaw")
 enum class ScheduleMessage { RequestSent, RescheduleSent, ProposalAccepted, ProposalDeclined, RequestWithdrawn, SessionCancelled }
 
 data class BookingSheetState(
+    /** Null while the client picks a trainer (the first step of the sheet). */
     val trainerId: String?,
+    /** Whether the sheet opened on the trainer list, so the details can go back to it. */
+    val canChangeTrainer: Boolean = false,
+    /** The days the month calendar lets the client pick; free times are loaded once a day is chosen. */
     val options: BookingOptions? = null,
     val loadingOptions: Boolean = false,
     val dates: List<LocalDate> = emptyList(),
@@ -136,6 +140,12 @@ fun workingDays(from: LocalDate, count: Int = 10): List<LocalDate> =
     generateSequence(from) { it.plus(1, DateTimeUnit.DAY) }
         .filter { it.dayOfWeek != DayOfWeek.SATURDAY && it.dayOfWeek != DayOfWeek.SUNDAY }
         .take(count).toList()
+
+/** The booking calendar's range: every day from [from] for [days] days. The server decides which have free times. */
+fun bookableDays(from: LocalDate, days: Int = BookingHorizonDays): List<LocalDate> =
+    generateSequence(from) { it.plus(1, DateTimeUnit.DAY) }.take(days).toList()
+
+const val BookingHorizonDays = 60
 
 /**
  * The client's sessions and requests (B1 and B2): the calendar, the session details and the booking, reschedule
@@ -247,19 +257,32 @@ class ClientScheduleViewModel(
 
     /* Booking request */
 
-    /** Opens the sheet for [trainerId] (e.g. from a guest's pending intent) or the client's only/first trainer. */
+    /**
+     * Opens the sheet straight on [trainerId] (e.g. from a guest's pending intent or "request again"), or on the
+     * list of the client's trainers. No day is preselected: free times appear once the client picks a day.
+     */
     fun openBooking(trainerId: String? = null) {
-        val schedule = state.value.schedule
-        val id = trainerId ?: schedule?.trainers?.firstOrNull()?.id
         val today = state.value.today
-        val dates = today?.let { workingDays(it) }.orEmpty()
-        mutableState.update { it.copy(booking = BookingSheetState(id, loadingOptions = id != null, dates = dates, date = dates.firstOrNull()), actionFailure = null) }
-        if (id != null) loadBookingOptions(id)
+        val dates = today?.let { bookableDays(it) }.orEmpty()
+        mutableState.update {
+            it.copy(
+                booking = BookingSheetState(trainerId, canChangeTrainer = trainerId == null, loadingOptions = trainerId != null, dates = dates),
+                actionFailure = null,
+            )
+        }
+        if (trainerId != null) loadBookingOptions(trainerId)
     }
 
     fun bookingTrainer(trainerId: String) {
-        mutableState.update { state -> state.copy(booking = state.booking?.copy(trainerId = trainerId, options = null, loadingOptions = true, slot = null, place = null, policyAccepted = false)) }
+        mutableState.update { state ->
+            state.copy(booking = state.booking?.copy(trainerId = trainerId, options = null, loadingOptions = true, slot = null, slots = emptyList(), place = null, policyAccepted = false, failure = null))
+        }
         loadBookingOptions(trainerId)
+    }
+
+    /** Back from a trainer's details to the trainer list; nothing chosen for that trainer is kept. */
+    fun bookingChangeTrainer() = mutableState.update { state ->
+        state.copy(booking = state.booking?.copy(trainerId = null, options = null, loadingOptions = false, date = null, slot = null, slots = emptyList(), place = null, policyAccepted = false, failure = null))
     }
 
     private fun loadBookingOptions(trainerId: String) {

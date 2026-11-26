@@ -22,13 +22,14 @@ import com.trainingapp.server.http.installRouteTemplateCapture
 import com.trainingapp.server.http.mediaRoutes
 import com.trainingapp.server.http.publicRoutes
 import com.trainingapp.server.http.webhookRoutes
-import com.trainingapp.server.auth.trainerJwt
+import com.trainingapp.server.auth.trainerBearer
 import com.trainingapp.server.platform.AppConfig
 import com.trainingapp.server.platform.ServerClock
 import com.trainingapp.server.platform.respondTrainerError
 import com.trainingapp.server.training.ExerciseLibraryImport
 import com.trainingapp.server.platform.Db as TrainerDb
 import com.trainingapp.server.identity.IdentityService
+import com.trainingapp.server.identity.ProfilePhotoService
 import com.trainingapp.server.media.LocalDiskStorage
 import com.trainingapp.server.media.MediaService
 import com.trainingapp.server.media.ObjectStorage
@@ -66,6 +67,7 @@ class Services(
     push: PushSender = PushSender.Logging,
 ) {
     val identity = IdentityService(db)
+    val photos = ProfilePhotoService(db)
     val catalogue = CatalogueService(db)
     val billing = BillingService(db, identity, catalogue, paymentProvider, config.payments.fakeConfirmDelaySeconds)
     val training = TrainingService(db, identity)
@@ -80,14 +82,14 @@ class Services(
 
 /**
  * The Ktor module: plugins, routes and (optionally) the inline worker. [trainerApi] adds the trainer API (`/api/v1`,
- * docs/features/trainer-backend.md) to the same server: its JWT provider, error body, routes and expiry sweeper.
+ * docs/features/trainer-backend.md) to the same server: its bearer auth, error body, routes and expiry sweeper.
  */
 fun Application.trainerModule(s: Services, startWorker: Boolean = s.config.workerInline, trainerApi: TrainerServices? = null) {
     install(ContentNegotiation) { json(ApiJson) }
     install(PrivacyCallLogging)
     installRouteTemplateCapture()
     installErrorHandling(s.db, trainerApi?.let { { e: Throwable -> respondTrainerError(e) } })
-    installAuthentication(s.tokenVerifier) { trainerApi?.let { trainerJwt(it.tokens) } }
+    installAuthentication(s.tokenVerifier) { trainerApi?.let { trainerBearer(it.verifier) } }
     install(WebSockets) { pingPeriod = 30.seconds }
     install(RateLimit) { register(PublicRateLimit) { rateLimiter(limit = 120, refillPeriod = 1.minutes); requestKey { it.request.local.remoteAddress } } }
     routing {
@@ -120,11 +122,14 @@ fun main() {
     val db = Db(Db.pool(config.db), config.db.logSql)
     val services = Services(db, config)
     if (config.seedDemoData) runBlocking { DemoSeed(services).seedIfEmpty() }
-    // The trainer API shares the connection pool; its own settings (token signing, data key, media folder) come from
-    // AppConfig. Its demo data is the same DemoSeed: `demo-trainer` is the trainer Michał Kowalczyk.
-    val trainerApi = TrainerServices.create(AppConfig.fromEnv(), TrainerDb(db.dataSource), ServerClock.System)
+    // The trainer API shares the connection pool and the identity settings (one token verifier for both APIs); its own
+    // settings (data key, media folder) come from AppConfig. Its demo data is the same DemoSeed: `demo-trainer` is the
+    // trainer Michał Kowalczyk.
+    val trainerApi = TrainerServices.create(AppConfig.fromEnv().copy(auth = config.auth), TrainerDb(db.dataSource), ServerClock.System)
     // The global exercise library (free-exercise-db); upserts by source id, so the seeded exercises are kept.
     runBlocking { ExerciseLibraryImport.importIfIncomplete(trainerApi.db, trainerApi.clock) }
+    // The demo client's past workouts, measurements and payments use library exercises, so they come after the import.
+    if (config.seedDemoData) runBlocking { com.trainingapp.server.dev.DemoClientActivity(services).seedIfMissing() }
     log.info("starting on port {} (profile {}, auth {})", config.port, config.profile, config.auth.mode)
     embeddedServer(Netty, port = config.port, host = "0.0.0.0") { trainerModule(services, trainerApi = trainerApi) }.start(wait = true)
 }

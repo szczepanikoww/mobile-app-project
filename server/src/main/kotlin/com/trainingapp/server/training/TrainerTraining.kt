@@ -36,6 +36,7 @@ import com.trainingapp.server.db.BodyMeasurements
 import com.trainingapp.server.db.ExerciseInstructions
 import com.trainingapp.server.db.ExerciseNames
 import com.trainingapp.server.db.Exercises
+import com.trainingapp.server.db.ExerciseTrainerNotes
 import com.trainingapp.server.db.PersonalRecordView
 import com.trainingapp.server.db.PlanDays
 import com.trainingapp.server.db.PlanTemplates
@@ -88,6 +89,51 @@ class TrainerTraining(private val db: Db, private val clock: ServerClock, privat
             if (updatedSince != null) visible and (Exercises.updatedAt greater updatedSince.toOffset()) else visible
         }.orderBy(Exercises.updatedAt to SortOrder.ASC, Exercises.id to SortOrder.ASC).toList()
         exerciseDtos(rows)
+    }
+
+    /** The trainer's note and video on an exercise they can see; an empty note when there is none. */
+    suspend fun exerciseNote(trainerId: UUID, exerciseId: UUID): com.trainingapp.contract.exercise.TrainerExerciseNoteDto = db.tx {
+        visibleExercise(trainerId, exerciseId)
+        ExerciseTrainerNotes.selectAll().where { (ExerciseTrainerNotes.trainerId eq trainerId) and (ExerciseTrainerNotes.exerciseId eq exerciseId) }
+            .singleOrNull()?.let {
+                com.trainingapp.contract.exercise.TrainerExerciseNoteDto(exerciseId.toString(), it[ExerciseTrainerNotes.note], it[ExerciseTrainerNotes.demoMediaId]?.toString())
+            } ?: com.trainingapp.contract.exercise.TrainerExerciseNoteDto(exerciseId.toString())
+    }
+
+    /** Saves the note and video; both empty removes the row. A video must be the trainer's own exercise demo. */
+    suspend fun saveExerciseNote(
+        trainerId: UUID,
+        exerciseId: UUID,
+        request: com.trainingapp.contract.exercise.TrainerExerciseNoteDto,
+    ): com.trainingapp.contract.exercise.TrainerExerciseNoteDto = db.tx {
+        visibleExercise(trainerId, exerciseId)
+        val note = request.note.trim()
+        if (note.length > 2000) invalid("Note too long")
+        val mediaId = request.demoMediaId?.toUuid("demoMediaId")
+        if (mediaId != null) {
+            val asset = com.trainingapp.server.db.MediaAssets.selectAll().where { com.trainingapp.server.db.MediaAssets.id eq mediaId }.singleOrNull()
+            // The upload may not have reached the server yet; an existing asset must be this trainer's demo video.
+            if (asset != null && (asset[com.trainingapp.server.db.MediaAssets.ownerUserId] != trainerId ||
+                    asset[com.trainingapp.server.db.MediaAssets.kind] != "EXERCISE_DEMO")) invalid("Not your exercise video")
+        }
+        val where = (ExerciseTrainerNotes.trainerId eq trainerId) and (ExerciseTrainerNotes.exerciseId eq exerciseId)
+        ExerciseTrainerNotes.deleteWhere { where }
+        if (note.isNotEmpty() || mediaId != null) {
+            ExerciseTrainerNotes.insert {
+                it[ExerciseTrainerNotes.trainerId] = trainerId
+                it[ExerciseTrainerNotes.exerciseId] = exerciseId
+                it[ExerciseTrainerNotes.note] = note
+                it[demoMediaId] = mediaId
+                it[updatedAt] = clock.now().toOffset()
+            }
+        }
+        com.trainingapp.contract.exercise.TrainerExerciseNoteDto(exerciseId.toString(), note, mediaId?.toString())
+    }
+
+    private fun visibleExercise(trainerId: UUID, exerciseId: UUID) {
+        Exercises.selectAll().where {
+            (Exercises.id eq exerciseId) and (Exercises.ownerTrainerId.isNull() or (Exercises.ownerTrainerId eq trainerId))
+        }.singleOrNull() ?: notFound("Exercise not found")
     }
 
     /** Creates or updates the trainer's own exercise. Idempotent by the client-generated [id]. */
@@ -423,9 +469,15 @@ class TrainerTraining(private val db: Db, private val clock: ServerClock, privat
         val to = request.endsOn?.let { runCatching { LocalDate.parse(it) }.getOrElse { invalid("Invalid endsOn") } }
         if (from != null && to != null && to.isBefore(from)) invalid("endsOn is before startsOn")
         val clientProfileId = relationship[TrainerClients.clientId]
-        AssignedPlans.update({
-            (AssignedPlans.relationshipId eq relationshipId) and (AssignedPlans.status eq "ACTIVE")
-        }) { it[status] = "REPLACED" }
+        // A plan for one session (status SESSION) replaces only that session's earlier plan; the client's current
+        // ACTIVE plan stays (docs/plans/trainer-redesign.md). Without a session it is the new current plan.
+        if (pinnedSession != null) {
+            AssignedPlans.update({ (AssignedPlans.sessionId eq pinnedSession) and (AssignedPlans.status eq "SESSION") }) { it[status] = "REPLACED" }
+        } else {
+            AssignedPlans.update({
+                (AssignedPlans.relationshipId eq relationshipId) and (AssignedPlans.status eq "ACTIVE")
+            }) { it[status] = "REPLACED" }
+        }
         val newPlanId = newId()
         AssignedPlans.insert {
             it[id] = newPlanId
@@ -433,7 +485,7 @@ class TrainerTraining(private val db: Db, private val clock: ServerClock, privat
             it[clientId] = clientProfileId
             it[planVersionId] = versionId
             it[sessionId] = pinnedSession
-            it[status] = "ACTIVE"
+            it[status] = if (pinnedSession != null) "SESSION" else "ACTIVE"
             it[startsOn] = from
             it[endsOn] = to
             it[assignedBy] = trainerId

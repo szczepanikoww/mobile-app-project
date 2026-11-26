@@ -50,6 +50,9 @@ data class ChatUiState(
     val isSending: Boolean = false,
     val sendFailed: Boolean = false,
     val isRefreshing: Boolean = false,
+    val peerActiveAt: Instant? = null,
+    val seenMessageId: String? = null,
+    val seenAt: Instant? = null,
 )
 
 sealed interface ChatAction {
@@ -61,9 +64,13 @@ sealed interface ChatAction {
     data class RetryVideo(val mediaId: String) : ChatAction
 }
 
-interface TrainerChatsRepository {
+/** The conversation list ("Wiadomości"), the same screen for both roles. */
+interface ChatListRepository {
     /** Returns fresh or cached data (flagged offline). Throws if there is neither. */
     suspend fun conversations(): ConversationsSnapshot
+}
+
+interface TrainerChatsRepository : ChatListRepository {
 
     /** Opening a thread marks it read. [clientId] is the relationship id. */
     suspend fun thread(clientId: String): ChatThread

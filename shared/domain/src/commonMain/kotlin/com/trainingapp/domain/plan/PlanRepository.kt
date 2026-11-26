@@ -57,6 +57,12 @@ interface PlanRepository {
 
     suspend fun archive(templateId: String)
 
+    /**
+     * Pulls the trainer's published templates (and their latest versions) from the server into the local cache.
+     * Local drafts and templates that are already up to date are left alone. A no-op while offline.
+     */
+    suspend fun refresh() = Unit
+
     /** Exercise ids referenced by any published version. */
     suspend fun exerciseIdsInPublishedVersions(): Set<String>
 }

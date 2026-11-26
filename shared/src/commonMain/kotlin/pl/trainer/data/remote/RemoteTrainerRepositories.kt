@@ -13,6 +13,12 @@ import com.trainingapp.contract.api.ProposeTimeRequest
 import com.trainingapp.contract.api.RequestReviewDto
 import com.trainingapp.contract.api.RevisionRequest
 import com.trainingapp.contract.api.SaveNoteRequest
+import com.trainingapp.contract.api.SessionCommentRequest
+import com.trainingapp.contract.api.CreateInviteRequest
+import com.trainingapp.contract.api.InviteDto
+import pl.trainer.domain.InviteBaseUrl
+import pl.trainer.domain.InviteLink
+import pl.trainer.domain.InviteLinkSource
 import com.trainingapp.contract.api.SessionResultDto
 import com.trainingapp.contract.api.TrainerDashboardDto
 import com.trainingapp.contract.money.Money
@@ -109,6 +115,23 @@ class RemoteTrainerRepository(private val api: TrainerApiClient) : TrainerReposi
     override suspend fun loadClientInformation(clientId: String): ClientInformation =
         api.get<ClientInformationDto>("trainer/clients/$clientId/information").toModel()
 
+    override suspend fun setArchived(clientId: String, archived: Boolean): TrainerDashboard {
+        api.command(HttpMethod.Post, "trainer/clients/$clientId/${if (archived) "archive" else "restore"}")
+        return load()
+    }
+
+    override suspend fun correctAttendance(id: String, revision: Int, attended: Boolean): TrainerDashboard {
+        api.send<com.trainingapp.contract.api.AttendanceCorrectionRequest, SessionResultDto>(
+            HttpMethod.Post, "trainer/sessions/$id/attendance", com.trainingapp.contract.api.AttendanceCorrectionRequest(revision, attended),
+        )
+        return load()
+    }
+
+    override suspend fun saveSessionComment(sessionId: String, comment: String): TrainerDashboard {
+        api.command(HttpMethod.Put, "trainer/sessions/$sessionId/comment", SessionCommentRequest(comment))
+        return load()
+    }
+
     /** The client enters this information; the trainer only reads it (TB1). */
     override suspend fun saveClientInformation(clientId: String, information: ClientInformation): ClientInformation =
         throw TrainerException(Failure.Denied)
@@ -159,3 +182,24 @@ class RemotePolicyRepository(
 
 private val UuidPattern = Regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 private fun String.isUuid() = UuidPattern.matches(this)
+
+/**
+ * The trainer's permanent invite link from the server's invite codes (`/api/v1/trainer/invites`). The permanent code
+ * is the newest active one created with [CreateInviteRequest.permanent]; one-off codes are left alone.
+ */
+class RemoteInviteLinks(private val api: TrainerApiClient) : InviteLinkSource {
+    private suspend fun permanentCode(): InviteDto? = api.get<List<InviteDto>>("trainer/invites")
+        .firstOrNull { it.maxUses == CreateInviteRequest.PERMANENT_USES }
+
+    private suspend fun create(): InviteDto =
+        api.send<CreateInviteRequest, InviteDto>(HttpMethod.Post, "trainer/invites", CreateInviteRequest.permanent())
+
+    override suspend fun current(): InviteLink = (permanentCode() ?: create()).toLink()
+
+    override suspend fun regenerate(): InviteLink {
+        permanentCode()?.let { api.command(HttpMethod.Delete, "trainer/invites/${it.code}") }
+        return create().toLink()
+    }
+
+    private fun InviteDto.toLink() = InviteLink(code, InviteBaseUrl + code)
+}

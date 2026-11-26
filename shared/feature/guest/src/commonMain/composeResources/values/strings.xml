@@ -75,6 +75,8 @@
     <string name="availability_hint">Declared by trainers. These are not live free slots.</string>
     <string name="apply_filters">Apply</string>
     <string name="search_gyms_placeholder">Gym name or district</string>
+    <string name="gyms_map_description">Map of gyms. Choose a pin to see the gym.</string>
+    <string name="gyms_map_no_position">%1$d gyms have no position and are shown only on the list.</string>
     <string name="gyms_empty_title">No gyms found</string>
     <string name="gyms_catalog_empty_body">Gyms will appear here once trainers list them.</string>
     <string name="distance_meters">%1$d m</string>
@@ -168,6 +170,12 @@
     <string name="failure_offline">Not sent. Check your connection.</string>
     <string name="failure_unavailable">The service is unavailable. Try again later.</string>
     <string name="failure_google">Google sign-in is not available yet.</string>
+    <string name="complete_account">Finish sign-up</string>
+    <string name="complete_account_title">Finish creating your account</string>
+    <string name="complete_account_body">You are signed in as %1$s. Add your name, choose a role and accept the terms.</string>
+    <string name="complete_account_body_no_email">You are signed in. Add your name, choose a role and accept the terms.</string>
+    <string name="cancel_completion">Cancel</string>
+    <string name="failure_too_many">Too many attempts. Wait a moment and try again.</string>
     <string name="log_out">Log out</string>
     <plurals name="results_count">
         <item quantity="one">%d result</item>

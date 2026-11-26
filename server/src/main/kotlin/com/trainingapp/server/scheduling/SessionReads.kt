@@ -24,6 +24,7 @@ import com.trainingapp.server.db.AppUsers
 import com.trainingapp.server.db.AssignedPlans
 import com.trainingapp.server.db.CalendarBlocks
 import com.trainingapp.server.db.Gyms
+import com.trainingapp.server.db.ClientGyms
 import com.trainingapp.server.db.PlanVersions
 import com.trainingapp.server.db.RelationshipOverdueView
 import com.trainingapp.server.db.RescheduleRequests
@@ -72,8 +73,16 @@ object SessionReads {
             initials = initialsOf(name),
             status = RelationshipStatus.valueOf(this[TrainerClients.status]),
             hasOverduePayment = overdue,
+            archived = this[TrainerClients.archivedAt] != null,
+            gyms = clientGymNames(this[TrainerClients.clientId]),
         )
     }
+
+    /** The names of the gyms the client attends (V11), alphabetically. */
+    private fun clientGymNames(clientId: UUID): List<String> =
+        ClientGyms.join(Gyms, JoinType.INNER, ClientGyms.gymId, Gyms.id)
+            .selectAll().where { ClientGyms.clientId eq clientId }
+            .map { it[Gyms.name] }.sorted()
 
     /** The trainer's sessions starting in [from, to), every status. */
     fun sessions(trainerId: UUID, from: Instant, to: Instant): List<SessionDto> =

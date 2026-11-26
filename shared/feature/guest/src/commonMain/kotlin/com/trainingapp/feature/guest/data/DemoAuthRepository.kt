@@ -1,7 +1,9 @@
 package com.trainingapp.feature.guest.data
 
+import com.trainingapp.contract.account.UpdateMeRequest
 import com.trainingapp.contract.text.SearchText
 import com.trainingapp.domain.common.NetworkMonitor
+import com.trainingapp.feature.guest.model.AccountUpdateResult
 import com.trainingapp.feature.guest.model.AuthRepository
 import com.trainingapp.feature.guest.model.AuthResult
 import com.trainingapp.feature.guest.model.AuthSession
@@ -85,6 +87,19 @@ class DemoAuthRepository(
         val current = state.value ?: return null
         if (role !in current.roles) return null
         return current.copy(activeRole = role).also { state.value = it }
+    }
+
+    override suspend fun updateDisplayName(name: String): AccountUpdateResult {
+        when (guard()) {
+            AuthResult.Offline -> return AccountUpdateResult.Offline
+            null -> Unit
+            else -> return AccountUpdateResult.Unavailable
+        }
+        val current = state.value ?: return AccountUpdateResult.Unavailable
+        val trimmed = name.trim()
+        if (trimmed.length !in 1..UpdateMeRequest.DISPLAY_NAME_MAX_LENGTH) return AccountUpdateResult.Invalid
+        state.value = current.copy(displayName = trimmed)
+        return AccountUpdateResult.Saved
     }
 }
 

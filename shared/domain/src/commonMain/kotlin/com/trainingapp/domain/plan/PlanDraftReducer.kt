@@ -71,7 +71,8 @@ object PlanDraftReducer {
             is PlanDraftAction.AddExercises -> draft.updateDay(action.dayId) { day ->
                 day.copy(
                     exercises = day.exercises + action.exerciseIds.map { exerciseId ->
-                        DraftExercise(id = ids.newId(), exerciseId = exerciseId, sets = listOf(DraftSet(ids.newId())))
+                        // RPE is opt-in per exercise. The field's default stays `true` so drafts stored before this change keep it.
+                        DraftExercise(id = ids.newId(), exerciseId = exerciseId, rpeEnabled = false, sets = listOf(DraftSet(ids.newId())))
                     },
                 )
             }
@@ -111,10 +112,17 @@ object PlanDraftReducer {
             }
 
             is PlanDraftAction.AddSet -> draft.updateExercise(action.dayId, action.plannedExerciseId) { exercise ->
-                val copied = exercise.sets.lastOrNull()?.copy(id = ids.newId()) ?: DraftSet(ids.newId())
-                exercise.copy(sets = exercise.sets + copied)
+                val sets = exercise.sets
+                val copied = sets.lastOrNull()?.copy(id = ids.newId()) ?: DraftSet(ids.newId())
+                // The old last set's rest was "after the exercise" and hidden; it now becomes the rest before the new
+                // set, so it takes the previous between-set rest (blank = the exercise default).
+                val previousGap = if (sets.size >= 2) sets[sets.lastIndex - 1].rest else ""
+                val updated = if (sets.isEmpty()) sets else sets.dropLast(1) + sets.last().copy(rest = previousGap)
+                exercise.copy(sets = updated + copied)
             }
 
+            // Each rest belongs to the set before it, so removing a set removes exactly one rest block with it:
+            // the one after it, or for the last set the one before it (which becomes the hidden "after" rest).
             is PlanDraftAction.RemoveSet -> draft.updateExercise(action.dayId, action.plannedExerciseId) { exercise ->
                 exercise.copy(sets = exercise.sets.filterNot { it.id == action.setId })
             }

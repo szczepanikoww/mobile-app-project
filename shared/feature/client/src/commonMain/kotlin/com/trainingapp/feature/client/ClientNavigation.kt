@@ -1,6 +1,7 @@
 package com.trainingapp.feature.client
 
 import androidx.compose.runtime.Composable
+import com.trainingapp.feature.client.presentation.ClientProfileViewModel
 import com.trainingapp.feature.client.presentation.ClientScheduleViewModel
 import com.trainingapp.feature.client.presentation.ClientShellViewModel
 import com.trainingapp.feature.client.presentation.TodayWorkoutViewModel
@@ -27,5 +28,6 @@ fun ClientShellRoute(
     val schedule: ClientScheduleViewModel = koinViewModel()
     val wallet: WalletViewModel = koinViewModel()
     val workout: TodayWorkoutViewModel = koinViewModel()
-    ClientShell(displayName, initials, shell, schedule, wallet, workout, actions, progressTab, chatUnread)
+    val profile: ClientProfileViewModel = koinViewModel()
+    ClientShell(displayName, initials, shell, schedule, wallet, workout, actions, progressTab, chatUnread, profile)
 }

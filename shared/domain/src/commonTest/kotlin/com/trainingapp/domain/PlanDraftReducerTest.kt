@@ -120,6 +120,75 @@ class PlanDraftReducerTest {
     }
 
     @Test
+    fun newExercisesHaveRpeOffAndTogglingKeepsTypedValues() {
+        val draft = draftWith("bench")
+        val dayId = draft.firstDay.id
+        val exercise = draft.firstDay.exercises.single()
+        assertEquals(false, exercise.rpeEnabled)
+        fun toggle(on: Boolean) = PlanDraftAction.UpdateSettings(dayId, exercise.id, null, on, "", "")
+        val edited = draft.apply(
+            toggle(true),
+            PlanDraftAction.UpdateSetValue(dayId, exercise.id, exercise.sets.single().id, DraftSetField.RPE, "8"),
+            toggle(false),
+        )
+        assertEquals(false, edited.firstDay.exercises.single().rpeEnabled)
+        assertEquals("8", edited.firstDay.exercises.single().sets.single().rpe)
+        assertEquals(true, edited.apply(toggle(true)).firstDay.exercises.single().rpeEnabled)
+    }
+
+    /** Builds sets 1–3 with rests 1:30 and 2:00 between them; returns the draft and the set ids. */
+    private fun threeSetsWithRests(): Pair<PlanDraft, List<String>> {
+        val draft = draftWith("bench")
+        val dayId = draft.firstDay.id
+        val exerciseId = draft.firstDay.exercises.single().id
+        val withSets = draft.apply(PlanDraftAction.AddSet(dayId, exerciseId), PlanDraftAction.AddSet(dayId, exerciseId))
+        val setIds = withSets.firstDay.exercises.single().sets.map { it.id }
+        val edited = withSets.apply(
+            PlanDraftAction.UpdateSetValue(dayId, exerciseId, setIds[0], DraftSetField.REST, "1:30"),
+            PlanDraftAction.UpdateSetValue(dayId, exerciseId, setIds[1], DraftSetField.REST, "2:00"),
+        )
+        return edited to setIds
+    }
+
+    private fun PlanDraft.restsBetweenSets() = firstDay.exercises.single().sets.let { sets -> sets.dropLast(1).map { it.rest } }
+
+    @Test
+    fun addSetRepeatsThePreviousRestBetweenSets() {
+        val (draft, _) = threeSetsWithRests()
+        val exercise = draft.firstDay.exercises.single()
+        val added = draft.apply(PlanDraftAction.AddSet(draft.firstDay.id, exercise.id))
+        assertEquals(listOf("1:30", "2:00", "2:00"), added.restsBetweenSets())
+
+        // With a single set there is no previous rest, so the new gap uses the exercise default.
+        val single = draftWith("row")
+        val second = single.apply(PlanDraftAction.AddSet(single.firstDay.id, single.firstDay.exercises.single().id))
+        assertEquals(listOf(""), second.restsBetweenSets())
+    }
+
+    @Test
+    fun removingASetRemovesOnlyThatSetAndOneRest() {
+        val (draft, setIds) = threeSetsWithRests()
+        val dayId = draft.firstDay.id
+        val exerciseId = draft.firstDay.exercises.single().id
+        fun remove(setId: String) = draft.apply(PlanDraftAction.RemoveSet(dayId, exerciseId, setId))
+        fun PlanDraft.setIds() = firstDay.exercises.single().sets.map { it.id }
+
+        // 1 ─1:30─ 2 ─2:00─ 3
+        remove(setIds[1]).let { // middle → 1 ─1:30─ 3
+            assertEquals(listOf(setIds[0], setIds[2]), it.setIds())
+            assertEquals(listOf("1:30"), it.restsBetweenSets())
+        }
+        remove(setIds[0]).let { // first → 2 ─2:00─ 3
+            assertEquals(listOf(setIds[1], setIds[2]), it.setIds())
+            assertEquals(listOf("2:00"), it.restsBetweenSets())
+        }
+        remove(setIds[2]).let { // last → 1 ─1:30─ 2
+            assertEquals(listOf(setIds[0], setIds[1]), it.setIds())
+            assertEquals(listOf("1:30"), it.restsBetweenSets())
+        }
+    }
+
+    @Test
     fun setTypeCyclesWorkingWarmUpDrop() {
         val draft = draftWith("bench")
         val dayId = draft.firstDay.id

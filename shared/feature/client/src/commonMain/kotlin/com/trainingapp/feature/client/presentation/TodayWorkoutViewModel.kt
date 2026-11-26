@@ -17,6 +17,8 @@ data class TodayWorkoutUiState(
     /** The plan day's name, e.g. "Push A"; null when there is no plan for today. */
     val dayName: String? = null,
     val exerciseCount: Int = 0,
+    /** The day's exercise ids in order, for their photos on Home. */
+    val exerciseIds: List<String> = emptyList(),
     /** An unfinished workout on this device: the action becomes "Wróć do treningu". */
     val inProgress: Boolean = false,
     val inProgressName: String? = null,
@@ -36,7 +38,12 @@ class TodayWorkoutViewModel(
             try {
                 val workout = today.today(client.clientId)
                 mutableState.update {
-                    it.copy(loading = false, dayName = workout?.day?.name, exerciseCount = workout?.day?.exercises?.size ?: 0)
+                    it.copy(
+                        loading = false,
+                        dayName = workout?.day?.name,
+                        exerciseCount = workout?.day?.exercises?.size ?: 0,
+                        exerciseIds = workout?.day?.exercises?.map { e -> e.exerciseId }.orEmpty(),
+                    )
                 }
             } catch (e: CancellationException) {
                 throw e

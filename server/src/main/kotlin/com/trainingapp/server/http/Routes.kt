@@ -30,6 +30,8 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.withCharset
 import io.ktor.server.application.ApplicationCall
+import io.ktor.server.application.application
+import com.trainingapp.server.identity.ProfilePhotoService
 import io.ktor.server.auth.authenticate
 import io.ktor.server.plugins.ratelimit.RateLimitName
 import io.ktor.server.plugins.ratelimit.rateLimit
@@ -127,10 +129,56 @@ fun Route.publicRoutes(s: Services) = rateLimit(PublicRateLimit) {
 }
 
 fun Route.accountRoutes(s: Services) = authenticate(AUTH_API) {
-    get("/v1/me") { call.respond(call.currentUser(s.identity).toMe()) }
+    get("/v1/me") {
+        val user = call.currentUser(s.identity)
+        call.copyGooglePicture(s, user.id)
+        call.respond(user.toMe())
+    }
     post("/v1/accounts") {
         val body = call.receive<CreateAccountRequest>()
-        call.respond(HttpStatusCode.Created, s.identity.createAccount(call.token(), body).toMe())
+        val user = s.identity.createAccount(call.token(), body)
+        call.copyGooglePicture(s, user.id)
+        call.respond(HttpStatusCode.Created, user.toMe())
+    }
+    // Profile photos: the caller's own upload, and any visible user's photo (ProfilePhotoService decides who sees it).
+    put("/v1/me/photo") {
+        val user = call.currentUser(s.identity)
+        val length = call.request.headers[HttpHeaders.ContentLength]?.toLongOrNull()
+        if (length != null && length > ProfilePhotoService.MAX_BYTES) throw invalid("photo")
+        s.photos.upload(user.id, call.receive<ByteArray>())
+        call.respond(HttpStatusCode.NoContent)
+    }
+    get("/v1/me/photo") {
+        val me = call.currentUser(s.identity).id
+        call.respondPhoto(s.photos.photo(me, me))
+    }
+    // The gallery ("Zdjęcia"): the same visibility as the profile photo.
+    get("/v1/users/{id}/gallery") {
+        call.respond(s.photos.gallery(call.currentUser(s.identity).id, call.pathUuid("id", "user")))
+    }
+    get("/v1/users/{id}/gallery/{photoId}") {
+        call.respondPhoto(s.photos.galleryPhoto(call.currentUser(s.identity).id, call.pathUuid("id", "user"), call.pathUuid("photoId", "photo")))
+    }
+    get("/v1/me/gallery") {
+        val me = call.currentUser(s.identity).id
+        call.respond(s.photos.gallery(me, me))
+    }
+    get("/v1/me/gallery/{photoId}") {
+        val me = call.currentUser(s.identity).id
+        call.respondPhoto(s.photos.galleryPhoto(me, me, call.pathUuid("photoId", "photo")))
+    }
+    post("/v1/me/gallery") {
+        val user = call.currentUser(s.identity)
+        val length = call.request.headers[HttpHeaders.ContentLength]?.toLongOrNull()
+        if (length != null && length > ProfilePhotoService.MAX_BYTES) throw invalid("photo")
+        call.respond(HttpStatusCode.Created, mapOf("id" to s.photos.addToGallery(user.id, call.receive<ByteArray>())))
+    }
+    delete("/v1/me/gallery/{photoId}") {
+        s.photos.removeFromGallery(call.currentUser(s.identity).id, call.pathUuid("photoId", "photo"))
+        call.respond(HttpStatusCode.NoContent)
+    }
+    get("/v1/users/{id}/photo") {
+        call.respondPhoto(s.photos.photo(call.currentUser(s.identity).id, call.pathUuid("id", "photo")))
     }
     patch("/v1/me") { call.respond(s.identity.updateMe(call.currentUser(s.identity), call.receive<UpdateMeRequest>()).toMe()) }
     post("/v1/me/roles/client") { call.respond(s.identity.addClientRole(call.currentUser(s.identity)).toMe()) }
@@ -167,6 +215,15 @@ fun Route.clientRoutes(s: Services) = authenticate(AUTH_API) {
             val date = call.request.queryParameters["date"]?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: throw invalid("date")
             val exclude = call.request.queryParameters["excludeSessionId"]?.let { runCatching { kotlin.uuid.Uuid.parse(it) }.getOrNull() ?: throw invalid("excludeSessionId") }
             call.respond(s.scheduling.availableSlots(call.currentClient(s.identity), call.pathUuid("trainerId", "trainer"), date, exclude))
+        }
+        // "Moje siłownie": the gyms the client attends; their trainers see them in the client card.
+        get("/gyms") { call.respond(s.identity.clientGyms(call.currentClient(s.identity))) }
+        put("/gyms") {
+            call.respond(s.identity.saveClientGyms(call.currentClient(s.identity), call.receive<com.trainingapp.contract.account.SaveClientGymsRequest>()))
+        }
+        // "Mam kod od trenera": joins the trainer of an invite code (docs/plans/trainer-redesign.md).
+        post("/invites/{code}/redeem") {
+            call.respond(s.identity.redeemInvite(call.currentClient(s.identity), call.parameters["code"].orEmpty()))
         }
         post("/booking-requests") {
             val body = call.receive<BookingRequestDto>()
@@ -302,4 +359,16 @@ fun Route.webhookRoutes(s: Services) {
         s.billing.handleProviderEvent(providerName, eventId, type, ref, json)
         call.respond(HttpStatusCode.OK, mapOf("received" to true))
     }
+}
+
+/** Copies the Google account picture in the background, once, if the user has no photo yet. Never delays the call. */
+private fun ApplicationCall.copyGooglePicture(s: Services, userId: kotlin.uuid.Uuid) {
+    val picture = token().picture ?: return
+    application.launch { s.photos.copyGooglePicture(userId, picture) }
+}
+
+private suspend fun ApplicationCall.respondPhoto(photo: com.trainingapp.server.identity.ProfilePhoto) {
+    response.header(HttpHeaders.CacheControl, "private, max-age=300")
+    response.header(HttpHeaders.ETag, "\"${photo.version}\"")
+    respondBytes(photo.bytes, ContentType.parse(photo.contentType))
 }

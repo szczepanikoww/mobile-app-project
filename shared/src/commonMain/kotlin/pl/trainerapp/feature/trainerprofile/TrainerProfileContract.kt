@@ -1,6 +1,7 @@
 package pl.trainerapp.feature.trainerprofile
 
 import pl.trainerapp.feature.trainerprofile.model.AvailabilityDay
+import pl.trainerapp.feature.trainerprofile.model.GymSelection
 import pl.trainerapp.feature.trainerprofile.model.PayoutAccount
 import pl.trainerapp.feature.trainerprofile.model.ProfileDraft
 import pl.trainerapp.feature.trainerprofile.model.ProfileSnapshot
@@ -27,6 +28,12 @@ data class TrainerProfileUiState(
     val isSaving: Boolean = false,
     val saveFailed: Boolean = false,
     val justSaved: Boolean = false,
+    /** "Moje siłownie"; null until loaded or when the repository has none. */
+    val gyms: GymSelection? = null,
+    val gymsSaving: Boolean = false,
+    val gymsFailed: Boolean = false,
+    /** A day's hours could not be saved (invalid text or the server refused it). */
+    val availabilityFailed: Boolean = false,
 ) {
     /** True when the form differs from the stored profile. */
     val isDirty: Boolean get() = profile != null && draft != null && draft != ProfileDraft.of(profile)
@@ -42,6 +49,9 @@ sealed interface TrainerProfileAction {
     data object SaveProfile : TrainerProfileAction
     data class SetSetting(val key: SettingKey, val enabled: Boolean) : TrainerProfileAction
     data class SetDayEnabled(val index: Int, val enabled: Boolean) : TrainerProfileAction
+    /** [hours] like "08:00 – 16:00" (several ranges separated by commas). */
+    data class SetDayHours(val index: Int, val hours: String) : TrainerProfileAction
+    data class SaveGyms(val ids: Set<String>) : TrainerProfileAction
 }
 
 interface TrainerProfileRepository {
@@ -52,4 +62,10 @@ interface TrainerProfileRepository {
     suspend fun saveProfile(profile: TrainerProfile)
     suspend fun saveSettings(settings: TrainerSettings)
     suspend fun saveAvailability(days: List<AvailabilityDay>)
+
+    /** The public gyms and the trainer's own ("Moje siłownie"). */
+    suspend fun gyms(): GymSelection = GymSelection(emptyList(), emptySet())
+
+    /** Stores the trainer's gyms; they are suggested as the place of new sessions. */
+    suspend fun saveGyms(ids: Set<String>): Unit = throw UnsupportedOperationException("No gyms")
 }

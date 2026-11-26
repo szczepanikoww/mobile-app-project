@@ -34,6 +34,8 @@ import com.trainingapp.feature.workoutbuilder.resources.settings_note
 import com.trainingapp.feature.workoutbuilder.resources.settings_note_supporting
 import com.trainingapp.feature.workoutbuilder.resources.settings_rest
 import com.trainingapp.feature.workoutbuilder.resources.settings_rest_none
+import com.trainingapp.feature.workoutbuilder.resources.settings_rpe
+import com.trainingapp.feature.workoutbuilder.resources.settings_rpe_supporting
 import com.trainingapp.feature.workoutbuilder.resources.settings_accessory
 import com.trainingapp.feature.workoutbuilder.resources.settings_accessory_supporting
 import com.trainingapp.feature.workoutbuilder.resources.settings_tempo
@@ -43,9 +45,9 @@ import org.jetbrains.compose.resources.stringResource
 import com.trainingapp.designsystem.resources.Res as DsRes
 
 /** Rest presets in seconds. `null` is "no rest". */
-private val RestPresets = listOf(null, 30, 60, 90, 120, 150, 180, 240, 300)
+private val RestPresets: List<Int?> = listOf(null) + RestPresetSeconds
 
-data class ExerciseSettings(val restSeconds: Int?, val accessory: Boolean, val tempo: String, val note: String)
+data class ExerciseSettings(val restSeconds: Int?, val rpeEnabled: Boolean, val accessory: Boolean, val tempo: String, val note: String)
 
 /** S6: settings for one exercise in the plan, opened from the note button. Changes apply with "Gotowe". */
 @Composable
@@ -56,6 +58,7 @@ fun ExerciseSettingsSheet(
     onDismiss: () -> Unit,
 ) {
     var rest by rememberSaveable(planned.id) { mutableStateOf(planned.restSeconds) }
+    var rpeEnabled by rememberSaveable(planned.id) { mutableStateOf(planned.rpeEnabled) }
     var accessory by rememberSaveable(planned.id) { mutableStateOf(planned.accessory) }
     var tempo by rememberSaveable(planned.id) { mutableStateOf(planned.tempo) }
     var note by rememberSaveable(planned.id) { mutableStateOf(planned.note) }
@@ -78,23 +81,18 @@ fun ExerciseSettingsSheet(
             }
         }
 
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .heightIn(min = Sizes.minTouchTarget)
-                .toggleable(value = accessory, role = Role.Switch, onValueChange = { accessory = it }),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(stringResource(Res.string.settings_accessory), style = AppTheme.type.bodyStrong)
-                Text(stringResource(Res.string.settings_accessory_supporting), style = AppTheme.type.compactBody, color = AppTheme.colors.textSecondary)
-            }
-            Switch(
-                checked = accessory,
-                onCheckedChange = null,
-                colors = SwitchDefaults.colors(checkedTrackColor = AppTheme.colors.brandStrong),
-            )
-        }
+        SwitchRow(
+            title = stringResource(Res.string.settings_rpe),
+            supporting = stringResource(Res.string.settings_rpe_supporting),
+            checked = rpeEnabled,
+            onCheckedChange = { rpeEnabled = it },
+        )
+        SwitchRow(
+            title = stringResource(Res.string.settings_accessory),
+            supporting = stringResource(Res.string.settings_accessory_supporting),
+            checked = accessory,
+            onCheckedChange = { accessory = it },
+        )
 
         AppTextField(
             value = tempo,
@@ -112,8 +110,29 @@ fun ExerciseSettingsSheet(
         )
         PrimaryButton(
             text = stringResource(DsRes.string.ds_done),
-            onClick = { onApply(ExerciseSettings(rest, accessory, tempo, note)) },
+            onClick = { onApply(ExerciseSettings(rest, rpeEnabled, accessory, tempo, note)) },
             modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@Composable
+private fun SwitchRow(title: String, supporting: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = Sizes.minTouchTarget)
+            .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = AppTheme.type.bodyStrong)
+            Text(supporting, style = AppTheme.type.compactBody, color = AppTheme.colors.textSecondary)
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = null,
+            colors = SwitchDefaults.colors(checkedTrackColor = AppTheme.colors.brandStrong),
         )
     }
 }

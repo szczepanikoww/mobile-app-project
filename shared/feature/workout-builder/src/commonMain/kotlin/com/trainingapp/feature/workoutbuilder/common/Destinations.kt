@@ -10,9 +10,17 @@ data object PlanLibraryDestination
 @Serializable
 data class PlanEditorDestination(val draftId: String? = null, val templateId: String? = null)
 
-/** S3. Browse mode without [pickRequestKey]; pick mode (from the editor) with it. */
+/**
+ * S3. Browse mode without [pickRequestKey]; pick mode (from the editor or the client's live workout) with it.
+ * [libraryEditable] false hides creating exercises and the exercise details, for pickers outside the trainer's
+ * library tools (the client's live workout).
+ */
 @Serializable
-data class ExerciseBrowserDestination(val pickRequestKey: String? = null, val singleSelect: Boolean = false)
+data class ExerciseBrowserDestination(
+    val pickRequestKey: String? = null,
+    val singleSelect: Boolean = false,
+    val libraryEditable: Boolean = true,
+)
 
 /** S4. With [pickRequestKey], "Dodaj do dnia" adds the exercise to the day the picker was opened for. */
 @Serializable

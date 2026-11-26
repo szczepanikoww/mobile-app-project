@@ -1,5 +1,6 @@
 package pl.trainerapp.feature.chat.data.remote
 
+import com.trainingapp.domain.auth.TokenProvider
 import com.trainingapp.contract.media.MediaStatusDto
 import com.trainingapp.contract.media.RemoteMediaState
 import io.ktor.client.HttpClient
@@ -62,7 +63,7 @@ class TechniqueCaptionAndReviewsTest {
                 else -> respond(conversations, HttpStatusCode.OK, json)
             }
         }
-        val api = TrainerApiClient("http://test", subject = { "demo-trainer" }, engine = HttpClient(engine))
+        val api = TrainerApiClient("http://test", tokens = TokenProvider.dev { "demo-trainer" }, engine = HttpClient(engine))
         return RemoteTechniqueVideoReviews(api, { id -> states[id]?.let { MediaStatusDto(id, it) } })
     }
 
@@ -114,7 +115,7 @@ class TechniqueCaptionAndReviewsTest {
                 else -> respond(conversations, HttpStatusCode.OK, json)
             }
         }
-        val repository = RemoteTrainerChatsRepository(TrainerApiClient("http://test", subject = { "demo-trainer" }, engine = HttpClient(engine)))
+        val repository = RemoteTrainerChatsRepository(TrainerApiClient("http://test", tokens = TokenProvider.dev { "demo-trainer" }, engine = HttpClient(engine)))
 
         val video = repository.thread("rel-1").messages.first()
 

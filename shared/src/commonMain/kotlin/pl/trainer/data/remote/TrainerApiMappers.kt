@@ -85,8 +85,11 @@ fun ClientSummaryDto.toModel(): Client = Client(
     id = id,
     name = name,
     initials = initials,
-    active = status == RelationshipStatus.ACTIVE,
+    active = status == RelationshipStatus.ACTIVE && !archived,
     hasOverduePayment = hasOverduePayment,
+    userId = userId,
+    archived = archived,
+    gyms = gyms,
 )
 
 fun CalendarBlockDto.toModel(): AvailabilityBlock = AvailabilityBlock(id, start, end)
@@ -97,6 +100,8 @@ fun TrainerDashboardDto.toModel(): TrainerDashboard = TrainerDashboard(
     blocks = blocks.map { it.toModel() },
     notes = notes,
     today = serverNow.toLocalDateTime(TimeZone.of("Europe/Warsaw")).date,
+    now = serverNow,
+    sessionComments = sessionComments,
 )
 
 fun PolicyDto.toModel(): CancellationPolicy = CancellationPolicy(

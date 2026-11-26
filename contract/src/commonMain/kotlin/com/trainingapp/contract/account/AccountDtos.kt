@@ -2,6 +2,22 @@ package com.trainingapp.contract.account
 
 import kotlinx.serialization.Serializable
 
+/** One public gym, for choosing "Moje siłownie". */
+@Serializable
+data class GymChoiceDto(val id: String, val name: String, val address: String)
+
+/** Every public gym and the ones the client attends (`GET /v1/client/gyms`). */
+@Serializable
+data class ClientGymsDto(val all: List<GymChoiceDto>, val selected: List<String>)
+
+/** `PUT /v1/client/gyms`: the gyms the client attends (replaces the list). */
+@Serializable
+data class SaveClientGymsRequest(val gymIds: List<String>)
+
+/** The trainer a client joined with an invite code ("Mam kod od trenera"). */
+@Serializable
+data class JoinedTrainerDto(val trainerId: String, val trainerName: String, val relationshipId: String)
+
 /** A role is held when its profile row exists (G4). The active role is chosen in the app only. */
 @Serializable
 enum class RoleDto { TRAINER, CLIENT }
@@ -31,9 +47,16 @@ data class CreateAccountRequest(
     val acceptedPrivacyVersion: String,
 )
 
-/** `PATCH /v1/me`. `locale` is `pl` or `en`. */
+/**
+ * `PATCH /v1/me`. Only the given fields change. `locale` is `pl` or `en`; `displayName` is trimmed and must be
+ * 1..[DISPLAY_NAME_MAX_LENGTH] characters (the same limit as the trainer profile).
+ */
 @Serializable
-data class UpdateMeRequest(val locale: String? = null, val timeZone: String? = null)
+data class UpdateMeRequest(val locale: String? = null, val timeZone: String? = null, val displayName: String? = null) {
+    companion object {
+        const val DISPLAY_NAME_MAX_LENGTH = 80
+    }
+}
 
 @Serializable
 enum class PushPlatform { ANDROID, IOS }
@@ -41,3 +64,4 @@ enum class PushPlatform { ANDROID, IOS }
 /** `PUT /v1/me/push-tokens/{token}`. */
 @Serializable
 data class PushTokenRequest(val platform: PushPlatform)
+

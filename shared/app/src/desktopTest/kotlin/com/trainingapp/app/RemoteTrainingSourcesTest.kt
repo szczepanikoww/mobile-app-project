@@ -1,5 +1,6 @@
 package com.trainingapp.app
 
+import com.trainingapp.domain.auth.TokenProvider
 import com.trainingapp.app.remote.RemoteExerciseRemoteDataSource
 import com.trainingapp.app.remote.RemoteMediaRemoteDataSource
 import com.trainingapp.app.remote.RemotePlanRemoteDataSource
@@ -43,7 +44,7 @@ class RemoteTrainingSourcesTest {
         fun paths() = requests.filterNot { it.url.encodedPath.endsWith("dev/token") }.map { "${it.method.value} ${it.url.encodedPath}" }
     }
 
-    private fun Server.api() = TrainerApiClient("http://test", subject = { "demo-trainer" }, engine = HttpClient(engine))
+    private fun Server.api() = TrainerApiClient("http://test", tokens = TokenProvider.dev { "demo-trainer" }, engine = HttpClient(engine))
 
     private fun MockRequestHandleScope.token() = respond("""{"token":"tok","userId":"t-1"}""", HttpStatusCode.OK, json)
 
@@ -83,6 +84,35 @@ class RemoteTrainingSourcesTest {
         }
         assertEquals(PublishResult.Conflict(4), RemotePlanRemoteDataSource(server.api()).publish(request))
         assertEquals("GET /api/v1/trainer/plans/tpl-1/versions/latest", server.paths().last())
+    }
+
+    @Test
+    fun fetchesTemplatesAndLatestVersion() = runTest {
+        val server = Server { r ->
+            when {
+                r.url.encodedPath.endsWith("dev/token") -> token()
+                r.url.encodedPath.endsWith("/plans") ->
+                    respond("""[{"id":"tpl-1","ownerTrainerId":"t-1","name":"Plan","latestVersion":2,"updatedAtEpochMs":5},{"id":"tpl-2","ownerTrainerId":"t-1","name":"Old","latestVersion":1,"archivedAtEpochMs":9,"updatedAtEpochMs":6}]""", HttpStatusCode.OK, json)
+                else -> respond("""{"id":"v-2","templateId":"tpl-1","number":2,"createdAtEpochMs":5,"body":{"name":"Plan","days":[]}}""", HttpStatusCode.OK, json)
+            }
+        }
+        val source = RemotePlanRemoteDataSource(server.api())
+        val templates = source.fetchTemplates()!!
+        assertEquals(listOf("tpl-1", "tpl-2"), templates.map { it.id })
+        assertEquals(9L, templates[1].archivedAtEpochMs)
+        assertEquals(2, source.fetchLatestVersion("tpl-1")?.number)
+        assertEquals(
+            listOf("GET /api/v1/trainer/plans", "GET /api/v1/trainer/plans/tpl-1/versions/latest"),
+            server.paths(),
+        )
+    }
+
+    @Test
+    fun fetchFailuresAreNull() = runTest {
+        val offline = Server { throw java.io.IOException("down") }
+        assertNull(RemotePlanRemoteDataSource(offline.api()).fetchTemplates())
+        val broken = Server { r -> if (r.url.encodedPath.endsWith("dev/token")) token() else error(HttpStatusCode.InternalServerError, "INTERNAL") }
+        assertNull(RemotePlanRemoteDataSource(broken.api()).fetchLatestVersion("tpl-1"))
     }
 
     @Test

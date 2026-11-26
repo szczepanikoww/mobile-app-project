@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -38,6 +39,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.trainingapp.designsystem.component.ActionRow
 import com.trainingapp.designsystem.component.AppTextButton
+import com.trainingapp.designsystem.component.BottomActionBar
 import com.trainingapp.designsystem.component.CardRow
 import com.trainingapp.designsystem.component.EmptyState
 import com.trainingapp.designsystem.component.ErrorState
@@ -45,6 +47,7 @@ import com.trainingapp.designsystem.component.InlineMessage
 import com.trainingapp.designsystem.component.LoadingState
 import com.trainingapp.designsystem.component.MessageTone
 import com.trainingapp.designsystem.component.MetaLine
+import com.trainingapp.designsystem.component.PersonPortrait
 import com.trainingapp.designsystem.component.PrimaryButton
 import com.trainingapp.designsystem.component.SecondaryButton
 import com.trainingapp.designsystem.theme.AppShapes
@@ -74,8 +77,8 @@ data class ClientCalendarActions(
 )
 
 /**
- * B2 "Kalendarz": a week strip and the week's agenda (no month view, D5). "Poproś o sesję" is the tab's one primary
- * action. A trainer's proposal is answered inline; a pending request can be withdrawn at no cost.
+ * B2 "Calendar": a week strip and the week's agenda (no month view, D5). "Request a session" is the tab's one primary
+ * action, pinned to the bottom. A trainer's proposal is answered inline; a pending request can be withdrawn at no cost.
  */
 @Composable
 fun ClientCalendarContent(state: ScheduleUiState, actions: ClientCalendarActions) {
@@ -89,26 +92,15 @@ fun ClientCalendarContent(state: ScheduleUiState, actions: ClientCalendarActions
             val week = state.week
             val byDay = week.associateWith { day -> data.sessions.filter { it.agendaStart.dateIn(it.zone) == day }.sortedBy { it.agendaStart } }
             val daysWithSessions = week.filter { byDay[it].orEmpty().isNotEmpty() }
-            // Header items before the agenda: action, offline note, week strip.
-            val leadingItems = 2 + if (state.offline) 1 else 0
+            // Header items before the agenda: offline note, week strip.
+            val leadingItems = 1 + if (state.offline) 1 else 0
+            Column(Modifier.fillMaxSize()) {
             LazyColumn(
-                Modifier.testTag("client-calendar"),
+                Modifier.weight(1f).testTag("client-calendar"),
                 state = listState,
                 contentPadding = PaddingValues(Spacing.gutter),
                 verticalArrangement = Arrangement.spacedBy(Spacing.m),
             ) {
-                item(key = "action") {
-                    if (data.trainers.isEmpty()) {
-                        SecondaryButton(stringResource(Res.string.find_trainer), onClick = actions.onFindTrainer, icon = Icons.Outlined.Search)
-                    } else {
-                        PrimaryButton(
-                            stringResource(Res.string.request_session),
-                            onClick = actions.onRequestSession,
-                            modifier = Modifier.fillMaxWidth(),
-                            icon = Icons.Outlined.CalendarToday,
-                        )
-                    }
-                }
                 if (state.offline) item(key = "offline") { InlineMessage(stringResource(Res.string.offline_cached), tone = MessageTone.Offline) }
                 item(key = "week") {
                     WeekStrip(state, byDay.filterValues { it.isNotEmpty() }.keys, onDate = { date ->
@@ -151,6 +143,20 @@ fun ClientCalendarContent(state: ScheduleUiState, actions: ClientCalendarActions
                         modifier = Modifier.padding(top = Spacing.l),
                     )
                 }
+            }
+            // The tab's one primary action sits at the bottom, within thumb reach, above the navigation bar.
+            BottomActionBar {
+                if (data.trainers.isEmpty()) {
+                    SecondaryButton(stringResource(Res.string.find_trainer), onClick = actions.onFindTrainer, modifier = Modifier.fillMaxWidth(), icon = Icons.Outlined.Search)
+                } else {
+                    PrimaryButton(
+                        stringResource(Res.string.request_session),
+                        onClick = actions.onRequestSession,
+                        modifier = Modifier.fillMaxWidth(),
+                        icon = Icons.Outlined.CalendarToday,
+                    )
+                }
+            }
             }
         }
     }
@@ -224,6 +230,7 @@ internal fun ClientSessionCard(session: ClientSession, submitting: Boolean, acti
         supporting = session.trainer.name + " · " + s.location,
         onClick = { actions.onOpenSession(session.id) },
         onClickLabel = stringResource(Res.string.details),
+        leading = { PersonPortrait(session.trainer.initials, size = 44.dp, photoOf = session.trainer.id) },
         badges = { SessionStateChip(session.state) },
         meta = {
             s.planTitle?.let { MetaLine(Icons.Outlined.FitnessCenter, stringResource(Res.string.plan_line, it)) }

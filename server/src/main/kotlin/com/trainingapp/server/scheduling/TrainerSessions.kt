@@ -48,6 +48,7 @@ import com.trainingapp.server.platform.toOffset
 import com.trainingapp.server.platform.toUuid
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.greater
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -428,11 +429,53 @@ class TrainerSessions(private val db: Db, private val clock: ServerClock) {
         SessionResultDto(SessionReads.session(sessionId)!!, now)
     }
 
+    /** See [com.trainingapp.contract.api.AttendanceCorrectionRequest]. The first marking stays in the append-only log. */
+    suspend fun correctAttendance(trainerId: UUID, sessionId: UUID, request: com.trainingapp.contract.api.AttendanceCorrectionRequest): SessionResultDto = db.tx {
+        val now = clock.now()
+        val row = lockOwnSession(trainerId, sessionId)
+        checkRevision(row, request.revision)
+        if ((request.reason?.length ?: 0) > 300) invalid("Reason too long")
+        val current = row[Sessions.status]
+        val target = if (request.attended) SessionStatus.COMPLETED.name else SessionStatus.NO_SHOW.name
+        if (current != SessionStatus.COMPLETED.name && current != SessionStatus.NO_SHOW.name) conflict("Attendance is not marked")
+        if (current == target) conflict("Attendance is already $target")
+        if (request.attended && com.trainingapp.server.db.Charges.selectAll().where {
+                (com.trainingapp.server.db.Charges.sessionId eq sessionId) and
+                    (com.trainingapp.server.db.Charges.kind eq com.trainingapp.contract.api.ChargeKind.NO_SHOW_FEE.name) and
+                    (com.trainingapp.server.db.Charges.amountMinor greater 0L)
+            }.any()) conflict("A no-show fee was charged")
+        val previous = Attendances.selectAll().where { Attendances.sessionId eq sessionId }
+            .orderBy(Attendances.markedAt, SortOrder.DESC).limit(1).singleOrNull()?.get(Attendances.id)
+        val revision = row[Sessions.revision] + 1
+        Sessions.update({ Sessions.id eq sessionId }) {
+            it[status] = target
+            it[Sessions.revision] = revision
+        }
+        Attendances.insert {
+            it[id] = newId()
+            it[Attendances.sessionId] = sessionId
+            it[outcome] = if (request.attended) "ATTENDED" else "NO_SHOW"
+            it[markedBy] = trainerId
+            it[markedAt] = now.toOffset()
+            it[correctsId] = previous
+            it[reason] = request.reason?.trim()?.ifBlank { null }
+        }
+        event(sessionId, revision, "ATTENDANCE_CORRECTED", trainerId, now)
+        SessionResultDto(SessionReads.session(sessionId)!!, now)
+    }
+
     // ------------------------------------------------------------------ helpers
 
     private fun ownSession(trainerId: UUID, sessionId: UUID): ResultRow =
         Sessions.selectAll().where { (Sessions.id eq sessionId) and (Sessions.trainerId eq trainerId) }.singleOrNull()
             ?: notFound("Session not found")
+
+    /** Saves the trainer's private comment on an own session (any status); a blank body removes it. */
+    suspend fun saveComment(trainerId: UUID, sessionId: UUID, request: com.trainingapp.contract.api.SessionCommentRequest): Unit = db.tx {
+        if (request.body.length > 2000) invalid("Comment too long")
+        lockOwnSession(trainerId, sessionId)
+        Sessions.update({ Sessions.id eq sessionId }) { it[trainerComment] = request.body.trim().ifBlank { null } }
+    }
 
     private fun lockOwnSession(trainerId: UUID, sessionId: UUID): ResultRow =
         Sessions.selectAll().where { (Sessions.id eq sessionId) and (Sessions.trainerId eq trainerId) }.forUpdate().singleOrNull()

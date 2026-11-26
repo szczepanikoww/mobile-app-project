@@ -65,6 +65,12 @@ data class PayoutAccount(
     val lastPayout: Pln,
 )
 
+/** A gym the trainer can pick for "Moje siłownie". */
+data class GymOption(val id: String, val name: String, val address: String = "")
+
+/** Every public gym and the ones the trainer works at. */
+data class GymSelection(val all: List<GymOption>, val selected: Set<String>)
+
 data class ProfileSnapshot(
     val profile: TrainerProfile,
     val settings: TrainerSettings,

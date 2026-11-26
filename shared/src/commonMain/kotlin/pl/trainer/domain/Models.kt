@@ -16,8 +16,15 @@ data class Client(
     val id: String,
     val name: String,
     val initials: String,
+    /** False for an archived client (the trainer's "Archiwum") or a relationship that is not active. */
     val active: Boolean = true,
     val hasOverduePayment: Boolean = false,
+    /** The client's user id, for the profile photo; null in fixtures without photos. */
+    val userId: String? = null,
+    /** In the trainer's archive: [active] is false but the relationship continues and the client can be restored. */
+    val archived: Boolean = false,
+    /** The gyms the client says they attend (names). */
+    val gyms: List<String> = emptyList(),
 )
 
 /** Private relationship-scoped information; kept outside client-list responses and fixtures. */
@@ -106,6 +113,10 @@ data class TrainerDashboard(
     val notes: Map<String, String> = emptyMap(),
     /** The server's current date in the trainer's time zone; null in the demo, which uses [DemoDate]. */
     val today: LocalDate? = null,
+    /** The server's time of this answer: "next session" and "past sessions" are split by it, never by the device clock. */
+    val now: Instant? = null,
+    /** The trainer's private comment per session id. */
+    val sessionComments: Map<String, String> = emptyMap(),
 )
 
 enum class DemoScenario { Normal, Loading, Empty, Error, Offline, Denied }
@@ -135,6 +146,18 @@ interface TrainerRepository {
     suspend fun loadClientInformation(clientId: String): ClientInformation
     suspend fun saveClientInformation(clientId: String, information: ClientInformation): ClientInformation
 
+    /** Moves the client to the trainer's archive ([archived] true) or back to the current clients. */
+    suspend fun setArchived(clientId: String, archived: Boolean): TrainerDashboard = throw TrainerException(Failure.Save)
+
+    /**
+     * Corrects marked attendance: [attended] true turns a no-show into a completed session, false the other way.
+     * Moves no money; refused ([Failure.Conflict]) when a no-show fee was already charged.
+     */
+    suspend fun correctAttendance(id: String, revision: Int, attended: Boolean): TrainerDashboard = throw TrainerException(Failure.Save)
+
+    /** Saves the trainer's private comment on a session; a blank [comment] removes it. */
+    suspend fun saveSessionComment(sessionId: String, comment: String): TrainerDashboard = throw TrainerException(Failure.Save)
+
     /** B4: what the trainer needs to answer a booking or reschedule request. */
     suspend fun requestReview(id: String): RequestReview = throw TrainerException(Failure.Load)
 
@@ -144,6 +167,29 @@ interface TrainerRepository {
      */
     suspend fun acceptRequest(id: String, revision: Int, waiver: FeeWaiver?): TrainerDashboard = acceptRequest(id, revision)
 }
+
+/** The trainer's permanent invitation: a code the client enters, and the link that carries it. */
+data class InviteLink(val code: String, val url: String) {
+    /** The text shared with the client. */
+    fun message(intro: String) = listOf(intro, url).joinToString(separator = LineBreak)
+}
+
+/** The trainer's permanent invite link (decision 2026-11-26): the same one until the trainer generates a new one. */
+interface InviteLinkSource {
+    /** The current link, created on first use. */
+    suspend fun current(): InviteLink
+
+    /** Revokes the current link and creates a new one; the old link stops working. */
+    suspend fun regenerate(): InviteLink
+}
+
+private val LineBreak = 10.toChar().toString()
+
+/**
+ * Where invite links point: the app's own scheme, which opens "I have a code from my trainer" with the code filled
+ * in (Android). A web address can replace it once the project has a domain; the code works on its own too.
+ */
+const val InviteBaseUrl = "trainingapp://join/"
 
 /** A full fee waiver with an optional reason the client can see. */
 data class FeeWaiver(val reason: String? = null)

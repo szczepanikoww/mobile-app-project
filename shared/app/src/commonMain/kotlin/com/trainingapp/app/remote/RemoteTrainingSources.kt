@@ -1,10 +1,13 @@
 package com.trainingapp.app.remote
 
+import com.trainingapp.contract.api.AssignedPlanDto
+import com.trainingapp.contract.api.AssignPlanRequest
 import com.trainingapp.contract.api.UploadSessionDto
 import com.trainingapp.contract.exercise.ExerciseDto
 import com.trainingapp.contract.exercise.UpsertExerciseRequest
 import com.trainingapp.contract.media.CreateUploadSessionRequest
 import com.trainingapp.contract.media.MediaStatusDto
+import com.trainingapp.contract.plan.PlanTemplateDto
 import com.trainingapp.contract.plan.PlanVersionDto
 import com.trainingapp.contract.plan.PublishPlanRequest
 import com.trainingapp.contract.plan.PublishPlanResponse
@@ -52,6 +55,19 @@ class RemotePlanRemoteDataSource(private val api: TrainerApiClient) : PlanRemote
         } catch (e: Exception) {
             PublishResult.Failed
         }
+    }
+
+    override suspend fun fetchTemplates(): List<PlanTemplateDto>? = fetchOrNull { api.get<List<PlanTemplateDto>>("trainer/plans") }
+
+    override suspend fun fetchLatestVersion(templateId: String): PlanVersionDto? =
+        fetchOrNull { api.get<PlanVersionDto>("trainer/plans/$templateId/versions/latest") }
+
+    private suspend fun <T> fetchOrNull(block: suspend () -> T): T? = try {
+        block()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        null
     }
 
     /** The server answered 409; the draft needs the template's newest version number to rebase. */
@@ -140,4 +156,48 @@ class RemoteMediaRemoteDataSource(
 
 private suspend fun readLocalFile(path: String): ByteArray = withContext(Dispatchers.Default) {
     SystemFileSystem.source(Path(path.removePrefix("file://"))).buffered().use { it.readByteArray() }
+}
+
+/**
+ * Assigns a published plan version to one of the trainer's active clients (`POST trainer/clients/{id}/assigned-plan`).
+ * The client's "today" then comes from it; an earlier active assignment is replaced by the server.
+ */
+class RemotePlanAssigner(private val api: TrainerApiClient) {
+    @OptIn(kotlin.uuid.ExperimentalUuidApi::class)
+    suspend fun assign(
+        clientId: String,
+        templateId: String,
+        versionNumber: Int,
+        operationId: String = kotlin.uuid.Uuid.random().toString(),
+        sessionId: String? = null,
+    ): AssignedPlanDto {
+        val version = api.get<PlanVersionDto>("trainer/plans/$templateId/versions/$versionNumber")
+        return api.send<AssignPlanRequest, AssignedPlanDto>(
+            HttpMethod.Post,
+            "trainer/clients/$clientId/assigned-plan",
+            AssignPlanRequest(planVersionId = version.id, sessionId = sessionId, operationId = operationId),
+        )
+    }
+
+    /** The client's current plan from this trainer, or null when there is none. */
+    suspend fun activePlan(clientId: String): AssignedPlanDto? = try {
+        api.get<AssignedPlanDto>("trainer/clients/$clientId/assigned-plan")
+    } catch (e: TrainerException) {
+        if (e.failure == Failure.Conflict || e.failure == Failure.Load || e.failure == Failure.Denied) null else throw e
+    }
+}
+
+/** The trainer's "Od trenera" note and video on an exercise (`trainer/exercises/{id}/note`). */
+class RemoteTrainerExerciseNotes(private val api: TrainerApiClient) : com.trainingapp.domain.exercise.TrainerExerciseNotes {
+    override suspend fun load(exerciseId: String): com.trainingapp.domain.exercise.TrainerExerciseNote =
+        api.get<com.trainingapp.contract.exercise.TrainerExerciseNoteDto>("trainer/exercises/$exerciseId/note").toModel()
+
+    override suspend fun save(note: com.trainingapp.domain.exercise.TrainerExerciseNote): com.trainingapp.domain.exercise.TrainerExerciseNote =
+        api.send<com.trainingapp.contract.exercise.TrainerExerciseNoteDto, com.trainingapp.contract.exercise.TrainerExerciseNoteDto>(
+            HttpMethod.Put, "trainer/exercises/${note.exerciseId}/note",
+            com.trainingapp.contract.exercise.TrainerExerciseNoteDto(note.exerciseId, note.note, note.demoMediaId),
+        ).toModel()
+
+    private fun com.trainingapp.contract.exercise.TrainerExerciseNoteDto.toModel() =
+        com.trainingapp.domain.exercise.TrainerExerciseNote(exerciseId, note, demoMediaId)
 }

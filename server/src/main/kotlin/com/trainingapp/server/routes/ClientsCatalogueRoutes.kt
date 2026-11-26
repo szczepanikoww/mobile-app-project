@@ -67,6 +67,14 @@ fun Route.clientsCatalogueRoutes(db: Db, clock: ServerClock, callers: CallerReso
     // ---------------- clients
     get("/clients") { call.respond(clients.clients(call.trainerId())) }
     get("/clients/{id}") { call.respond(clients.detail(call.trainerId(), call.uuidParam("id"))) }
+    post("/clients/{id}/archive") {
+        clients.setArchived(call.trainerId(), call.uuidParam("id"), archived = true)
+        call.respond(HttpStatusCode.NoContent)
+    }
+    post("/clients/{id}/restore") {
+        clients.setArchived(call.trainerId(), call.uuidParam("id"), archived = false)
+        call.respond(HttpStatusCode.NoContent)
+    }
     post("/clients/{id}/end") {
         clients.endRelationship(call.trainerId(), call.uuidParam("id"))
         call.respond(HttpStatusCode.NoContent)

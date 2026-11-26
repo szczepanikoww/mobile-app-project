@@ -112,6 +112,9 @@ data class GymSummaryDto(
     val hoursSummary: String,
     val distanceMeters: Int? = null,
     val rating: RatingDto? = null,
+    /** WGS84 position for the map; null when the gym has none. */
+    val latitude: Double? = null,
+    val longitude: Double? = null,
 )
 
 /** `day` is ISO (1 = Monday). `close` ≤ `open` means the window runs past midnight. Times are `HH:mm`. */

@@ -70,6 +70,37 @@ object WorkoutLogReducer {
         return log.copy(exercises = log.exercises + entry, currentExerciseIndex = log.exercises.size)
     }
 
+    /**
+     * Adds exercises at the end while logging (plan or independent workout), each with one empty set, and shows the
+     * first of them. The plan version is not changed: only this workout's log is. Unknown tracking types default to
+     * weight × reps.
+     */
+    fun addExercises(log: WorkoutLog, exerciseIds: List<String>, trackingTypes: Map<String, TrackingType>, ids: IdGenerator): WorkoutLog {
+        if (exerciseIds.isEmpty()) return log
+        val entries = exerciseIds.map { id ->
+            LoggedExercise(ids.newId(), id, trackingTypes[id] ?: TrackingType.WEIGHT_REPS, sets = listOf(SetLog(ids.newId())))
+        }
+        return log.copy(exercises = log.exercises + entries, currentExerciseIndex = log.exercises.size)
+    }
+
+    /**
+     * Removes one exercise entry with its sets. A rest started by one of its sets ends; the shown exercise stays the
+     * same one when it remains, else the one now at the removed position.
+     */
+    fun removeExercise(log: WorkoutLog, exerciseEntryId: String): WorkoutLog {
+        val index = log.exercises.indexOfFirst { it.id == exerciseEntryId }
+        if (index < 0) return log
+        val removed = log.exercises[index]
+        val remaining = log.exercises.filterNot { it.id == exerciseEntryId }
+        val current = when {
+            remaining.isEmpty() -> 0
+            log.currentExerciseIndex > index -> log.currentExerciseIndex - 1
+            else -> log.currentExerciseIndex.coerceAtMost(remaining.lastIndex)
+        }
+        val rest = log.rest?.takeUnless { rest -> removed.sets.any { it.id == rest.afterSetId } }
+        return log.copy(exercises = remaining, currentExerciseIndex = current, rest = rest)
+    }
+
     sealed interface EditResult {
         data class Changed(val log: WorkoutLog) : EditResult
 

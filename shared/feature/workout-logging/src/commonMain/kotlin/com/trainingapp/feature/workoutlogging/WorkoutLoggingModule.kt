@@ -24,6 +24,7 @@ val workoutLoggingModule = module {
             time = get(),
             ids = get(),
             language = get(),
+            picker = get(),
         )
     }
     viewModel { (destination: WorkoutSummaryDestination) ->

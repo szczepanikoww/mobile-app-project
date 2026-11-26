@@ -22,6 +22,93 @@ class TrainerBehaviorTest {
     }
     private fun at(day: Int, hour: Int) = LocalDateTime(2026, 10, day, hour, 0).toInstant(TimeZone.of("Europe/Warsaw"))
 
+    @Test fun startSplitsSessionsByTheServerClock() = runTest {
+        val model = model(DemoTrainerRepository(0))
+        advanceUntilIdle()
+        val state = model.state.value
+        // The demo server clock is 28 Oct 09:20: s1 (09:00–10:00) is in progress and is the next session.
+        assertEquals("s1", state.nextSession?.id)
+        assertTrue(state.openRequests.any { it.id == "s2" } && state.openRequests.any { it.id == "s4" })
+        assertTrue(state.pastSessions.all { it.end <= state.now!! })
+        assertTrue(state.pastSessions.none { it.id == "s1" })
+        assertTrue(state.unmarkedSessions.all { it.status == SessionStatus.Confirmed })
+    }
+
+    @Test fun archivingIsReversibleAndKeepsSessions() = runTest {
+        val repo = DemoTrainerRepository(0)
+        val model = model(repo)
+        advanceUntilIdle()
+        val sessions = model.state.value.data!!.sessions.count { it.clientId == "c1" }
+        model.navigate(Route.ClientDetail("c1"))
+        model.setArchived("c1", true)
+        advanceUntilIdle()
+        val archived = model.state.value.data!!.clients.first { it.id == "c1" }
+        assertFalse(archived.active)
+        assertTrue(archived.archived)
+        assertEquals(Route.Main, model.state.value.route)
+        model.clientTab(ClientTab.Archive)
+        assertTrue(model.state.value.visibleClients.any { it.id == "c1" })
+        model.setArchived("c1", false)
+        advanceUntilIdle()
+        assertTrue(model.state.value.data!!.clients.first { it.id == "c1" }.active)
+        assertEquals(sessions, model.state.value.data!!.sessions.count { it.clientId == "c1" })
+    }
+
+    @Test fun sessionCommentIsSavedAndRemovedWhenBlank() = runTest {
+        val model = model(DemoTrainerRepository(0))
+        advanceUntilIdle()
+        model.saveSessionComment("s1", "  Pracujemy nad techniką przysiadu  ")
+        advanceUntilIdle()
+        assertEquals("Pracujemy nad techniką przysiadu", model.state.value.data!!.sessionComments["s1"])
+        model.saveSessionComment("s1", "   ")
+        advanceUntilIdle()
+        assertNull(model.state.value.data!!.sessionComments["s1"])
+    }
+
+    @Test fun inviteLinkStaysTheSameUntilANewOneIsGenerated() = runTest {
+        val model = TrainerViewModel(DemoTrainerRepository(0), pl.trainer.data.DemoInviteLinks(0)).also { m ->
+            stores += ViewModelStore().also { it.put("invite", m) }
+        }
+        advanceUntilIdle()
+        model.loadInvite()
+        advanceUntilIdle()
+        val first = model.state.value.invite.link!!
+        model.loadInvite()
+        advanceUntilIdle()
+        assertEquals(first, model.state.value.invite.link)
+        model.loadInvite(regenerate = true)
+        advanceUntilIdle()
+        val second = model.state.value.invite.link!!
+        assertNotEquals(first.code, second.code)
+        assertTrue(second.url.endsWith(second.code))
+    }
+
+    @Test fun noShowIsRecordedForAPastSession() = runTest {
+        val model = model(DemoTrainerRepository(0))
+        advanceUntilIdle()
+        val past = model.state.value.unmarkedSessions.firstOrNull() ?: return@runTest
+        model.noShow(past)
+        advanceUntilIdle()
+        assertEquals(SessionStatus.NoShow, model.state.value.data!!.sessions.first { it.id == past.id }.status)
+    }
+
+    @Test fun markedAttendanceCanBeCorrected() = runTest {
+        val model = model(DemoTrainerRepository(0))
+        advanceUntilIdle()
+        val completed = model.state.value.data!!.sessions.first { it.id == "s7" }
+        assertEquals(SessionStatus.Completed, completed.status)
+        model.correctAttendance(completed, attended = false)
+        advanceUntilIdle()
+        val noShow = model.state.value.data!!.sessions.first { it.id == "s7" }
+        assertEquals(SessionStatus.NoShow, noShow.status)
+        model.correctAttendance(noShow, attended = false)
+        advanceUntilIdle()
+        assertEquals(Failure.Conflict, model.state.value.actionFailure)
+        model.correctAttendance(noShow, attended = true)
+        advanceUntilIdle()
+        assertEquals(SessionStatus.Completed, model.state.value.data!!.sessions.first { it.id == "s7" }.status)
+    }
+
     @Test fun acceptingABookingChangesRequestedToConfirmed() = runTest {
         val repo = DemoTrainerRepository(0)
         val before = repo.load().sessions.first { it.id == "s2" }

@@ -12,7 +12,8 @@ import kotlin.time.Instant
 import pl.trainer.data.DemoTrainerRepository
 import pl.trainer.domain.*
 
-enum class Destination { Start, Calendar, Clients, Finance }
+/** The trainer's four tabs (docs/plans/trainer-redesign.md). Plans are rendered by the app's workout builder. */
+enum class Destination { Start, Calendar, Clients, Plans }
 enum class ClientFilter { All, Overdue }
 enum class ClientTab { Current, Archive }
 enum class CalendarMode { Day, Week }
@@ -26,7 +27,23 @@ sealed interface Route {
     data object Availability : Route
     data class NoteEditor(val clientId: String) : Route
     data class ClientInformationEditor(val clientId: String) : Route
+    /** Start: every open booking and reschedule request, each with Accept / Reject. */
+    data object Requests : Route
+    /** Start: past sessions, newest first, with attendance to mark. */
+    data object History : Route
+    /** Start: this week's payments. */
+    data object Payments : Route
 }
+
+/** The trainer's permanent invite link in the invite sheet. */
+data class InviteState(val link: InviteLink? = null, val loading: Boolean = false, val failure: Failure? = null)
+
+/** "Płatności w tym tygodniu" on Start. */
+data class WeekPaymentsState(
+    val summary: pl.trainerapp.feature.trainerfinance.model.FinanceSummary? = null,
+    val loading: Boolean = false,
+    val failed: Boolean = false,
+)
 
 data class TrainerUiState(
     val data: TrainerDashboard? = null,
@@ -36,7 +53,7 @@ data class TrainerUiState(
     val saved: Boolean = false,
     val submitting: Boolean = false,
     val scenario: DemoScenario = DemoScenario.Normal,
-    val destination: Destination = Destination.Calendar,
+    val destination: Destination = Destination.Start,
     val routes: List<Route> = listOf(Route.Main),
     val selectedDate: LocalDate = DemoDate,
     val calendarMode: CalendarMode = CalendarMode.Day,
@@ -52,6 +69,8 @@ data class TrainerUiState(
     val reviewFailure: Failure? = null,
     /** Whether the trainer may edit client information; the client owns it when this is false (TB1). */
     val canEditClientInformation: Boolean = true,
+    val invite: InviteState = InviteState(),
+    val payments: WeekPaymentsState = WeekPaymentsState(),
 ) {
     val route get() = routes.last()
     /** The server's date for the trainer; the fixed preview date in the demo. Never the device clock. */
@@ -63,16 +82,85 @@ data class TrainerUiState(
             ClientFilter.Overdue -> it.hasOverduePayment
         }
     }
+
+    /** The server's time of the last answer; "next" and "past" sessions are split by it, never by the device clock. */
+    val now: Instant? get() = data?.now
+
+    /** Open booking and reschedule requests from clients, soonest first (Start, "Wymaga reakcji"). */
+    val openRequests: List<Session> get() = data?.sessions.orEmpty().filter { it.isOpenRequest() }.sortedBy { it.calendarStart }
+
+    /** The confirmed session in progress or the next one to start. */
+    val nextSession: Session? get() {
+        val at = now ?: return null
+        return data?.sessions.orEmpty().filter { it.isActive() && it.end > at }.minByOrNull { it.start }
+    }
+
+    /** Past sessions for "Historia sesji": ended confirmed ones (attendance to mark), completed and no-shows. */
+    val pastSessions: List<Session> get() {
+        val at = now ?: return emptyList()
+        return data?.sessions.orEmpty().filter {
+            it.end <= at && (it.status == SessionStatus.Confirmed || it.status == SessionStatus.Completed || it.status == SessionStatus.NoShow)
+        }.sortedByDescending { it.start }
+    }
+
+    /** Past sessions whose attendance is not marked yet. */
+    val unmarkedSessions: List<Session> get() = pastSessions.filter { it.status == SessionStatus.Confirmed }
 }
 
-class TrainerViewModel(private val repository: TrainerRepository) : ViewModel() {
+/**
+ * [invites] and [finance] are optional so previews and tests can run without them: the invite sheet and the weekly
+ * payments widget then show their unavailable state.
+ */
+class TrainerViewModel(
+    private val repository: TrainerRepository,
+    private val invites: InviteLinkSource? = null,
+    private val finance: pl.trainerapp.feature.trainerfinance.TrainerFinanceRepository? = null,
+) : ViewModel() {
     private val mutableState = MutableStateFlow(TrainerUiState(canEditClientInformation = repository.canEditClientInformation))
     val state = mutableState.asStateFlow()
     private var loadingJob: Job? = null
     private var informationJob: Job? = null
     private var reviewJob: Job? = null
+    private var inviteJob: Job? = null
+    private var paymentsJob: Job? = null
 
     init { reload() }
+
+    /** Loads the week's payments for Start; a failure leaves the rest of the screen usable. */
+    fun loadPayments() {
+        val source = finance ?: return
+        paymentsJob?.cancel()
+        mutableState.update { it.copy(payments = it.payments.copy(loading = true, failed = false)) }
+        paymentsJob = viewModelScope.launch {
+            try {
+                val snapshot = source.load(pl.trainerapp.feature.trainerfinance.model.FinancePeriod.Week)
+                mutableState.update { it.copy(payments = WeekPaymentsState(snapshot.summary)) }
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e
+            } catch (_: Exception) {
+                mutableState.update { it.copy(payments = it.payments.copy(loading = false, failed = true)) }
+            }
+        }
+    }
+
+    /** Loads the permanent invite link (created on first use), or with [regenerate] replaces it with a new one. */
+    fun loadInvite(regenerate: Boolean = false) {
+        val source = invites ?: run {
+            mutableState.update { it.copy(invite = InviteState(failure = Failure.Load)) }
+            return
+        }
+        if (state.value.invite.loading) return
+        inviteJob?.cancel()
+        mutableState.update { it.copy(invite = it.invite.copy(loading = true, failure = null)) }
+        inviteJob = viewModelScope.launch {
+            try {
+                val link = if (regenerate) source.regenerate() else source.current()
+                mutableState.update { it.copy(invite = InviteState(link)) }
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e
+            } catch (e: Exception) {
+                mutableState.update { it.copy(invite = it.invite.copy(loading = false, failure = (e as? TrainerException)?.failure ?: Failure.Load)) }
+            }
+        }
+    }
 
     fun reload() {
         loadingJob?.cancel()
@@ -84,6 +172,7 @@ class TrainerViewModel(private val repository: TrainerRepository) : ViewModel() 
                 // The calendar opens on the server's today; a date the trainer chose stays.
                 mutableState.update { it.copy(data = data, loading = false,
                     selectedDate = if (it.selectedDate == it.today) data.today ?: it.selectedDate else it.selectedDate) }
+                loadPayments()
             } catch (e: TrainerException) {
                 mutableState.update { it.copy(data = null, loading = false, failure = e.failure) }
             } catch (e: kotlinx.coroutines.CancellationException) { throw e
@@ -180,6 +269,21 @@ class TrainerViewModel(private val repository: TrainerRepository) : ViewModel() 
     fun cancel(session: Session) = mutate { repository.cancelSession(session.id, session.revision) }
     fun complete(session: Session) = mutate { repository.completeSession(session.id, session.revision) }
     fun removeBlock(id: String) = mutate { repository.removeBlock(id) }
+
+    /** Records that the client did not come. The server decides whether it is allowed yet and any fee. */
+    fun noShow(session: Session) = mutate { repository.markNoShow(session.id, session.revision) }
+
+    /** Moves the client to the archive (back to the list) or restores them (the card stays open). */
+    fun setArchived(clientId: String, archived: Boolean) {
+        mutate(pop = archived) { repository.setArchived(clientId, archived) }
+        if (!archived) loadClientInformation(clientId)
+    }
+
+    /** Turns a completed session into a no-show or back ([attended]). */
+    fun correctAttendance(session: Session, attended: Boolean) = mutate { repository.correctAttendance(session.id, session.revision, attended) }
+
+    /** Saves the trainer's private comment on the session. */
+    fun saveSessionComment(sessionId: String, comment: String) = mutate { repository.saveSessionComment(sessionId, comment) }
     fun saveNote(clientId: String, note: String) = mutate(pop = true) { repository.saveNote(clientId, note) }
 
     fun loadClientInformation(clientId: String) {

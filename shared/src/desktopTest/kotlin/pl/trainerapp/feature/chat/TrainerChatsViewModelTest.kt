@@ -22,6 +22,8 @@ import kotlin.test.assertTrue
 import pl.trainerapp.feature.chat.data.DemoChatMedia
 import pl.trainerapp.feature.chat.data.DemoChatStore
 import pl.trainerapp.feature.chat.data.DemoClientChatRepository
+import pl.trainerapp.feature.chat.data.DemoClientConversations
+import pl.trainerapp.feature.chat.data.TrainerChatsFixtures
 import pl.trainerapp.feature.chat.data.DemoTrainerChatsRepository
 import pl.trainerapp.feature.chat.model.ChatRole
 import pl.trainerapp.feature.chat.model.MediaRef
@@ -45,6 +47,66 @@ class TrainerChatsViewModelTest {
     @AfterTest fun tearDown() = Dispatchers.resetMain()
 
     private fun repo(store: DemoChatStore = DemoChatStore()) = DemoTrainerChatsRepository(store, latencyMillis = 0)
+
+    @Test
+    fun `the sender sees a message as seen once the other side opens the thread`() = runTest {
+        val store = DemoChatStore()
+        val trainer = repo(store)
+        val client = DemoClientChatRepository(store, "c2", latencyMillis = 0)
+
+        val sent = trainer.send("c2", "Do zobaczenia jutro")
+        // Not read yet: the receipt still sits under the older message the client had read.
+        assertEquals("c2-1", trainer.thread("c2").seenMessageId)
+
+        client.thread() // the client opens the conversation
+        val after = trainer.thread("c2")
+        assertEquals(sent.id, after.seenMessageId)
+        assertTrue(after.seenAt != null)
+
+        // A newer message of mine is not seen until it is read too.
+        val newer = trainer.send("c2", "I jeszcze jedno")
+        val again = trainer.thread("c2")
+        assertEquals(sent.id, again.seenMessageId)
+        assertTrue(newer.id != again.seenMessageId)
+    }
+
+    @Test
+    fun `active people are the ones seen within the last minutes`() = runTest {
+        val store = DemoChatStore()
+        val snapshot = repo(store).conversations()
+        val now = snapshot.generatedAt
+        val active = snapshot.conversations.filter { pl.trainerapp.feature.chat.model.isActive(it.peerActiveAt, now) }.map { it.relationshipId }
+        assertEquals(TrainerChatsFixtures.activeIds, active.toSet())
+        assertFalse(pl.trainerapp.feature.chat.model.isActive(null, now))
+        assertFalse(pl.trainerapp.feature.chat.model.isActive(now - kotlin.time.Duration.parse("1h"), now))
+    }
+
+    @Test
+    fun `the conversation view model exposes the receipt and the activity`() = runTest {
+        val store = DemoChatStore()
+        val trainer = repo(store)
+        trainer.send("c1", "Cześć")
+        DemoClientChatRepository(store, "c1", latencyMillis = 0).thread()
+
+        val vm = TrainerChatViewModel("c1", trainer)
+        advanceUntilIdle()
+        val state = vm.state.value
+        assertEquals(state.messages.last { it.author == ChatRole.Trainer }.id, state.seenMessageId)
+        assertTrue(state.seenAt != null)
+        assertTrue(state.peerActiveAt != null)
+    }
+
+    @Test
+    fun `client list shows only the client's own conversation, named after the trainer`() = runTest {
+        val store = DemoChatStore()
+        val vm = TrainerChatListViewModel(DemoClientConversations(store, setOf("c6"), latencyMillis = 0))
+        advanceUntilIdle()
+        val rows = vm.state.value.snapshot!!.conversations
+        assertEquals(listOf("c6"), rows.map { it.relationshipId })
+        assertEquals(TrainerChatsFixtures.trainerName, rows.single().name)
+        // The trainer's unread count is not the client's.
+        assertEquals(0, rows.single().unread)
+    }
 
     @Test
     fun `list shows conversations newest first with unread total`() = runTest {
